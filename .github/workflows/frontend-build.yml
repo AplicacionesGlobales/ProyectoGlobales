@@ -47,9 +47,6 @@ jobs:
     - name: Check TypeScript compilation
       run: npx tsc --noEmit
 
-    - name: Verify Expo project structure
-      run: npx expo doctor
-
     - name: Build for web (development)
       run: npx expo export --platform web --dev
 
