@@ -1,0 +1,59 @@
+name: Frontend Build Check
+
+on:
+  # Se ejecuta cuando se hace un Pull Request hacia main
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+  # Se ejecuta cuando se hace merge/push a main (después del PR aprobado)
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: frontend
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup Expo CLI
+      run: npm install -g @expo/cli
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Check TypeScript compilation
+      run: npx tsc --noEmit
+
+    - name: Verify Expo project structure
+      run: npx expo doctor
+
+    - name: Build for web (development)
+      run: npx expo export --platform web --dev
+
+    - name: Check bundle size
+      run: |
+        echo "Frontend build completed successfully!"
+        du -sh dist/ || echo "Build output directory not found, but compilation succeeded"
