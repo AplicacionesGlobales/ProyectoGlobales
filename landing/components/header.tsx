@@ -27,11 +27,18 @@ export function Header() {
           </Link>
         </nav>
 
-        <Link href="/registro">
-          <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-            Comenzar Ahora
-          </Button>
-        </Link>
+        <div className="flex items-center space-x-4">
+          <Link href="/auth/login">
+            <Button variant="outline" size="sm">
+              Iniciar Sesión
+            </Button>
+          </Link>
+          <Link href="/onboarding">
+            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700" size="sm">
+              Comenzar Ahora
+            </Button>
+          </Link>
+        </div>
       </div>
     </header>
   )
