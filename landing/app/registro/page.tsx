@@ -63,7 +63,7 @@ const services = [
     id: "pagos",
     name: "Pagos Integrados",
     emoji: "💳",
-    description: "Acepta pagos directamente en la app. Los pagos se depositan a tu cuenta todos los miércoles.",
+    description: "Acepta pagos directamente en la app. Los pagos se depositan a tu cuenta todos los martes.",
     price: 25,
   },
   {
@@ -655,7 +655,7 @@ export default function RegistroPage() {
           <div className="space-y-6">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold mb-2">¡Último paso!</h2>
-              <p className="text-gray-600">Datos para procesar tu pago mensual</p>
+              <p className="text-gray-600">Datos para recibir tus pagos semanales</p>
             </div>
 
             <div className="space-y-4">
@@ -668,7 +668,7 @@ export default function RegistroPage() {
                   placeholder="Número de cuenta bancaria"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Usaremos esta cuenta para procesar los pagos de tu membresía mensual
+                  A esta cuenta te depositaremos tus ganancias todos los martes de cada semana
                 </p>
               </div>
 
@@ -677,27 +677,30 @@ export default function RegistroPage() {
                   <div className="flex items-start space-x-4">
                     <div className="text-blue-600 mt-1">💰</div>
                     <div>
-                      <h3 className="font-semibold text-blue-800 mb-2">Modelo de Precios</h3>
+                      <h3 className="font-semibold text-blue-800 mb-2">Modelo de Precios y Pagos</h3>
                       <div className="text-sm text-blue-700 space-y-2">
                         {formData.tipoPlan === "web" ? (
                           <div>
                             <p className="font-medium">Plan Web:</p>
                             <p>• Sin mensualidad - $0/mes</p>
-                            <p>• 5% de comisión por cada transacción realizada</p>
+                            <p>• 3.8% + $0.40 de comisión por cada transacción realizada</p>
+                            <p>• Pagos depositados los martes de cada semana</p>
                             <p>• Todas las funciones incluidas sin costo adicional</p>
                           </div>
                         ) : formData.tipoPlan === "app" ? (
                           <div>
                             <p className="font-medium">Plan App Móvil:</p>
                             <p>• Mensualidad: ${calculatePrice(formData.serviciosSeleccionados, "app")}</p>
-                            <p>• 3% de comisión por cada transacción + $0.30 fijo</p>
+                            <p>• 3.8% + $0.40 de comisión por cada transacción</p>
+                            <p>• Pagos depositados los martes de cada semana</p>
                             <p>• Funciones adicionales incluidas en la mensualidad</p>
                           </div>
                         ) : formData.tipoPlan === "completo" ? (
                           <div>
                             <p className="font-medium">Plan Completo:</p>
                             <p>• Mensualidad: ${calculatePrice(formData.serviciosSeleccionados, "completo")}</p>
-                            <p>• 3% de comisión por cada transacción + $0.30 fijo</p>
+                            <p>• 3.8% + $0.40 de comisión por cada transacción</p>
+                            <p>• Pagos depositados los martes de cada semana</p>
                             <p>• Todas las funciones incluidas en la mensualidad</p>
                           </div>
                         ) : null}
