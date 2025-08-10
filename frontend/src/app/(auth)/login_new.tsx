@@ -1,3 +1,4 @@
+import React from 'react';
 import { IonIcon } from '@/components/IonIcon';
 import { useApp } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
