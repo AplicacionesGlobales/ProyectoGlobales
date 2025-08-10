@@ -9,16 +9,85 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  ROOT
+  CLIENT
+}
+
 model User {
   id        Int      @id @default(autoincrement())
-  email     String   @unique
+  email     String   // Email principal del usuario (único para ROOT, puede repetirse para CLIENT)
   username  String   @unique
   firstName String?
   lastName  String?
-  password  String
+  role      UserRole @default(CLIENT)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relaciones
+  business     Business[]   // Solo para usuarios ROOT
+  userBranches UserBranch[] // Para usuarios CLIENT, sus asignaciones a sucursales
+
   @@map("users")
 }
+
+model Business {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relación con el usuario ROOT que es dueño
+  ownerId Int
+  owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Relaciones
+  branches Branch[]
+
+  @@map("businesses")
+}
+
+model Branch {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relación con el comercio
+  businessId Int
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Relaciones
+  userBranches UserBranch[]
+
+  @@map("branches")
+}
+
+model UserBranch {
+  id           Int      @id @default(autoincrement())
+  email        String   // Email específico para esta sucursal (puede repetirse entre sucursales)
+  passwordHash String   // Hash de la contraseña específica para esta sucursal
+  apiKey       String   @unique // Key única para autenticación
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relaciones
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  // Un usuario puede tener solo una cuenta por sucursal
+  @@unique([userId, branchId])
+  @@map("user_branches")
+}
+
+
+
