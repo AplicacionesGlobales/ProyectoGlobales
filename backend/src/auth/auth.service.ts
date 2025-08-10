@@ -4,16 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../common/services/email/email.service';
 import { CryptoService, ResetTokenPayload } from '../common/services/crypto.service';
 import * as bcrypt from 'bcryptjs';
-import { 
-  RegisterClientDto, 
-  AuthResponse,
-  ForgotPasswordDto,
-  ValidateResetTokenDto,
-  ResetPasswordDto,
-  ForgotPasswordResponseDto,
-  ValidateTokenResponseDto,
-  ResetPasswordResponseDto
-} from './dto';
+import { RegisterClientDto, AuthResponse, ForgotPasswordDto, ValidateResetTokenDto, ResetPasswordDto, ForgotPasswordResponseDto, ValidateTokenResponseDto, ResetPasswordResponseDto } from './dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole } from '../../generated/prisma';
 import { randomBytes } from 'crypto';
@@ -213,13 +204,19 @@ export class AuthService {
       const jwtToken = this.cryptoService.createJWTToken(jwtPayload);
       
       // Crear URL de reset
-      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${jwtToken}`;
+      const resetUrl = `${process.env.BASE_URL}/reset-password?token=${jwtToken}`;
 
       // Enviar email
       const emailSent = await this.emailService.sendEmail({
         to: email.toLowerCase(),
         subject: 'Restablecer tu contraseña',
-        html: this.emailService.generatePasswordResetEmailHTML(resetUrl, user.firstName || ''),
+        html: this.emailService.loadTemplate('reset-password', {
+          appName: process.env.APP_NAME || 'WhiteLabel',
+          userName: user.firstName || '',
+          resetUrl,
+          supportEmail: process.env.SUPPORT_EMAIL || 'soporte@tuapp.com',
+          currentYear: new Date().getFullYear().toString(),
+        }),
       });
 
       if (!emailSent) {
@@ -354,6 +351,7 @@ export class AuthService {
         });
       }
 
+      // Actualizar contraseña en transacción
       await this.prisma.$transaction([
         // Si el email coincide con el email principal del usuario, actualizar la tabla User
         ...(user.email === payload.email ? [
@@ -391,6 +389,9 @@ export class AuthService {
         }),
       ]);
 
+      // 🆕 ENVIAR EMAIL DE CONFIRMACIÓN CON ENLACE DE EMERGENCIA
+      await this.sendPasswordUpdatedNotification(user, payload.email);
+
       return BaseResponseDto.success({
         success: true,
         message: 'Contraseña actualizada exitosamente',
@@ -402,6 +403,66 @@ export class AuthService {
         ERROR_CODES.INTERNAL_ERROR,
         'Error interno del servidor'
       );
+    }
+  }
+
+  // 🆕 NUEVO MÉTODO: Enviar notificación de contraseña actualizada
+  private async sendPasswordUpdatedNotification(user: any, email: string): Promise<void> {
+    try {
+      // Generar token de emergencia (válido por 24 horas)
+      const emergencyToken = this.cryptoService.generateResetToken();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // 24 horas para emergencia
+
+      const emergencyResetToken = await this.prisma.passwordResetToken.create({
+        data: {
+          token: emergencyToken,
+          userId: user.id,
+          expiresAt,
+          used: false,
+        },
+      });
+
+      // Crear JWT token para la URL de emergencia
+      const emergencyJwtPayload: ResetTokenPayload = {
+        userId: user.id,
+        email: email.toLowerCase(),
+        tokenId: emergencyResetToken.id,
+      };
+      
+      const emergencyJwtToken = this.cryptoService.createJWTToken(emergencyJwtPayload);
+      
+      // Crear URL de reset de emergencia
+      const emergencyResetUrl = `${process.env.BASE_URL}/reset-password?token=${emergencyJwtToken}&emergency=true`;
+
+      // Formatear fecha y hora actual
+      const updateTime = new Date().toLocaleString('es-ES', {
+        timeZone: 'America/Costa_Rica',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      // Enviar email de notificación
+      await this.emailService.sendEmail({
+        to: email.toLowerCase(),
+        subject: `${process.env.APP_NAME || 'WhiteLabel'} - Contraseña Actualizada`,
+        html: this.emailService.loadTemplate('password-updated', {
+          appName: process.env.APP_NAME || 'WhiteLabel',
+          userName: user.firstName || 'Usuario',
+          updateTime,
+          emergencyResetUrl,
+          supportEmail: process.env.SUPPORT_EMAIL || 'soporte@tuapp.com',
+          currentYear: new Date().getFullYear().toString(),
+        }),
+      });
+
+      console.log(`✅ Email de confirmación enviado a ${email}`);
+    } catch (error) {
+      // No fallar el proceso principal si el email falla
+      console.error('Error enviando email de confirmación:', error);
     }
   }
 
