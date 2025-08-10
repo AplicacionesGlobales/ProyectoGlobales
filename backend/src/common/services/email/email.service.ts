@@ -13,7 +13,7 @@ export interface EmailOptions {
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
-  private templatePath = path.join(process.cwd(), 'src', 'common', 'email', 'templates');
+  private templatePath = path.join(process.cwd(), 'src', 'common', 'services', 'email', 'templates');
 
   constructor() {
     this.transporter = nodemailer.createTransport({

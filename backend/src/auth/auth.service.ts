@@ -210,7 +210,7 @@ export class AuthService {
       const emailSent = await this.emailService.sendEmail({
         to: email.toLowerCase(),
         subject: 'Restablecer tu contraseña',
-        html: this.emailService.loadTemplate('reset-password', {
+        html: this.emailService.loadTemplate('password-reset', {
           appName: process.env.APP_NAME || 'WhiteLabel',
           userName: user.firstName || '',
           resetUrl,
@@ -406,7 +406,7 @@ export class AuthService {
     }
   }
 
-  // 🆕 NUEVO MÉTODO: Enviar notificación de contraseña actualizada
+  // Enviar notificación de contraseña actualizada
   private async sendPasswordUpdatedNotification(user: any, email: string): Promise<void> {
     try {
       // Generar token de emergencia (válido por 24 horas)
@@ -459,7 +459,7 @@ export class AuthService {
         }),
       });
 
-      console.log(`✅ Email de confirmación enviado a ${email}`);
+      console.log(`Email de confirmación enviado a ${email}`);
     } catch (error) {
       // No fallar el proceso principal si el email falla
       console.error('Error enviando email de confirmación:', error);
