@@ -1,5 +1,6 @@
 import { useApp } from '@/contexts/AppContext';
 import { Redirect } from 'expo-router';
+import React from 'react';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
