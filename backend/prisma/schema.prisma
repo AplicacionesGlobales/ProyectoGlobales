@@ -27,67 +27,68 @@ model User {
   passwordResetTokens PasswordResetToken[]
 
   // Relaciones
-  business     Business[]   // Solo para usuarios ROOT
-  userBranches UserBranch[] // Para usuarios CLIENT, sus asignaciones a sucursales
+  brands     Brand[]     // Solo para usuarios ROOT - sus marcas white label
+  userBrands UserBrand[] // Para usuarios CLIENT, sus asignaciones a marcas
 
   @@map("users")
 }
 
-model Business {
+model Brand {
   id          Int      @id @default(autoincrement())
   name        String
   description String?
+  address     String?
+  phone       String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relación con el usuario ROOT que es dueño
+  // Relación con el usuario ROOT que es dueño de la marca
   ownerId Int
   owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   // Relaciones
-  branches Branch[]
+  userBrands   UserBrand[]
+  colorPalette ColorPalette?
 
-  @@map("businesses")
+  @@map("brands")
 }
 
-model Branch {
-  id        Int      @id @default(autoincrement())
-  name      String
-  address   String?
-  phone     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relación con el comercio
-  businessId Int
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-
-  // Relaciones
-  userBranches UserBranch[]
-
-  @@map("branches")
-}
-
-model UserBranch {
+model UserBrand {
   id           Int      @id @default(autoincrement())
-  email        String   // Email específico para esta sucursal (puede repetirse entre sucursales)
-  passwordHash String   // Hash de la contraseña específica para esta sucursal
-  apiKey       String   @unique // Key única para autenticación
+  email        String   // Email específico para esta marca (puede repetirse entre marcas)
+  passwordHash String   // Hash de la contraseña específica para esta marca
+  salt         String   @unique // Salt único para fortalecer la autenticación (incluye timestamp)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   // Relaciones
-  userId   Int
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  branchId Int
-  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  userId  Int
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brandId Int
+  brand   Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
-  // Un usuario puede tener solo una cuenta por sucursal
-  @@unique([userId, branchId])
-  @@map("user_branches")
+  // Un usuario puede tener solo una cuenta por marca
+  @@unique([userId, brandId])
+  @@map("user_brands")
+}
+
+model ColorPalette {
+  id        Int      @id @default(autoincrement())
+  primary   String   // Color primario (hex)
+  secondary String   // Color secundario (hex)
+  accent    String   // Color de acento (hex)
+  neutral   String   // Color neutral (hex)
+  success   String   // Color de éxito (hex)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relación uno a uno con Brand
+  brandId Int   @unique
+  brand   Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("color_palettes")
 }
 
 model PasswordResetToken {
