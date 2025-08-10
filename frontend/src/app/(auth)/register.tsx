@@ -163,6 +163,19 @@ export default function RegisterScreen() {
   const navigateToLogin = () => {
     router.navigate('./login');
   };
+  Alert.alert(
+  '🎉 ¡Registro Exitoso!', 
+  `Bienvenido ${firstName}! Tu cuenta ha sido creada exitosamente.\n\nAhora vamos a configurar tu plan.`,
+  [
+    {
+      text: 'Seleccionar Plan',
+      onPress: () => {
+        router.replace('./plan-selection'); 
+      }
+    }
+  ],
+  { cancelable: false }
+);
 
   const getPasswordStrengthColor = () => {
     if (passwordStrength < 40) return '#ef4444';
