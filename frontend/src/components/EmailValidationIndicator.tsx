@@ -67,7 +67,7 @@ export const EmailValidationIndicator: React.FC<EmailValidationIndicatorProps> =
         color: isAvailable ? '#16a34a' : '#dc2626',
         fontWeight: '500',
       }}>
-        {isAvailable ? 'Email available' : 'Email already taken'}
+        {isAvailable ? 'Email available' : `${email} is already taken`}
       </Text>
     </View>
   );

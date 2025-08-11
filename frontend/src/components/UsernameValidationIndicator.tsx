@@ -67,7 +67,7 @@ export const UsernameValidationIndicator: React.FC<UsernameValidationIndicatorPr
         color: isAvailable ? '#16a34a' : '#dc2626',
         fontWeight: '500',
       }}>
-        {isAvailable ? 'Username available' : 'Username already taken'}
+        {isAvailable ? 'Username available' : `${username} is already taken`}
       </Text>
     </View>
   );

@@ -110,10 +110,20 @@ export default function RegisterScreen() {
     }).start();
   }, [passwordValidation.validation.strength]);
 
+  // Revalidar confirmPassword cuando password cambia
+  useEffect(() => {
+    if (confirmPassword && password) {
+      const error = ErrorUtils.validateSingleField('confirmPassword', confirmPassword, password);
+      setValidationErrors(prev => ({ ...prev, confirmPassword: error }));
+    }
+  }, [password, confirmPassword]);
+
   // Debounced validation for individual fields
   const debouncedValidation = useRef(
     ErrorUtils.debounceValidation((field: string, value: string, additionalValue?: string) => {
-      const error = ErrorUtils.validateSingleField(field, value, additionalValue);
+      // Para confirmPassword necesitamos pasar la contraseña actual
+      const additionalVal = field === 'confirmPassword' ? password : additionalValue;
+      const error = ErrorUtils.validateSingleField(field, value, additionalVal);
       setValidationErrors(prev => ({ ...prev, [field]: error }));
     }, 300)
   ).current;
@@ -335,7 +345,12 @@ export default function RegisterScreen() {
               }
               
               // Debounced validation for real-time feedback
-              debouncedValidation(field, text);
+              // Para confirmPassword, necesitamos pasar la contraseña actual
+              if (field === 'confirmPassword') {
+                debouncedValidation(field, text, password);
+              } else {
+                debouncedValidation(field, text);
+              }
             }}
             onFocus={() => setFocusedField(field)}
             onBlur={() => {
