@@ -8,6 +8,7 @@ import {
   ModalErrorConfig
 } from '@/types/error.types';
 import { ErrorUtils } from '@/utils/errorUtils';
+import { logger } from '@/utils/logger';
 
 interface ErrorProviderProps {
   children: ReactNode;
@@ -145,6 +146,14 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
       const message = ErrorUtils.formatApiError(error) || fallbackMessage || 'An unexpected error occurred';
       const severity = ErrorUtils.determineSeverity('error', 'api');
       
+      // Log API error
+      logger.error('API Error displayed to user', {
+        originalError: error,
+        displayMessage: message,
+        severity,
+        fallbackUsed: !!fallbackMessage
+      });
+      
       showToast(message, 'error', severity);
     },
     [showToast]
@@ -152,6 +161,13 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
 
   const showValidationErrors = useCallback(
     (errors: Array<{ field: string; message: string }>) => {
+      // Log validation errors
+      logger.warn('Validation errors displayed to user', {
+        errorCount: errors.length,
+        fields: errors.map(e => e.field),
+        errors: errors
+      });
+
       if (errors.length === 1) {
         showToast(errors[0].message, 'validation', 'medium');
       } else if (errors.length > 1) {
@@ -165,6 +181,12 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
   const showNetworkError = useCallback(
     (retryAction?: () => void) => {
       const message = 'Network connection failed. Please check your internet connection.';
+      
+      // Log network error
+      logger.error('Network error displayed to user', {
+        hasRetryAction: !!retryAction,
+        timestamp: Date.now()
+      });
       
       if (retryAction) {
         showBanner(
