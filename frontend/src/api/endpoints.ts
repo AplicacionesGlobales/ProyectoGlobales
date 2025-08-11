@@ -72,17 +72,17 @@ export const loginUser = async (data: LoginRequest): Promise<LoginResponse> => {
   );
 };
 
-export const validateEmail = async (email: string): Promise<ValidateEmailResponse> => {
+export const validateEmail = async (email: string, brandId?: number): Promise<ValidateEmailResponse> => {
   return apiRequest<ValidateEmailResponse>(
-    API_ENDPOINTS.AUTH.VALIDATE_EMAIL,
+    API_ENDPOINTS.VALIDATE.EMAIL,
     'POST',
-    { email }
+    { email, brandId }
   );
 };
 
 export const validateUsername = async (username: string): Promise<ValidateUsernameResponse> => {
   return apiRequest<ValidateUsernameResponse>(
-    API_ENDPOINTS.AUTH.VALIDATE_USERNAME,
+    API_ENDPOINTS.VALIDATE.USERNAME,
     'POST',
     { username }
   );
@@ -96,11 +96,11 @@ export const forgotPassword = async (email: string): Promise<ForgotPasswordRespo
   );
   
   // Extraer la data del wrapper BaseResponseDto
-  if (apiResponse.successful && apiResponse.data) {
+  if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
   } else {
     // Si hay error, lanzar excepción con el mensaje
-    const errorMessage = apiResponse.error?.[0]?.description || 'Error al enviar código de recuperación';
+    const errorMessage = apiResponse.errors?.[0]?.description || 'Error al enviar código de recuperación';
     throw new Error(errorMessage);
   }
 };
@@ -114,11 +114,11 @@ export const validateResetCode = async (data: ValidateResetCodeRequest): Promise
   );
   
   // Extraer la data del wrapper BaseResponseDto
-  if (apiResponse.successful && apiResponse.data) {
+  if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
   } else {
     // Si hay error, lanzar excepción con el mensaje
-    const errorMessage = apiResponse.error?.[0]?.description || 'Error al validar código';
+    const errorMessage = apiResponse.errors?.[0]?.description || 'Error al validar código';
     throw new Error(errorMessage);
   }
 };
@@ -131,11 +131,11 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
   );
   
   // Extraer la data del wrapper BaseResponseDto
-  if (apiResponse.successful && apiResponse.data) {
+  if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
   } else {
     // Si hay error, lanzar excepción con el mensaje
-    const errorMessage = apiResponse.error?.[0]?.description || 'Error al restablecer contraseña';
+    const errorMessage = apiResponse.errors?.[0]?.description || 'Error al restablecer contraseña';
     throw new Error(errorMessage);
   }
 };

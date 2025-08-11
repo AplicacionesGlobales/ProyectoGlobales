@@ -22,10 +22,10 @@ export class AuthController {
 
   // ==================== REGISTRATION ENDPOINTS ====================
   @Post('register/client')
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Registrar cliente en sucursal' })
   @ApiBody({ type: RegisterClientDto })
-  @ApiResponse({ status: 201, description: 'Cliente registrado exitosamente', schema: AUTH_SUCCESS_RESPONSE })
+  @ApiResponse({ status: 200, description: 'Cliente registrado', type: BaseResponseDto })
   async registerClient(
     @Body(ValidationPipe) registerDto: RegisterClientDto
   ): Promise<BaseResponseDto<AuthResponse>> {
@@ -34,27 +34,15 @@ export class AuthController {
 
 
   @Post('register/brand')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Registrar nueva marca con usuario administrador',
-    description: 'Crea una nueva marca y el usuario root/administrador asociado con información completa del flujo de onboarding'
-  })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Registrar nueva marca con usuario administrador' })
   @ApiBody({ type: CreateBrandDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Marca y usuario administrador creados exitosamente',
-    type: () => BaseResponseDto
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Email ya existe o datos inválidos'
-  })
+  @ApiResponse({ status: 200, description: 'Marca registrada', type: BaseResponseDto })
   async registerBrand(
     @Body(ValidationPipe) createBrandDto: CreateBrandDto
   ): Promise<BaseResponseDto<any>> {
     return this.authService.registerBrand(createBrandDto);
   }
-
 
   // ==================== LOGIN ENDPOINTS ====================
 
