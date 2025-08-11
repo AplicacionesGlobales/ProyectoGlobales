@@ -27,9 +27,10 @@ interface ConfirmationStepProps {
       logo?: File
     }
     plan: {
-      type: "monthly" | "annual"
+      type: "web" | "app" | "complete"
       features: string[]
       price: number
+      billingPeriod?: "monthly" | "annual"
     }
   }
   onNext: () => void
@@ -230,7 +231,11 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
           
           {/* Plan type and basic info */}
           <div className="mb-4">
-            <p className="font-medium capitalize text-lg">{data.plan.type === 'monthly' ? 'Mensual' : 'Anual'}</p>
+            <p className="font-medium capitalize text-lg">
+              {data.plan.type === 'web' ? 'Solo Web' : 
+               data.plan.type === 'app' ? 'Solo App Móvil' : 
+               'Web + App Completa'} - {data.plan.billingPeriod === 'monthly' ? 'Mensual' : 'Anual'}
+            </p>
             <p className="text-sm text-gray-500">{data.selectedFeatures.length} funciones seleccionadas</p>
           </div>
 
@@ -238,7 +243,15 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
           <div className="space-y-2 mb-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex justify-between text-sm">
               <span>Plan base:</span>
-              <span>${data.plan.type === 'annual' ? '39 × 12' : '49'} = ${data.plan.type === 'annual' ? '468' : '49'}{data.plan.type === 'annual' ? '/año' : '/mes'}</span>
+              <span>
+                {data.plan.type === 'web' ? (
+                  '$0/mes'
+                ) : data.plan.billingPeriod === 'annual' ? (
+                  `$${data.plan.type === 'app' ? '59' : '60'} × 12 × 0.8 = $${data.plan.type === 'app' ? '566' : '576'}/año`
+                ) : (
+                  `$${data.plan.type === 'app' ? '59' : '60'}/mes`
+                )}
+              </span>
             </div>
             
             {data.selectedFeatures.length > 0 && (
@@ -248,13 +261,13 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
                   const feature = APP_FEATURES.find(f => f.id === featureId);
                   if (!feature) return null;
                   const monthlyPrice = feature.price;
-                  const yearlyPrice = data.plan.type === 'annual' ? monthlyPrice * 12 * 0.8 : monthlyPrice;
+                  const yearlyPrice = data.plan.billingPeriod === 'annual' ? monthlyPrice * 12 * 0.8 : monthlyPrice;
                   
                   return (
                     <div key={featureId} className="flex justify-between text-sm">
                       <span>• {feature.name}</span>
                       <span>
-                        {data.plan.type === 'annual' 
+                        {data.plan.billingPeriod === 'annual' 
                           ? `$${monthlyPrice} × 12 × 0.8 = $${yearlyPrice.toFixed(2)}/año`
                           : `$${monthlyPrice}/mes`
                         }
@@ -262,7 +275,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
                     </div>
                   );
                 })}
-                {data.plan.type === 'annual' && (
+                {data.plan.billingPeriod === 'annual' && (
                   <div className="flex justify-between text-sm text-green-600 pt-1 border-t">
                     <span>Descuento anual (20%):</span>
                     <span>¡Incluido!</span>
@@ -273,7 +286,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             
             <div className="flex justify-between font-semibold text-lg pt-2 border-t">
               <span>Total:</span>
-              <span>${data.plan.price.toFixed(2)}{data.plan.type === 'monthly' ? '/mes' : '/año'}</span>
+              <span>${data.plan.price.toFixed(2)}{data.plan.billingPeriod === 'monthly' ? '/mes' : '/año'}</span>
             </div>
           </div>
         </Card>

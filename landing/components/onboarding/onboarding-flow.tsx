@@ -35,9 +35,10 @@ export interface OnboardingData {
     imagotipoUrl?: File
   }
   plan: {
-    type: "monthly" | "annual"
+    type: "web" | "app" | "complete"
     features: string[]
     price: number
+    billingPeriod?: "monthly" | "annual"
   }
 }
 
@@ -69,9 +70,10 @@ export function OnboardingFlow() {
       customColors: ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"]
     },
     plan: {
-      type: "monthly",
+      type: "web",
       features: [],
-      price: 0
+      price: 0,
+      billingPeriod: "monthly"
     }
   })
 

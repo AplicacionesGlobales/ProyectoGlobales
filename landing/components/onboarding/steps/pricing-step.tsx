@@ -11,47 +11,70 @@ import { APP_FEATURES } from "@/lib/business-types"
 
 const plans = [
   {
-    id: "monthly",
-    name: "Plan Mensual",
-    description: "Ideal para empezar",
-    basePrice: 49,
+    id: "web",
+    name: "Solo Web",
+    description: "Perfecto para empezar online",
+    basePrice: 0,
     discount: 0,
     period: "mes",
-    yearlyPrice: null,
+    yearlyPrice: 0,
     features: [
-      "Hasta 100 citas por mes",
-      "1 usuario administrador",
-      "Soporte por email",
-      "Almacenamiento básico (1GB)"
+      "Sitio web responsive",
+      "Gestión básica de citas",
+      "Dominio personalizado",
+      "3.8% + $0.40 por transacción",
+      "Soporte por email"
     ],
-    popular: false
+    popular: false,
+    badge: "Sin Mensualidad",
+    badgeColor: "bg-green-100 text-green-800"
   },
   {
-    id: "annual",
-    name: "Plan Anual",
-    description: "Ahorra 20% pagando anual",
-    basePrice: 39,
-    discount: 20,
-    period: "año",
-    yearlyPrice: 468, // 39 * 12 = 468
-    monthlyEquivalent: 39,
+    id: "app",
+    name: "Solo App Móvil",
+    description: "La experiencia móvil completa",
+    basePrice: 59,
+    discount: 0,
+    period: "mes",
+    yearlyPrice: 590, // 59 * 10 months (2 months free)
+    monthlyEquivalent: 49,
     features: [
-      "Citas ilimitadas",
-      "Hasta 3 usuarios",
-      "Soporte prioritario",
-      "Almacenamiento extendido (5GB)",
-      "Reportes avanzados",
-      "Backup automático"
+      "App en App Store y Google Play",
+      "Notificaciones push",
+      "Funciones avanzadas de citas",
+      "3.8% + $0.40 por transacción",
+      "Soporte prioritario"
     ],
-    popular: true
+    popular: true,
+    badge: "Más Popular",
+    badgeColor: "bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+  },
+  {
+    id: "complete",
+    name: "Web + App Completa",
+    description: "La solución completa para tu negocio",
+    basePrice: 60,
+    discount: 0,
+    period: "mes",
+    yearlyPrice: 600, // 60 * 10 months (2 months free)
+    monthlyEquivalent: 50,
+    features: [
+      "Todo lo anterior incluido",
+      "Sincronización total",
+      "Analytics avanzados",
+      "3.8% + $0.40 por transacción",
+      "Soporte 24/7"
+    ],
+    popular: false
   }
 ]
 
 interface PricingStepProps {
   plan: {
-    type: "monthly" | "annual"
+    type: "web" | "app" | "complete"
     features: string[]
     price: number
+    billingPeriod?: "monthly" | "annual"
   }
   selectedFeatures: string[]
   onChange: (plan: any) => void
@@ -60,6 +83,7 @@ interface PricingStepProps {
 }
 
 export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }: PricingStepProps) {
+  const [billingPeriod, setBillingPeriod] = React.useState<"monthly" | "annual">(plan.billingPeriod || "monthly")
   const selectedPlan = plans.find(p => p.id === plan.type)
   
   // Calculate features price using the APP_FEATURES data
@@ -68,19 +92,42 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
     return total + (feature?.price || 0);
   }, 0)
 
-  const totalPrice = (selectedPlan?.basePrice || 0) + featuresPrice
-  const finalPrice = plan.type === "annual" ? (totalPrice * 12 * 0.8) : totalPrice
+  const calculateFinalPrice = (planOption: any, billing: "monthly" | "annual") => {
+    const basePrice = planOption.basePrice || 0
+    const totalMonthlyPrice = basePrice + featuresPrice
+    
+    if (billing === "annual") {
+      // For annual: apply 20% discount
+      return (totalMonthlyPrice * 12 * 0.8)
+    }
+    return totalMonthlyPrice
+  }
 
-  const handlePlanChange = (planType: "monthly" | "annual") => {
+  const finalPrice = selectedPlan ? calculateFinalPrice(selectedPlan, billingPeriod) : 0
+
+  const handlePlanChange = (planType: "web" | "app" | "complete") => {
     const selectedPlanOption = plans.find(p => p.id === planType)
     if (selectedPlanOption) {
-      const newTotalPrice = selectedPlanOption.basePrice + featuresPrice
-      const newFinalPrice = planType === "annual" ? (newTotalPrice * 12 * 0.8) : newTotalPrice
+      const newFinalPrice = calculateFinalPrice(selectedPlanOption, billingPeriod)
       
       onChange({
         type: planType,
         features: selectedPlanOption.features,
-        price: newFinalPrice
+        price: newFinalPrice,
+        billingPeriod: billingPeriod
+      })
+    }
+  }
+
+  const handleBillingPeriodChange = (newBillingPeriod: "monthly" | "annual") => {
+    setBillingPeriod(newBillingPeriod)
+    if (selectedPlan) {
+      const newFinalPrice = calculateFinalPrice(selectedPlan, newBillingPeriod)
+      onChange({
+        type: plan.type,
+        features: selectedPlan.features,
+        price: newFinalPrice,
+        billingPeriod: newBillingPeriod
       })
     }
   }
@@ -91,27 +138,49 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
       onChange({
         type: plan.type,
         features: selectedPlan.features,
-        price: finalPrice
+        price: finalPrice,
+        billingPeriod: billingPeriod
       })
     }
-  }, [selectedFeatures, plan.type])
+  }, [selectedFeatures])
 
-  const isValid = plan.type && (plan.type === "monthly" || plan.type === "annual")
+  const isValid = plan.type && ["web", "app", "complete"].includes(plan.type)
 
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900">Elige tu plan</h2>
         <p className="mt-2 text-gray-600">
-          Selecciona el plan que mejor se adapte a tus necesidades
+          Selecciona el tipo de aplicación que mejor se adapte a tus necesidades
         </p>
+      </div>
+
+      {/* Billing Period Toggle */}
+      <div className="flex justify-center mb-6">
+        <div className="bg-gray-100 p-1 rounded-lg">
+          <Button
+            variant={billingPeriod === "monthly" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => handleBillingPeriodChange("monthly")}
+          >
+            Mensual
+          </Button>
+          <Button
+            variant={billingPeriod === "annual" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => handleBillingPeriodChange("annual")}
+            className="ml-1"
+          >
+            Anual (-20%)
+          </Button>
+        </div>
       </div>
 
       <RadioGroup
         value={plan.type}
-        onValueChange={(value) => handlePlanChange(value as "monthly" | "annual")}
+        onValueChange={(value) => handlePlanChange(value as "web" | "app" | "complete")}
       >
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-3">
           {plans.map((planOption) => (
             <div key={planOption.id} className="relative">
               <Card
@@ -120,13 +189,13 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
                     ? "ring-2 ring-purple-500 bg-purple-50"
                     : "hover:bg-gray-50"
                 }`}
-                onClick={() => handlePlanChange(planOption.id as "monthly" | "annual")}
+                onClick={() => handlePlanChange(planOption.id as "web" | "app" | "complete")}
               >
                 {planOption.popular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                    <Badge className={planOption.badgeColor}>
                       <Star className="w-3 h-3 mr-1" />
-                      Más Popular
+                      {planOption.badge}
                     </Badge>
                   </div>
                 )}
@@ -142,15 +211,17 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
                   <div>
                     <p className="text-gray-600">{planOption.description}</p>
                     <div className="mt-2">
-                      {planOption.id === "annual" ? (
+                      {billingPeriod === "annual" && planOption.yearlyPrice !== undefined ? (
                         <div>
                           <span className="text-3xl font-bold text-gray-900">
                             ${planOption.yearlyPrice}
                           </span>
-                          <span className="text-gray-600">/{planOption.period}</span>
-                          <div className="text-sm text-gray-500 mt-1">
-                            (${planOption.monthlyEquivalent}/mes)
-                          </div>
+                          <span className="text-gray-600">/año</span>
+                          {planOption.monthlyEquivalent && (
+                            <div className="text-sm text-gray-500 mt-1">
+                              (${planOption.monthlyEquivalent}/mes)
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div>
@@ -190,9 +261,9 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
           <div className="flex justify-between">
             <span>Plan base:</span>
             <span>
-              {selectedPlan?.id === "annual" 
-                ? `$${selectedPlan.yearlyPrice}/${selectedPlan.period}`
-                : `$${selectedPlan?.basePrice || 0}/${selectedPlan?.period}`
+              {billingPeriod === "annual" && selectedPlan?.yearlyPrice !== undefined
+                ? `$${selectedPlan.yearlyPrice}/${billingPeriod === "annual" ? "año" : selectedPlan.period}`
+                : `$${selectedPlan?.basePrice || 0}/${selectedPlan?.period || "mes"}`
               }
             </span>
           </div>
@@ -200,12 +271,12 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
             <div className="flex justify-between">
               <span>Funciones adicionales:</span>
               <span>
-                ${plan.type === "annual" ? featuresPrice * 12 : featuresPrice}
-                {plan.type === "annual" ? "/año" : "/mes"}
+                ${billingPeriod === "annual" ? featuresPrice * 12 : featuresPrice}
+                {billingPeriod === "annual" ? "/año" : "/mes"}
               </span>
             </div>
           )}
-          {plan.type === "annual" && featuresPrice > 0 && (
+          {billingPeriod === "annual" && featuresPrice > 0 && (
             <div className="flex justify-between text-green-600">
               <span>Descuento anual (20%) en funciones:</span>
               <span>-${(featuresPrice * 12 * 0.2).toFixed(2)}</span>
@@ -216,10 +287,10 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
             <span>Total:</span>
             <span>
               ${finalPrice.toFixed(2)}
-              /{plan.type === "annual" ? "año" : "mes"}
+              /{billingPeriod === "annual" ? "año" : "mes"}
             </span>
           </div>
-          {plan.type === "annual" && (
+          {billingPeriod === "annual" && (
             <p className="text-sm text-gray-600 text-center mt-2">
               ¡Pagas todo el año de una vez!
             </p>
