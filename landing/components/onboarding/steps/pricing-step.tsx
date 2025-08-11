@@ -16,6 +16,7 @@ const plans = [
     basePrice: 49,
     discount: 0,
     period: "mes",
+    yearlyPrice: null,
     features: [
       "Hasta 100 citas por mes",
       "1 usuario administrador",
@@ -30,7 +31,9 @@ const plans = [
     description: "Ahorra 20% pagando anual",
     basePrice: 39,
     discount: 20,
-    period: "mes",
+    period: "año",
+    yearlyPrice: 468, // 39 * 12 = 468
+    monthlyEquivalent: 39,
     features: [
       "Citas ilimitadas",
       "Hasta 3 usuarios",
@@ -130,10 +133,24 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
                   <div>
                     <p className="text-gray-600">{planOption.description}</p>
                     <div className="mt-2">
-                      <span className="text-3xl font-bold text-gray-900">
-                        ${planOption.basePrice}
-                      </span>
-                      <span className="text-gray-600">/{planOption.period}</span>
+                      {planOption.id === "annual" ? (
+                        <div>
+                          <span className="text-3xl font-bold text-gray-900">
+                            ${planOption.yearlyPrice}
+                          </span>
+                          <span className="text-gray-600">/{planOption.period}</span>
+                          <div className="text-sm text-gray-500 mt-1">
+                            (${planOption.monthlyEquivalent}/mes)
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="text-3xl font-bold text-gray-900">
+                            ${planOption.basePrice}
+                          </span>
+                          <span className="text-gray-600">/{planOption.period}</span>
+                        </div>
+                      )}
                       {planOption.discount > 0 && (
                         <Badge variant="secondary" className="ml-2">
                           -{planOption.discount}%
@@ -163,28 +180,39 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
         <div className="space-y-2">
           <div className="flex justify-between">
             <span>Plan base:</span>
-            <span>${selectedPlan?.basePrice || 0}/{selectedPlan?.period}</span>
+            <span>
+              {selectedPlan?.id === "annual" 
+                ? `$${selectedPlan.yearlyPrice}/${selectedPlan.period}`
+                : `$${selectedPlan?.basePrice || 0}/${selectedPlan?.period}`
+              }
+            </span>
           </div>
           {featuresPrice > 0 && (
             <div className="flex justify-between">
               <span>Funciones adicionales:</span>
-              <span>${featuresPrice}/mes</span>
+              <span>
+                ${plan.type === "annual" ? featuresPrice * 12 : featuresPrice}
+                {plan.type === "annual" ? "/año" : "/mes"}
+              </span>
             </div>
           )}
-          {plan.type === "annual" && (
+          {plan.type === "annual" && featuresPrice > 0 && (
             <div className="flex justify-between text-green-600">
-              <span>Descuento anual (20%):</span>
-              <span>-${(totalPrice * 0.2).toFixed(2)}</span>
+              <span>Descuento anual (20%) en funciones:</span>
+              <span>-${(featuresPrice * 12 * 0.2).toFixed(2)}</span>
             </div>
           )}
           <hr className="my-2" />
           <div className="flex justify-between font-semibold text-lg">
             <span>Total:</span>
-            <span>${finalPrice.toFixed(2)}/{plan.type === "annual" ? "mes" : selectedPlan?.period}</span>
+            <span>
+              ${plan.type === "annual" ? (selectedPlan?.yearlyPrice || 0) + (featuresPrice * 12 * 0.8) : finalPrice.toFixed(2)}
+              /{plan.type === "annual" ? "año" : "mes"}
+            </span>
           </div>
           {plan.type === "annual" && (
-            <p className="text-sm text-gray-600">
-              Facturado anualmente: ${(finalPrice * 12).toFixed(2)}
+            <p className="text-sm text-gray-600 text-center mt-2">
+              ¡Pagas todo el año de una vez!
             </p>
           )}
         </div>

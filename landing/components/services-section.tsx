@@ -10,9 +10,9 @@ const services = [
   },
   {
     iconId: "ubicaciones",
-    title: "Ubicaciones Precisas",
+    title: "Servicios a Domicilio",
     description:
-      "Permite a tus clientes marcar ubicaciones exactas en el mapa. Perfecto para fotógrafos, camarógrafos y servicios a domicilio.",
+      "Permite a tus clientes marcar ubicaciones exactas en el mapa. Perfecto para fotógrafos, camarógrafos y servicios móviles.",
   },
   {
     iconId: "archivos",

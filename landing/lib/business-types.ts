@@ -99,8 +99,8 @@ export const APP_FEATURES: AppFeature[] = [
   // Business features
   {
     id: "ubicaciones",
-    name: "Multi-ubicaciones",
-    description: "Gestión de múltiples sucursales",
+    name: "Servicios a Domicilio",
+    description: "Para negocios que van donde el cliente (fotógrafos, masajistas, entrenadores)",
     icon: "ubicaciones",
     category: "business",
   },

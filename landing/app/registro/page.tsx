@@ -49,9 +49,9 @@ const services = [
   },
   {
     id: "ubicaciones",
-    name: "Ubicaciones en Mapa",
+    name: "Servicios a Domicilio",
     icon: "ubicaciones",
-    description: "Permite a clientes marcar ubicaciones exactas en el mapa para servicios a domicilio",
+    description: "Para negocios que van donde el cliente (fotógrafos, masajistas, entrenadores)",
     price: 15,
   },
   {
