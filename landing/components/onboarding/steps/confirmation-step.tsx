@@ -83,6 +83,22 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
       const shortId = Math.random().toString(36).substring(2, 8) // 6 character random string
       const username = `${cleanEmail}_${shortId}`
 
+      // Preparar paleta de colores
+      let finalColorPalette;
+      if (data.customization.colorPalette === 'custom' && data.customization.customColors && data.customization.customColors.length >= 5) {
+        // Si es custom y tiene al menos 5 colores, usar esos colores
+        finalColorPalette = {
+          primary: data.customization.customColors[0],
+          secondary: data.customization.customColors[1], 
+          accent: data.customization.customColors[2],
+          neutral: data.customization.customColors[3],
+          success: data.customization.customColors[4]
+        };
+      } else {
+        // Si es una paleta predeterminada, usar esa paleta
+        finalColorPalette = colorPalettes[data.customization.colorPalette] || colorPalettes.modern;
+      }
+
       // Prepare complete registration data with ALL flow information
       const registrationData: BrandRegistrationData = {
         // User authentication info
@@ -102,8 +118,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         selectedFeatures: data.selectedFeatures,
 
         // Customization
-        colorPalette: colorPalettes[data.customization.colorPalette] || colorPalettes.modern,
-        customColors: data.customization.customColors || [],
+        colorPalette: finalColorPalette,
 
         // Images/Files (FormData will be handled separately)
         logoFile: data.customization.logoUrl,

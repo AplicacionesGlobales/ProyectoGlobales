@@ -28,7 +28,6 @@ export interface BrandRegistrationData {
     neutral: string;
     success: string;
   };
-  customColors?: string[];
 
   // Files (these will be handled as FormData)
   logoFile?: File;
@@ -123,7 +122,6 @@ export const authService = {
       // Add arrays and objects as JSON strings
       if (data.selectedFeatures) formData.append('selectedFeatures', JSON.stringify(data.selectedFeatures));
       formData.append('colorPalette', JSON.stringify(data.colorPalette));
-      if (data.customColors) formData.append('customColors', JSON.stringify(data.customColors));
       if (data.plan) formData.append('plan', JSON.stringify(data.plan));
       
       // Add optional metadata
