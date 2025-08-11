@@ -130,10 +130,6 @@ export function CustomizationStepNew({
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold mb-2">Personaliza tu app</h2>
-        <p className="text-gray-600">Elige los colores y sube tus logos para crear tu identidad de marca</p>
-      </div>
 
       <Tabs defaultValue="colors" className="w-full">
         <TabsList className="grid w-full grid-cols-2">

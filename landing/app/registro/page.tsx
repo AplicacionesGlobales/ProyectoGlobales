@@ -751,7 +751,6 @@ export default function RegistroPage() {
                 </div>
                 <div className="text-xs text-center hidden md:block">
                   <div className="font-medium">{step.title}</div>
-                  <div className="text-gray-500">{step.description}</div>
                 </div>
               </div>
             ))}

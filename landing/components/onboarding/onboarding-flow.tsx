@@ -251,54 +251,85 @@ export function OnboardingFlow() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Configurar tu App
-            </h1>
-            <div className="text-sm text-gray-500">
-              Paso {currentStep} de {steps.length}
+        <div className="mb-10">
+          {/* Título y contador de paso */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Configurar tu App
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Te ayudamos a personalizar tu aplicación paso a paso
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-semibold text-gray-700">
+                Paso {currentStep} de {steps.length}
+              </div>
+              <div className="text-sm text-gray-500">
+                {Math.round(progress)}% completado
+              </div>
             </div>
           </div>
           
-          <Progress value={progress} className="h-2 mb-4" />
-          
-          <div className="flex items-center space-x-2">
-            {steps.map((step, index) => (
-              <div
-                key={step.id}
-                className={`flex items-center space-x-2 ${
-                  index < steps.length - 1 ? "flex-1" : ""
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    currentStep > step.id
-                      ? "bg-green-500 text-white"
-                      : currentStep === step.id
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-600"
-                  }`}
-                >
-                  {currentStep > step.id ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    step.id
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900">
-                    {step.title}
+          {/* Progress Steps - Diseño simplificado */}
+          <div className="relative">
+            {/* Línea de conexión */}
+            <div className="absolute top-5 left-5 right-5 h-0.5 bg-gray-200"></div>
+            <div 
+              className="absolute top-5 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-700 ease-out"
+              style={{ 
+                left: '20px',
+                width: `calc(${((currentStep - 1) / (steps.length - 1)) * 100}% - 40px + ${(currentStep - 1) * 40 / (steps.length - 1)}px)` 
+              }}
+            ></div>
+            
+            {/* Steps */}
+            <div className="relative flex justify-between">
+              {steps.map((step, index) => {
+                const isCompleted = currentStep > step.id
+                const isCurrent = currentStep === step.id
+                
+                return (
+                  <div
+                    key={step.id}
+                    className="flex flex-col items-center"
+                  >
+                    {/* Círculo del paso */}
+                    <div className="relative mb-3">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                          isCompleted
+                            ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md"
+                            : isCurrent
+                            ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg ring-2 ring-purple-200"
+                            : "bg-white border-2 border-gray-300 text-gray-500"
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          step.id
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Título del paso */}
+                    <div className="text-center max-w-20">
+                      <div className={`text-xs font-medium leading-tight ${
+                        isCurrent 
+                          ? "text-purple-600" 
+                          : isCompleted
+                          ? "text-green-600"
+                          : "text-gray-500"
+                      }`}>
+                        {step.title}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {step.description}
-                  </div>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className="w-full bg-gray-200 h-0.5 mx-4" />
-                )}
-              </div>
-            ))}
+                )
+              })}
+            </div>
           </div>
         </div>
 
