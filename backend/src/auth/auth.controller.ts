@@ -62,6 +62,14 @@ export class AuthController {
     return this.authService.validateEmail(validateEmailDto.email, validateEmailDto.brandId);
   }
 
+  @Post('validate-username')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validar disponibilidad de username' })
+  @ApiResponse({ status: 200, description: 'Username validado', type: BaseResponseDto })
+  async validateUsername(@Body() { username }: { username: string }) {
+    return this.authService.validateUsername(username);
+  }
+
   // ==================== LOGIN ENDPOINTS ====================
 
   

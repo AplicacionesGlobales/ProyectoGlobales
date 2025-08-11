@@ -78,9 +78,11 @@ export interface ValidateUsernameRequest {
   username: string;
 }
 
-export interface ValidateUsernameResponse {
-  available: boolean;
-  message?: string;
+export interface ValidateUsernameData {
+  isAvailable: boolean;
+}
+
+export interface ValidateUsernameResponse extends BaseResponseDto<ValidateUsernameData> {
 }
 
 // Forgot Password Types

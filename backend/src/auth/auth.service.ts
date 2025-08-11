@@ -777,6 +777,27 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
     }
   }
 
+  // ==================== USERNAME VALIDATION ====================
+  
+  async validateUsername(username: string): Promise<BaseResponseDto<{ isAvailable: boolean }>> {
+    try {
+      const normalizedUsername = username.toLowerCase().trim();
+
+      // Username debe ser único globalmente
+      const existingUser = await this.prisma.user.findFirst({
+        where: { username: normalizedUsername }
+      });
+
+      return BaseResponseDto.success({ isAvailable: !existingUser });
+
+    } catch (error) {
+      return BaseResponseDto.error([{ 
+        code: ERROR_CODES.INTERNAL_ERROR, 
+        description: 'Error validating username' 
+      }]);
+    }
+  }
+
   // ==================== PASSWORD VALIDATION ====================
   
   private validatePassword(password: string): { isValid: boolean; errors: ErrorDetail[] } {

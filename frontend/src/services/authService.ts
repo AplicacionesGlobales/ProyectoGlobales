@@ -91,7 +91,7 @@ class AuthService implements IAuthService {
   async validateUsername(username: string): Promise<boolean> {
     try {
       const response = await validateUsernameEndpoint(username);
-      return response.available;
+      return response.success && response.data ? response.data.isAvailable : true;
     } catch (error) {
       console.warn('Username validation failed:', error);
       return true; // Assume available if validation fails

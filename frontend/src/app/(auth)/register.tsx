@@ -18,8 +18,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useError, ErrorUtils, InlineError } from '@/components/ui/errors';
 import { authService } from '../../services/authService';
 import { useEmailValidation } from '../../hooks/useEmailValidation';
+import { useUsernameValidation } from '../../hooks/useUsernameValidation';
 import { usePasswordValidation } from '../../hooks/usePasswordValidation';
 import { EmailValidationIndicator } from '../../components/EmailValidationIndicator';
+import { UsernameValidationIndicator } from '../../components/UsernameValidationIndicator';
 import { PasswordStrengthIndicator } from '../../components/PasswordStrengthIndicator';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -58,6 +60,14 @@ export default function RegisterScreen() {
     validateEmailRealtime, 
     clearValidation: clearEmailValidation 
   } = useEmailValidation();
+
+  // Username validation hook
+  const { 
+    isValidating: isValidatingUsername, 
+    isUsernameAvailable, 
+    validateUsernameRealtime, 
+    clearValidation: clearUsernameValidation 
+  } = useUsernameValidation();
 
   // Password validation hook
   const passwordValidation = usePasswordValidation(password);
@@ -177,6 +187,12 @@ export default function RegisterScreen() {
       // Check email availability
       if (isEmailAvailable === false) {
         showToast('Please use a different email address', 'error', 'high');
+        return;
+      }
+
+      // Check username availability
+      if (isUsernameAvailable === false) {
+        showToast('Please choose a different username', 'error', 'high');
         return;
       }
 
@@ -312,6 +328,12 @@ export default function RegisterScreen() {
                 validateEmailRealtime(text);
               }
               
+              // Real-time username validation
+              if (field === 'username') {
+                clearUsernameValidation();
+                validateUsernameRealtime(text);
+              }
+              
               // Debounced validation for real-time feedback
               debouncedValidation(field, text);
             }}
@@ -356,6 +378,15 @@ export default function RegisterScreen() {
             isValidating={isValidatingEmail}
             isAvailable={isEmailAvailable}
             email={value}
+          />
+        )}
+        
+        {/* Username validation indicator */}
+        {field === 'username' && (
+          <UsernameValidationIndicator
+            isValidating={isValidatingUsername}
+            isAvailable={isUsernameAvailable}
+            username={value}
           />
         )}
         
