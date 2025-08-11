@@ -156,17 +156,7 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    showModal(
-      'Reset Password',
-      'Enter your email and we\'ll send you instructions to reset your password.',
-      'info',
-      'medium',
-      () => console.log('Send recovery email'),
-      'Send',
-      undefined,
-      undefined,
-      true
-    );
+    router.push('/(auth)/forgot-password/ForgotPassword');
   };
 
   const fillDemoCredentials = (type: 'admin' | 'client') => {

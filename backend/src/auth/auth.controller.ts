@@ -5,13 +5,11 @@ import {
   RegisterClientDto, 
   AuthResponse,
   ForgotPasswordDto,
-  ValidateResetTokenDto,
   ResetPasswordDto,
   ForgotPasswordResponseDto,
-  ValidateTokenResponseDto,
+  ValidateCodeResponseDto,
+  ValidateResetCodeDto,
   ResetPasswordResponseDto,
-  RegisterBrandDto,
-  BrandRegistrationResponse
 } from './dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
@@ -114,7 +112,7 @@ export class AuthController {
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Solicitar reset de contraseña' })
+  @ApiOperation({ summary: 'Solicitar código de reset de contraseña' })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({ 
     status: 200, 
@@ -127,24 +125,24 @@ export class AuthController {
     return this.authService.requestPasswordReset(forgotPasswordDto);
   }
 
-  @Post('validate-reset-token')
+  @Post('validate-reset-code')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Validar token de reset de contraseña' })
-  @ApiBody({ type: ValidateResetTokenDto })
+  @ApiOperation({ summary: 'Validar código de reset de contraseña' })
+  @ApiBody({ type: ValidateResetCodeDto })
   @ApiResponse({ 
     status: 200, 
-    description: 'Token validado',
-    type: ValidateTokenResponseDto
+    description: 'Código validado',
+    type: ValidateCodeResponseDto
   })
-  async validateResetToken(
-    @Body(ValidationPipe) validateTokenDto: ValidateResetTokenDto
-  ): Promise<BaseResponseDto<ValidateTokenResponseDto>> {
-    return this.authService.validateResetToken(validateTokenDto);
+  async validateResetCode(
+    @Body(ValidationPipe) validateCodeDto: ValidateResetCodeDto
+  ): Promise<BaseResponseDto<ValidateCodeResponseDto>> {
+    return this.authService.validateResetCode(validateCodeDto);
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Resetear contraseña con token válido' })
+  @ApiOperation({ summary: 'Resetear contraseña con código válido' })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({ 
     status: 200, 

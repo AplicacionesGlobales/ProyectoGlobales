@@ -14,6 +14,7 @@ export interface EmailOptions {
 export class EmailService {
   private transporter: nodemailer.Transporter;
   private templatePath = path.join(process.cwd(), 'src', 'common', 'services', 'email', 'templates');
+  private readonly APP_NAME: string = process.env.APP_NAME || 'WhiteLabel';
 
   constructor() {
     this.transporter = nodemailer.createTransport({
@@ -30,7 +31,7 @@ export class EmailService {
   async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
       const info = await this.transporter.sendMail({
-        from: `"Tu App" <${process.env.SMTP_USER}>`,
+        from: ` ${this.APP_NAME} <${process.env.SMTP_USER}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,
