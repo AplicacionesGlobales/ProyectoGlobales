@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { authService, BrandRegistrationData } from "@/lib/api"
-import { getBusinessType, getAppFeature } from "@/lib/business-types"
+import { getBusinessType, getAppFeature, APP_FEATURES } from "@/lib/business-types"
 import { Icon } from "@/lib/icons"
 
 interface ConfirmationStepProps {
@@ -218,14 +218,53 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <CreditCard className="w-5 h-5 text-orange-500" />
             <h3 className="font-semibold text-gray-900">Plan Seleccionado</h3>
           </div>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="font-medium capitalize">{data.plan.type === 'monthly' ? 'Mensual' : 'Anual'}</p>
-              <p className="text-sm text-gray-500">{data.selectedFeatures.length} funciones incluidas</p>
+          
+          {/* Plan type and basic info */}
+          <div className="mb-4">
+            <p className="font-medium capitalize text-lg">{data.plan.type === 'monthly' ? 'Mensual' : 'Anual'}</p>
+            <p className="text-sm text-gray-500">{data.selectedFeatures.length} funciones seleccionadas</p>
+          </div>
+
+          {/* Price breakdown */}
+          <div className="space-y-2 mb-4 p-4 bg-gray-50 rounded-lg">
+            <div className="flex justify-between text-sm">
+              <span>Plan base:</span>
+              <span>${data.plan.type === 'annual' ? '39 × 12' : '49'} = ${data.plan.type === 'annual' ? '468' : '49'}{data.plan.type === 'annual' ? '/año' : '/mes'}</span>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold">${data.plan.price}</p>
-              <p className="text-sm text-gray-500">{data.plan.type === 'monthly' ? '/mes' : '/año'}</p>
+            
+            {data.selectedFeatures.length > 0 && (
+              <>
+                <div className="text-sm font-medium text-gray-700 pt-2 border-t">Funciones adicionales:</div>
+                {data.selectedFeatures.map(featureId => {
+                  const feature = APP_FEATURES.find(f => f.id === featureId);
+                  if (!feature) return null;
+                  const monthlyPrice = feature.price;
+                  const yearlyPrice = data.plan.type === 'annual' ? monthlyPrice * 12 * 0.8 : monthlyPrice;
+                  
+                  return (
+                    <div key={featureId} className="flex justify-between text-sm">
+                      <span>• {feature.name}</span>
+                      <span>
+                        {data.plan.type === 'annual' 
+                          ? `$${monthlyPrice} × 12 × 0.8 = $${yearlyPrice.toFixed(2)}/año`
+                          : `$${monthlyPrice}/mes`
+                        }
+                      </span>
+                    </div>
+                  );
+                })}
+                {data.plan.type === 'annual' && (
+                  <div className="flex justify-between text-sm text-green-600 pt-1 border-t">
+                    <span>Descuento anual (20%):</span>
+                    <span>¡Incluido!</span>
+                  </div>
+                )}
+              </>
+            )}
+            
+            <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+              <span>Total:</span>
+              <span>${data.plan.price.toFixed(2)}{data.plan.type === 'monthly' ? '/mes' : '/año'}</span>
             </div>
           </div>
         </Card>
