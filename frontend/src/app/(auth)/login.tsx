@@ -1,10 +1,8 @@
 import { healthCheck } from '@/api';
-import { IonIcon } from '@/components/IonIcon';
 import { useApp } from '@/contexts/AppContext';
-import { useTheme } from '@/contexts/ThemeContext';
 import { router } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
-import React = require('react');
+import { StatusBar } from 'expo-status-bar';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ActivityIndicator, 
   Alert, 
@@ -19,6 +17,7 @@ import {
   Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -33,13 +32,11 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(false);
   
   const { login } = useApp();
-  const { colors } = useTheme();
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Entrance animations
@@ -61,20 +58,6 @@ export default function LoginScreen() {
         tension: 40,
         useNativeDriver: true,
       }),
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(rotateAnim, {
-            toValue: 1,
-            duration: 3000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(rotateAnim, {
-            toValue: 0,
-            duration: 3000,
-            useNativeDriver: true,
-          }),
-        ])
-      ),
     ]).start();
   }, []);
 
@@ -84,12 +67,12 @@ export default function LoginScreen() {
     switch(field) {
       case 'email':
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!value) error = 'El email es requerido';
-        else if (!emailRegex.test(value)) error = 'Formato de email inválido';
+        if (!value) error = 'Email is required';
+        else if (!emailRegex.test(value)) error = 'Invalid email format';
         break;
       case 'password':
-        if (!value) error = 'La contraseña es requerida';
-        else if (value.length < 6) error = 'Mínimo 6 caracteres';
+        if (!value) error = 'Password is required';
+        else if (value.length < 6) error = 'Minimum 6 characters';
         break;
     }
     
@@ -103,7 +86,7 @@ export default function LoginScreen() {
     const isPasswordValid = validateField('password', password);
     
     if (!isEmailValid || !isPasswordValid) {
-      Alert.alert('Error de Validación', 'Por favor corrige los errores');
+      Alert.alert('Validation Error', 'Please fix all errors');
       return;
     }
 
@@ -126,10 +109,10 @@ export default function LoginScreen() {
           }
         }, 100);
       } else {
-        Alert.alert('Error', 'Credenciales incorrectas');
+        Alert.alert('Error', 'Invalid credentials');
       }
     } catch (error) {
-      Alert.alert('Error', 'Error al iniciar sesión');
+      Alert.alert('Error', 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -141,11 +124,11 @@ export default function LoginScreen() {
 
   const handleForgotPassword = () => {
     Alert.alert(
-      '🔐 Recuperar Contraseña', 
-      'Ingresa tu email y te enviaremos instrucciones para restablecer tu contraseña.',
+      '🔐 Reset Password', 
+      'Enter your email and we\'ll send you instructions to reset your password.',
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Enviar', onPress: () => console.log('Send recovery email') }
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Send', onPress: () => console.log('Send recovery email') }
       ]
     );
   };
@@ -158,16 +141,14 @@ export default function LoginScreen() {
       setEmail('client@test.com');
       setPassword('client123');
     }
-    // Auto-focus password field after filling
-    setFocusedField('password');
   };
 
   const testHealthAPI = async () => {
     try {
       await healthCheck();
-      Alert.alert('✅ API Test', 'La API está funcionando correctamente.');
+      Alert.alert('✅ API Test', 'API is working correctly.');
     } catch (error) {
-      Alert.alert('❌ API Test', 'Error al conectar con la API.');
+      Alert.alert('❌ API Test', 'Error connecting to API.');
       console.error('API Error:', error);
     }
   };
@@ -186,7 +167,7 @@ export default function LoginScreen() {
 
     return (
       <Animated.View style={{ 
-        marginBottom: 20,
+        marginBottom: 16,
         transform: [{
           scale: isFocused ? 1.02 : 1
         }]
@@ -195,42 +176,43 @@ export default function LoginScreen() {
           <Text style={{
             fontSize: 14,
             fontWeight: '600',
-            color: colors.text,
+            color: '#374151',
             marginBottom: 6,
             marginLeft: 2,
           }}>
             {options.label}
+            {options.required && <Text style={{ color: '#ef4444' }}> *</Text>}
           </Text>
         )}
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
           borderWidth: 2,
-          borderColor: hasError ? '#ef4444' : isFocused ? colors.primary : isValid ? '#10b981' : '#e5e7eb',
+          borderColor: hasError ? '#ef4444' : isFocused ? '#3b82f6' : isValid ? '#10b981' : '#e5e7eb',
           borderRadius: 12,
           paddingHorizontal: 14,
-          backgroundColor: isFocused ? colors.surface : '#ffffff',
-          shadowColor: isFocused ? colors.primary : '#000',
+          backgroundColor: isFocused ? '#f9fafb' : '#ffffff',
+          shadowColor: isFocused ? '#3b82f6' : '#000',
           shadowOffset: { width: 0, height: isFocused ? 4 : 1 },
-          shadowOpacity: isFocused ? 0.15 : 0.05,
+          shadowOpacity: isFocused ? 0.1 : 0.05,
           shadowRadius: isFocused ? 8 : 2,
           elevation: isFocused ? 4 : 1,
         }}>
           <Ionicons 
             name={icon as any} 
-            size={22} 
-            color={hasError ? '#ef4444' : isFocused ? colors.primary : colors.textSecondary} 
+            size={20} 
+            color={hasError ? '#ef4444' : isFocused ? '#3b82f6' : '#9ca3af'} 
             style={{ marginRight: 10 }}
           />
           <TextInput
             style={{
               flex: 1,
-              paddingVertical: Platform.OS === 'ios' ? 16 : 12,
+              paddingVertical: Platform.OS === 'ios' ? 14 : 10,
               fontSize: 16,
-              color: colors.text,
+              color: '#1f2937',
             }}
             placeholder={placeholder}
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor="#9ca3af"
             value={value}
             onChangeText={(text) => {
               setValue(text);
@@ -252,13 +234,13 @@ export default function LoginScreen() {
             <TouchableOpacity onPress={options.onToggle} style={{ padding: 4 }}>
               <Ionicons 
                 name={options.isVisible ? 'eye-off' : 'eye'} 
-                size={22} 
-                color={colors.textSecondary} 
+                size={20} 
+                color="#9ca3af" 
               />
             </TouchableOpacity>
           )}
           {isValid && (
-            <Ionicons name="checkmark-circle" size={22} color="#10b981" />
+            <Ionicons name="checkmark-circle" size={20} color="#10b981" />
           )}
         </View>
         {hasError && (
@@ -271,36 +253,21 @@ export default function LoginScreen() {
     );
   };
 
-  const spin = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg']
-  });
-
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-      {/* Gradient Background Alternative */}
-      <View
+      <StatusBar style="dark" />
+      
+      {/* Gradient Background */}
+      <LinearGradient
+        colors={['#3b82f6', '#60a5fa', '#93c5fd']}
         style={{
           position: 'absolute',
           left: 0,
           right: 0,
           top: 0,
-          height: 400,
-          backgroundColor: colors.primary,
-          borderBottomLeftRadius: 40,
-          borderBottomRightRadius: 40,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: 0,
-          height: 400,
-          backgroundColor: 'rgba(96, 165, 250, 0.3)',
-          borderBottomLeftRadius: 40,
-          borderBottomRightRadius: 40,
+          height: 350,
+          borderBottomLeftRadius: 30,
+          borderBottomRightRadius: 30,
         }}
       />
 
@@ -320,34 +287,24 @@ export default function LoginScreen() {
               { scale: scaleAnim }
             ],
             paddingHorizontal: 24,
-            paddingTop: 80,
+            paddingTop: 60,
             paddingBottom: 40,
           }}>
-            {/* Header with Animated Logo */}
-            <View style={{ alignItems: 'center', marginBottom: 40 }}>
-              <Animated.View style={{
-                width: 100,
-                height: 100,
-                borderRadius: 50,
+            {/* Header */}
+            <View style={{ alignItems: 'center', marginBottom: 30 }}>
+              <View style={{
+                width: 90,
+                height: 90,
+                borderRadius: 45,
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 24,
-                transform: [{ rotate: spin }]
+                marginBottom: 20,
               }}>
-                <View style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                  <Ionicons name="calendar" size={45} color={colors.primary} />
-                </View>
-              </Animated.View>
+                <Ionicons name="calendar" size={45} color="#ffffff" />
+              </View>
               <Text style={{
-                fontSize: 36,
+                fontSize: 34,
                 fontWeight: 'bold',
                 color: '#ffffff',
                 marginBottom: 8,
@@ -360,7 +317,7 @@ export default function LoginScreen() {
                 color: 'rgba(255, 255, 255, 0.9)',
                 textAlign: 'center',
               }}>
-                Gestiona tu negocio de forma profesional
+                Manage your business professionally
               </Text>
             </View>
 
@@ -378,22 +335,23 @@ export default function LoginScreen() {
               <Text style={{
                 fontSize: 24,
                 fontWeight: 'bold',
-                color: colors.text,
+                color: '#1f2937',
                 marginBottom: 24,
                 textAlign: 'center',
               }}>
-                Bienvenido de vuelta
+                Welcome Back!
               </Text>
 
               {/* Email Input */}
               {renderInput(
                 email,
                 setEmail,
-                'correo@ejemplo.com',
+                'john@example.com',
                 'email',
                 'mail-outline',
                 { 
-                  label: 'Correo Electrónico',
+                  label: 'Email Address',
+                  required: true,
                   keyboardType: 'email-address'
                 }
               )}
@@ -406,7 +364,8 @@ export default function LoginScreen() {
                 'password',
                 'lock-closed-outline',
                 { 
-                  label: 'Contraseña',
+                  label: 'Password',
+                  required: true,
                   secureTextEntry: !showPassword,
                   showToggle: true,
                   isVisible: showPassword,
@@ -429,32 +388,32 @@ export default function LoginScreen() {
                   }}
                 >
                   <View style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 4,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 6,
                     borderWidth: 2,
-                    borderColor: rememberMe ? colors.primary : '#d1d5db',
-                    backgroundColor: rememberMe ? colors.primary : 'transparent',
+                    borderColor: rememberMe ? '#3b82f6' : '#d1d5db',
+                    backgroundColor: rememberMe ? '#3b82f6' : 'transparent',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginRight: 8,
                   }}>
                     {rememberMe && (
-                      <Ionicons name="checkmark" size={14} color="#ffffff" />
+                      <Ionicons name="checkmark" size={16} color="#ffffff" />
                     )}
                   </View>
-                  <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-                    Recordarme
+                  <Text style={{ color: '#6b7280', fontSize: 14 }}>
+                    Remember me
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={handleForgotPassword}>
                   <Text style={{ 
-                    color: colors.primary, 
+                    color: '#3b82f6', 
                     fontSize: 14, 
                     fontWeight: '600' 
                   }}>
-                    ¿Olvidaste tu contraseña?
+                    Forgot password?
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -464,13 +423,13 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 disabled={loading}
                 style={{
-                  backgroundColor: colors.primary,
+                  backgroundColor: '#3b82f6',
                   borderRadius: 12,
                   paddingVertical: 16,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  shadowColor: colors.primary,
+                  shadowColor: '#3b82f6',
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.3,
                   shadowRadius: 8,
@@ -482,13 +441,13 @@ export default function LoginScreen() {
                   <ActivityIndicator color="#ffffff" />
                 ) : (
                   <>
-                    <Ionicons name="log-in-outline" size={22} color="#ffffff" style={{ marginRight: 8 }} />
+                    <Ionicons name="log-in-outline" size={20} color="#ffffff" style={{ marginRight: 8 }} />
                     <Text style={{
                       color: '#ffffff',
                       fontSize: 17,
                       fontWeight: '600',
                     }}>
-                      Iniciar Sesión
+                      Sign In
                     </Text>
                   </>
                 )}
@@ -499,7 +458,7 @@ export default function LoginScreen() {
                 onPress={handleRegister}
                 style={{
                   borderWidth: 2,
-                  borderColor: colors.primary,
+                  borderColor: '#3b82f6',
                   borderRadius: 12,
                   paddingVertical: 16,
                   flexDirection: 'row',
@@ -507,13 +466,13 @@ export default function LoginScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="person-add-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+                <Ionicons name="person-add-outline" size={20} color="#3b82f6" style={{ marginRight: 8 }} />
                 <Text style={{
-                  color: colors.primary,
+                  color: '#3b82f6',
                   fontSize: 17,
                   fontWeight: '600',
                 }}>
-                  Crear Cuenta Nueva
+                  Create New Account
                 </Text>
               </TouchableOpacity>
             </View>
@@ -526,8 +485,8 @@ export default function LoginScreen() {
                 marginBottom: 20,
               }}>
                 <View style={{ flex: 1, height: 1, backgroundColor: '#e5e7eb' }} />
-                <Text style={{ paddingHorizontal: 12, color: colors.textSecondary, fontSize: 14 }}>
-                  O continúa con
+                <Text style={{ paddingHorizontal: 12, color: '#6b7280', fontSize: 14 }}>
+                  Or continue with
                 </Text>
                 <View style={{ flex: 1, height: 1, backgroundColor: '#e5e7eb' }} />
               </View>
@@ -549,31 +508,9 @@ export default function LoginScreen() {
                   shadowRadius: 2,
                   elevation: 1,
                 }}>
-                  <Ionicons name="logo-google" size={20} color="#EA4335" />
-                  <Text style={{ marginLeft: 8, color: colors.text, fontWeight: '500' }}>
+                  <Ionicons name="logo-google" size={20} color="#3b82f6" />
+                  <Text style={{ marginLeft: 8, color: '#4b5563', fontWeight: '500' }}>
                     Google
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#ffffff',
-                  borderWidth: 1,
-                  borderColor: '#e5e7eb',
-                  borderRadius: 12,
-                  paddingVertical: 14,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 2,
-                  elevation: 1,
-                }}>
-                  <Ionicons name="logo-apple" size={20} color="#000000" />
-                  <Text style={{ marginLeft: 8, color: colors.text, fontWeight: '500' }}>
-                    Apple
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -594,13 +531,13 @@ export default function LoginScreen() {
                 justifyContent: 'center',
                 marginBottom: 16,
               }}>
-                <Ionicons name="rocket" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+                <Ionicons name="rocket" size={20} color="#3b82f6" style={{ marginRight: 8 }} />
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '600',
-                  color: colors.text,
+                  color: '#1f2937',
                 }}>
-                  Cuentas de Demostración
+                  Demo Accounts
                 </Text>
               </View>
 
@@ -620,7 +557,7 @@ export default function LoginScreen() {
               >
                 <Ionicons name="briefcase" size={18} color="#3b82f6" style={{ marginRight: 8 }} />
                 <Text style={{ color: '#3b82f6', fontWeight: '600' }}>
-                  Administrador
+                  Administrator
                 </Text>
               </TouchableOpacity>
 
@@ -640,7 +577,7 @@ export default function LoginScreen() {
               >
                 <Ionicons name="person" size={18} color="#10b981" style={{ marginRight: 8 }} />
                 <Text style={{ color: '#10b981', fontWeight: '600' }}>
-                  Cliente
+                  Client
                 </Text>
               </TouchableOpacity>
 
@@ -665,13 +602,13 @@ export default function LoginScreen() {
 
               <Text style={{
                 fontSize: 11,
-                color: colors.textSecondary,
+                color: '#6b7280',
                 textAlign: 'center',
                 marginTop: 12,
                 lineHeight: 18,
               }}>
                 Admin: admin@test.com / admin123{'\n'}
-                Cliente: client@test.com / client123
+                Client: client@test.com / client123
               </Text>
             </View>
           </Animated.View>
