@@ -39,6 +39,12 @@ export class AuthService {
     const errors: ErrorDetail[] = [];
 
     try {
+      // Validar contraseña
+      const passwordValidation = this.validatePassword(registerDto.password);
+      if (!passwordValidation.isValid) {
+        errors.push(...passwordValidation.errors);
+      }
+
       // Verificar username único
       const existingUsername = await this.prisma.user.findUnique({
         where: { username: registerDto.username }
@@ -508,6 +514,12 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
     const errors: ErrorDetail[] = [];
 
     try {
+      // Validar contraseña
+      const passwordValidation = this.validatePassword(createBrandDto.password);
+      if (!passwordValidation.isValid) {
+        errors.push(...passwordValidation.errors);
+      }
+
       // Verificar que el email no exista
       const existingUserByEmail = await this.prisma.user.findFirst({
         where: { email: createBrandDto.email }
@@ -518,7 +530,6 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
           code: ERROR_CODES.EMAIL_EXISTS, 
           description: ERROR_MESSAGES.EMAIL_EXISTS 
         });
-        return BaseResponseDto.error(errors);
       }
 
       // Verificar que el username no exista
@@ -531,6 +542,9 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
           code: ERROR_CODES.USERNAME_EXISTS, 
           description: ERROR_MESSAGES.USERNAME_EXISTS 
         });
+      }
+
+      if (errors.length > 0) {
         return BaseResponseDto.error(errors);
       }
 
@@ -729,6 +743,74 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
       });
       return BaseResponseDto.error(errors);
     }
+  }
+
+  // ==================== EMAIL VALIDATION ====================
+  
+  async validateEmail(email: string, brandId?: number): Promise<BaseResponseDto<{ isAvailable: boolean }>> {
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Para ROOT/ADMIN: email debe ser único globalmente
+      if (!brandId) {
+        const existingUser = await this.prisma.user.findFirst({
+          where: { email: normalizedEmail }
+        });
+        return BaseResponseDto.success({ isAvailable: !existingUser });
+      }
+
+      // Para CLIENT: verificar en la marca específica
+      const existingUserBrand = await this.prisma.userBrand.findFirst({
+        where: { 
+          email: normalizedEmail,
+          brandId: brandId
+        }
+      });
+
+      return BaseResponseDto.success({ isAvailable: !existingUserBrand });
+
+    } catch (error) {
+      return BaseResponseDto.error([{ 
+        code: ERROR_CODES.INTERNAL_ERROR, 
+        description: 'Error validating email' 
+      }]);
+    }
+  }
+
+  // ==================== PASSWORD VALIDATION ====================
+  
+  private validatePassword(password: string): { isValid: boolean; errors: ErrorDetail[] } {
+    const errors: ErrorDetail[] = [];
+    
+    if (password.length < 6) {
+      errors.push({ 
+        code: ERROR_CODES.WEAK_PASSWORD, 
+        description: 'La contraseña debe tener al menos 6 caracteres' 
+      });
+    }
+
+    if (!/[a-z]/.test(password)) {
+      errors.push({ 
+        code: ERROR_CODES.WEAK_PASSWORD, 
+        description: 'La contraseña debe contener al menos una letra minúscula' 
+      });
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      errors.push({ 
+        code: ERROR_CODES.WEAK_PASSWORD, 
+        description: 'La contraseña debe contener al menos una letra mayúscula' 
+      });
+    }
+
+    if (!/\d/.test(password)) {
+      errors.push({ 
+        code: ERROR_CODES.WEAK_PASSWORD, 
+        description: 'La contraseña debe contener al menos un número' 
+      });
+    }
+
+    return { isValid: errors.length === 0, errors };
   }
 
 }

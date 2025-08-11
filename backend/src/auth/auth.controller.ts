@@ -35,10 +35,7 @@ export class AuthController {
 
   @Post('register/brand')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Registrar nueva marca con usuario administrador',
-    description: 'Crea una nueva marca y el usuario root/administrador asociado con información completa del flujo de onboarding'
-  })
+  @ApiOperation({summary: 'Registrar nueva marca con usuario administrador'})
   @ApiBody({ type: CreateBrandDto })
   @ApiResponse({
     status: 201,
@@ -55,6 +52,15 @@ export class AuthController {
     return this.authService.registerBrand(createBrandDto);
   }
 
+  // ==================== EMAIL VALIDATION ENDPOINTS ====================
+  
+  @Post('validate-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validar disponibilidad de email' })
+  @ApiResponse({ status: 200, description: 'Email validado' })
+  async validateEmail(@Body() { email, brandId }: { email: string; brandId?: number }) {
+    return this.authService.validateEmail(email, brandId);
+  }
 
   // ==================== LOGIN ENDPOINTS ====================
 

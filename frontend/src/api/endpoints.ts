@@ -72,11 +72,11 @@ export const loginUser = async (data: LoginRequest): Promise<LoginResponse> => {
   );
 };
 
-export const validateEmail = async (email: string): Promise<ValidateEmailResponse> => {
+export const validateEmail = async (email: string, brandId?: number): Promise<ValidateEmailResponse> => {
   return apiRequest<ValidateEmailResponse>(
     API_ENDPOINTS.AUTH.VALIDATE_EMAIL,
     'POST',
-    { email }
+    { email, brandId }
   );
 };
 

@@ -3,7 +3,7 @@ export const API_ENDPOINTS = {
   HEALTH: '/health',
   // Auth endpoints
   AUTH: {
-    REGISTER: '/auth/register',
+    REGISTER: '/auth/register/client',
     LOGIN: '/auth/login',
     VALIDATE_EMAIL: '/auth/validate-email',
     VALIDATE_USERNAME: '/auth/validate-username',

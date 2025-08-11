@@ -28,6 +28,7 @@ export interface RegisterRequest {
   email: string;
   username: string;
   password: string;
+  branchId: number; // ID de la marca para clientes
 }
 
 export interface RegisterResponse {
@@ -63,11 +64,14 @@ export interface LoginResponse {
 
 export interface ValidateEmailRequest {
   email: string;
+  brandId?: number;
 }
 
-export interface ValidateEmailResponse {
-  available: boolean;
-  message?: string;
+export interface ValidateEmailData {
+  isAvailable: boolean;
+}
+
+export interface ValidateEmailResponse extends BaseResponseDto<ValidateEmailData> {
 }
 
 export interface ValidateUsernameRequest {

@@ -16,6 +16,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useError, ErrorUtils, InlineError } from '@/components/ui/errors';
+import { authService } from '../../services/authService';
+import { useEmailValidation } from '../../hooks/useEmailValidation';
+import { usePasswordValidation } from '../../hooks/usePasswordValidation';
+import { EmailValidationIndicator } from '../../components/EmailValidationIndicator';
+import { PasswordStrengthIndicator } from '../../components/PasswordStrengthIndicator';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -32,7 +37,6 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(0);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string | null>>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -46,6 +50,17 @@ export default function RegisterScreen() {
   const confirmPasswordInputRef = useRef<TextInput>(null);
 
   const { showToast, showModal, showSuccess, showValidationErrors } = useError();
+
+  // Email validation hook
+  const { 
+    isValidating: isValidatingEmail, 
+    isEmailAvailable, 
+    validateEmailRealtime, 
+    clearValidation: clearEmailValidation 
+  } = useEmailValidation();
+
+  // Password validation hook
+  const passwordValidation = usePasswordValidation(password);
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -77,24 +92,13 @@ export default function RegisterScreen() {
   }, []);
 
   useEffect(() => {
-    // Calculate password strength
-    let strength = 0;
-    if (password.length >= 8) strength += 20;
-    if (password.length >= 12) strength += 10;
-    if (/[a-z]/.test(password)) strength += 20;
-    if (/[A-Z]/.test(password)) strength += 20;
-    if (/[0-9]/.test(password)) strength += 20;
-    if (/[@$!%*?&#]/.test(password)) strength += 10;
-    
-    setPasswordStrength(strength);
-    
-    // Animate progress bar
+    // Animate progress bar based on password validation
     Animated.timing(progressAnim, {
-      toValue: strength,
+      toValue: passwordValidation.validation.strength,
       duration: 300,
       useNativeDriver: false,
     }).start();
-  }, [password]);
+  }, [passwordValidation.validation.strength]);
 
   // Debounced validation for individual fields
   const debouncedValidation = useRef(
@@ -164,38 +168,25 @@ export default function RegisterScreen() {
     setLoading(true);
     
     try {
-      // Simulate API call with potential server errors
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          // Simulate different scenarios
-          const scenario = Math.random();
-          
-          if (scenario < 0.1) {
-            // Simulate username already exists
-            reject({
-              response: {
-                status: 409,
-                data: {
-                  field: 'username',
-                  message: 'This username is already taken'
-                }
-              }
-            });
-          } else if (scenario < 0.2) {
-            // Simulate email already exists
-            reject({
-              response: {
-                status: 409,
-                data: {
-                  field: 'email',
-                  message: 'An account with this email already exists'
-                }
-              }
-            });
-          } else {
-            resolve(true);
-          }
-        }, 2000);
+      // Check password validation
+      if (!passwordValidation.validation.isValid) {
+        showToast('Please ensure your password meets all requirements', 'error', 'high');
+        return;
+      }
+
+      // Check email availability
+      if (isEmailAvailable === false) {
+        showToast('Please use a different email address', 'error', 'high');
+        return;
+      }
+
+      // Register with backend
+      const response = await authService.register({
+        firstName,
+        lastName,
+        email,
+        username,
+        password,
       });
 
       showSuccess(`Welcome ${firstName}! Your account has been created successfully.`, 4000);
@@ -204,18 +195,24 @@ export default function RegisterScreen() {
       }, 1000);
       
     } catch (error: any) {
-      // Handle server errors
-      if (error?.response?.status === 409 && error?.response?.data?.field) {
-        // Handle field-specific server errors
-        const serverError = error.response.data;
-        setValidationErrors(prev => ({
-          ...prev,
-          [serverError.field]: serverError.message
-        }));
-        showToast(serverError.message, 'error', 'high');
-        
-        // Focus the problematic field
-        focusFirstErrorField({ [serverError.field]: serverError.message });
+      console.error('Registration error:', error);
+      
+      // Handle backend validation errors
+      if (error?.message) {
+        if (error.message.includes('email')) {
+          setValidationErrors(prev => ({ ...prev, email: error.message }));
+          showToast(error.message, 'error', 'high');
+          emailInputRef.current?.focus();
+        } else if (error.message.includes('username')) {
+          setValidationErrors(prev => ({ ...prev, username: error.message }));
+          showToast(error.message, 'error', 'high');
+          usernameInputRef.current?.focus();
+        } else if (error.message.includes('password')) {
+          showToast(error.message, 'error', 'high');
+          passwordInputRef.current?.focus();
+        } else {
+          showToast(error.message, 'error', 'high');
+        }
       } else {
         showToast('Registration failed. Please try again.', 'error', 'high');
       }
@@ -227,26 +224,6 @@ export default function RegisterScreen() {
   const navigateToLogin = () => {
     router.navigate('./login');
   };
-
-  const getPasswordStrengthColor = () => {
-    if (passwordStrength < 40) return '#ef4444';
-    if (passwordStrength < 70) return '#f59e0b';
-    return '#10b981';
-  };
-
-  const getPasswordStrengthText = () => {
-    if (passwordStrength < 40) return 'Weak';
-    if (passwordStrength < 70) return 'Medium';
-    return 'Strong';
-  };
-
-  const passwordRequirements = [
-    { met: password.length >= 8, text: 'At least 8 characters' },
-    { met: /[a-z]/.test(password), text: 'One lowercase letter' },
-    { met: /[A-Z]/.test(password), text: 'One uppercase letter' },
-    { met: /[0-9]/.test(password), text: 'One number' },
-    { met: /[@$!%*?&#]/.test(password), text: 'One special character' },
-  ];
 
   const getFieldRef = (field: string) => {
     switch (field) {
@@ -328,6 +305,13 @@ export default function RegisterScreen() {
               if (validationErrors[field]) {
                 setValidationErrors((prev: any) => ({ ...prev, [field]: null }));
               }
+              
+              // Real-time email validation
+              if (field === 'email') {
+                clearEmailValidation();
+                validateEmailRealtime(text);
+              }
+              
               // Debounced validation for real-time feedback
               debouncedValidation(field, text);
             }}
@@ -365,6 +349,25 @@ export default function RegisterScreen() {
           showIcon={true}
           dismissible={false}
         />
+        
+        {/* Email validation indicator */}
+        {field === 'email' && (
+          <EmailValidationIndicator
+            isValidating={isValidatingEmail}
+            isAvailable={isEmailAvailable}
+            email={value}
+          />
+        )}
+        
+        {/* Password strength indicator */}
+        {field === 'password' && value && (
+          <PasswordStrengthIndicator
+            validation={passwordValidation.validation}
+            password={value}
+            strengthColor={passwordValidation.getStrengthColor()}
+            strengthText={passwordValidation.getStrengthText()}
+          />
+        )}
       </Animated.View>
     );
   };
@@ -542,69 +545,6 @@ export default function RegisterScreen() {
                   isVisible: showPassword,
                   onToggle: () => setShowPassword(!showPassword)
                 }
-              )}
-
-              {/* Password Strength */}
-              {password && (
-                <View style={{ marginTop: -8, marginBottom: 16 }}>
-                  <View style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginBottom: 8,
-                  }}>
-                    <Text style={{
-                      fontSize: 12,
-                      fontWeight: '600',
-                      color: getPasswordStrengthColor(),
-                    }}>
-                      Strength: {getPasswordStrengthText()}
-                    </Text>
-                    <Text style={{
-                      fontSize: 12,
-                      color: '#6b7280',
-                    }}>
-                      {passwordStrength}%
-                    </Text>
-                  </View>
-                  
-                  <View style={{
-                    height: 6,
-                    backgroundColor: '#e5e7eb',
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                  }}>
-                    <Animated.View style={{
-                      height: '100%',
-                      width: progressAnim.interpolate({
-                        inputRange: [0, 100],
-                        outputRange: ['0%', '100%'],
-                      }),
-                      backgroundColor: getPasswordStrengthColor(),
-                    }} />
-                  </View>
-
-                  <View style={{ marginTop: 12, gap: 4 }}>
-                    {passwordRequirements.map((req, index) => (
-                      <View key={index} style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                      }}>
-                        <Ionicons 
-                          name={req.met ? 'checkmark-circle' : 'close-circle-outline'} 
-                          size={16} 
-                          color={req.met ? '#10b981' : '#9ca3af'} 
-                        />
-                        <Text style={{
-                          fontSize: 12,
-                          color: req.met ? '#10b981' : '#9ca3af',
-                          marginLeft: 6,
-                        }}>
-                          {req.text}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
               )}
 
               {/* Confirm Password */}
