@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, ArrowRight, Lightbulb, Filter } from "lucide-react"
-import { APP_FEATURES, getRecommendedFeatures, getBusinessType, AppFeature } from "@/lib/business-types"
+import { ArrowLeft, ArrowRight, Lightbulb, Filter, Loader2 } from "lucide-react"
+import { useLandingData } from "@/hooks/use-landing-data"
+import { Feature } from "@/lib/api/types"
 
 interface FeaturesStepProps {
   features: string[]
@@ -20,10 +21,41 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(features || [])
   const [showRecommendedOnly, setShowRecommendedOnly] = useState(false)
 
+  const { 
+    features: allFeatures, 
+    loading, 
+    error, 
+    getRecommendedFeatures,
+    getFeaturesByCategory,
+    getBusinessTypeByKey 
+  } = useLandingData();
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-lg text-gray-600">Cargando funcionalidades...</span>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 mb-4">Error: {error}</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
+
   // Get recommended features based on business type
   const recommendedFeatures = getRecommendedFeatures(businessType)
-  const recommendedIds = recommendedFeatures.map(f => f.id)
-  const businessTypeInfo = getBusinessType(businessType)
+  const recommendedIds = recommendedFeatures.map(f => f.key) // Changed from f.id to f.key
+  const businessTypeInfo = getBusinessTypeByKey(businessType)
 
   // Pre-select recommended features when business type changes
   useEffect(() => {
@@ -44,19 +76,19 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
   }
 
   // Group features by category
-  const coreFeatures = APP_FEATURES.filter(f => f.category === 'core')
-  const businessFeatures = APP_FEATURES.filter(f => f.category === 'business')  
-  const advancedFeatures = APP_FEATURES.filter(f => f.category === 'advanced')
+  const coreFeatures = getFeaturesByCategory('ESSENTIAL')
+  const businessFeatures = getFeaturesByCategory('BUSINESS')
+  const advancedFeatures = getFeaturesByCategory('ADVANCED')
 
   const displayFeatures = showRecommendedOnly 
-    ? APP_FEATURES.filter(f => recommendedIds.includes(f.id))
-    : APP_FEATURES
+    ? allFeatures.filter(f => recommendedIds.includes(f.key))
+    : allFeatures
 
   const isValid = selectedFeatures.length > 0
 
-  const renderFeatureCard = (feature: AppFeature) => {
-    const isSelected = selectedFeatures.includes(feature.id)
-    const isRecommended = recommendedIds.includes(feature.id)
+  const renderFeatureCard = (feature: Feature) => {
+    const isSelected = selectedFeatures.includes(feature.key)
+    const isRecommended = recommendedIds.includes(feature.key)
     
     return (
       <Card 
@@ -66,37 +98,40 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
             ? 'ring-2 ring-blue-500 bg-blue-50' 
             : 'hover:shadow-md'
         } ${isRecommended ? 'border-green-200 bg-green-50' : ''}`}
-        onClick={() => handleFeatureToggle(feature.id)}
+        onClick={() => handleFeatureToggle(feature.key)}
       >
         <div className="flex items-start gap-3">
           <Checkbox 
             checked={isSelected}
-            onChange={() => handleFeatureToggle(feature.id)}
+            onChange={() => handleFeatureToggle(feature.key)}
           />
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">{feature.icon}</span>
-              <h3 className="font-semibold">{feature.name}</h3>
+              <span className="text-2xl">📱</span>
+              <h3 className="font-semibold">{feature.title}</h3>
               {isRecommended && (
                 <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
                   <Lightbulb className="w-3 h-3 mr-1" />
                   Recomendado
                 </Badge>
               )}
-              {feature.popular && (
+              {feature.isPopular && (
                 <Badge variant="secondary" className="bg-orange-100 text-orange-700 text-xs">
                   Popular
                 </Badge>
               )}
             </div>
             <p className="text-sm text-gray-600">{feature.description}</p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm font-medium text-purple-600">${feature.price}/mes</span>
+            </div>
           </div>
         </div>
       </Card>
     )
   }
 
-  const renderCategorySection = (title: string, features: AppFeature[]) => {
+  const renderCategorySection = (title: string, features: Feature[]) => {
     if (showRecommendedOnly) return null
     
     return (
@@ -120,7 +155,7 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm text-green-700">
               <Lightbulb className="w-4 h-4 inline mr-1" />
-              Para <strong>{businessTypeInfo.name}</strong> recomendamos estas funciones que ya están seleccionadas
+              Para <strong>{businessTypeInfo.title}</strong> recomendamos estas funciones que ya están seleccionadas
             </p>
           </div>
         )}

@@ -9,11 +9,10 @@ import {
   UploadedFiles
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
-import { BrandRegistrationResponseDto } from './dto/brand-registration-response.dto';
 
 @ApiTags('Registro de Marca')
 @Controller('auth')
@@ -43,17 +42,16 @@ export class BrandRegistrationController {
   }))
   @ApiResponse({ 
     status: 201, 
-    description: 'Marca creada exitosamente',
-    type: () => BaseResponseDto<BrandRegistrationResponseDto>
+    description: 'Marca creada exitosamente'
   })
   @ApiResponse({ 
     status: 400, 
     description: 'Datos inválidos o email ya registrado'
   })
   async registerBrand(
-    @Body(ValidationPipe) body: any, // Será parseado manualmente para FormData
+    @Body(ValidationPipe) body: any,
     @UploadedFiles() files?: any[]
-  ): Promise<BaseResponseDto<BrandRegistrationResponseDto>> {
+  ): Promise<BaseResponseDto> {
     // Parsear datos del cuerpo (para FormData los JSON vienen como strings)
     let createBrandDto: CreateBrandDto;
     

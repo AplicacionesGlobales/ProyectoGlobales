@@ -1,9 +1,11 @@
-// This file now serves as legacy types and fallback data
-// The main data should come from the backend API via landingService
+// This file now serves as legacy types and minimal fallback data
+// The main data should ALWAYS come from the backend API via landingService
+// Use useLandingData hook instead of these fallback constants
 
 import { BusinessType, Feature, Plan } from './api/types';
 
-// Legacy interfaces for backward compatibility
+// Legacy interfaces for backward compatibility ONLY
+// These should not be used in new code - use API types instead
 export interface BusinessTypeLocal {
   id: string;
   name: string;
@@ -24,49 +26,22 @@ export interface AppFeatureLocal {
 // Re-export API types for convenience
 export type { BusinessType, Feature, Plan };
 
-// Fallback data (should be replaced by API calls)
-export const BUSINESS_TYPES: BusinessTypeLocal[] = [
+// DEPRECATED: Minimal fallback data for emergency use only
+// ⚠️  DO NOT USE THESE IN NEW CODE - Use useLandingData hook instead
+// These are kept only for extreme fallback scenarios when API is completely unavailable
+
+const EMERGENCY_BUSINESS_TYPES: BusinessTypeLocal[] = [
   { 
     id: "fotografo", 
     name: "Fotógrafo", 
     icon: "fotografo", 
-    services: ["citas", "ubicaciones", "archivos", "pagos", "galerias"] 
-  },
-  { 
-    id: "camarografo", 
-    name: "Camarógrafo", 
-    icon: "camarografo", 
-    services: ["citas", "ubicaciones", "archivos", "pagos", "galerias"] 
-  },
-  { 
-    id: "medico", 
-    name: "Médico/Dentista", 
-    icon: "medico", 
-    services: ["citas", "archivos", "pagos", "reportes", "recordatorios"] 
+    services: ["citas", "pagos", "clientes"] 
   },
   { 
     id: "estilista", 
     name: "Estilista/Barbero", 
     icon: "estilista", 
-    services: ["citas", "pagos", "galerias", "recordatorios"] 
-  },
-  { 
-    id: "consultor", 
-    name: "Consultor", 
-    icon: "consultor", 
-    services: ["citas", "archivos", "pagos", "reportes"] 
-  },
-  { 
-    id: "masajista", 
-    name: "Masajista/Spa", 
-    icon: "masajista", 
-    services: ["citas", "ubicaciones", "pagos", "recordatorios"] 
-  },
-  { 
-    id: "entrenador", 
-    name: "Entrenador Personal", 
-    icon: "entrenador", 
-    services: ["citas", "ubicaciones", "archivos", "pagos", "seguimiento"] 
+    services: ["citas", "pagos", "clientes"] 
   },
   { 
     id: "otro", 
@@ -76,8 +51,7 @@ export const BUSINESS_TYPES: BusinessTypeLocal[] = [
   },
 ];
 
-// Fallback features (should be replaced by API calls)
-export const APP_FEATURES: AppFeatureLocal[] = [
+const EMERGENCY_APP_FEATURES: AppFeatureLocal[] = [
   {
     id: "citas",
     name: "Sistema de Citas",
@@ -85,7 +59,7 @@ export const APP_FEATURES: AppFeatureLocal[] = [
     icon: "citas",
     category: "core",
     popular: true,
-    price: 15,
+    price: 20,
   },
   {
     id: "pagos",
@@ -94,7 +68,7 @@ export const APP_FEATURES: AppFeatureLocal[] = [
     icon: "pagos",
     category: "core",
     popular: true,
-    price: 10,
+    price: 25,
   },
   {
     id: "clientes",
@@ -105,66 +79,33 @@ export const APP_FEATURES: AppFeatureLocal[] = [
     popular: true,
     price: 8,
   },
-  {
-    id: "ubicaciones",
-    name: "Servicios a Domicilio",
-    description: "Para negocios que van donde el cliente",
-    icon: "ubicaciones",
-    category: "business",
-    price: 12,
-  },
-  {
-    id: "archivos",
-    name: "Gestión de Archivos",
-    description: "Almacenamiento y compartir archivos",
-    icon: "archivos",
-    category: "business",
-    price: 7,
-  },
-  {
-    id: "galerias",
-    name: "Galerías de Trabajo",
-    description: "Mostrar tu portafolio visual",
-    icon: "galerias",
-    category: "business",
-    price: 9,
-  },
-  {
-    id: "recordatorios",
-    name: "Recordatorios Email",
-    description: "Notificaciones automáticas por email",
-    icon: "recordatorios",
-    category: "business",
-    price: 6,
-  },
-  {
-    id: "reportes",
-    name: "Reportes Avanzados",
-    description: "Analytics y métricas de negocio",
-    icon: "reportes",
-    category: "advanced",
-    price: 18,
-  },
-  {
-    id: "seguimiento",
-    name: "Seguimiento de Progreso",
-    description: "Track de objetivos y resultados",
-    icon: "seguimiento",
-    category: "advanced",
-    price: 14,
-  },
 ];
 
-// Helper functions that work with both legacy and new data
+// ⚠️ DEPRECATED HELPER FUNCTIONS - Use useLandingData hook instead!
+// These functions are only for legacy compatibility and emergency fallback
+// For new code, use: const { businessTypes, features } = useLandingData();
+
+/**
+ * @deprecated Use useLandingData().getBusinessTypeByKey() instead
+ */
 export const getBusinessType = (id: string): BusinessTypeLocal | undefined => {
-  return BUSINESS_TYPES.find(type => type.id === id);
+  console.warn('⚠️ DEPRECATED: getBusinessType() - Use useLandingData().getBusinessTypeByKey() instead');
+  return EMERGENCY_BUSINESS_TYPES.find(type => type.id === id);
 };
 
+/**
+ * @deprecated Use useLandingData().features.find() instead
+ */
 export const getAppFeature = (id: string): AppFeatureLocal | undefined => {
-  return APP_FEATURES.find(feature => feature.id === id);
+  console.warn('⚠️ DEPRECATED: getAppFeature() - Use useLandingData().features.find() instead');
+  return EMERGENCY_APP_FEATURES.find(feature => feature.id === id);
 };
 
+/**
+ * @deprecated Use useLandingData().getRecommendedFeatures() instead
+ */
 export const getRecommendedFeatures = (businessTypeId: string): AppFeatureLocal[] => {
+  console.warn('⚠️ DEPRECATED: getRecommendedFeatures() - Use useLandingData().getRecommendedFeatures() instead');
   const businessType = getBusinessType(businessTypeId);
   if (!businessType) return [];
   
@@ -173,7 +114,14 @@ export const getRecommendedFeatures = (businessTypeId: string): AppFeatureLocal[
     .filter((feature): feature is AppFeatureLocal => feature !== undefined);
 };
 
-// Conversion helpers for API data
+// Modern conversion helpers for API data (RECOMMENDED)
+// These are useful for converting API responses to legacy formats if needed
+
+/**
+ * Convert API BusinessType to legacy BusinessTypeLocal format
+ * @param apiBusinessType - BusinessType from API
+ * @returns BusinessTypeLocal format
+ */
 export const convertBusinessTypeFromAPI = (apiBusinessType: BusinessType): BusinessTypeLocal => ({
   id: apiBusinessType.key,
   name: apiBusinessType.title,
@@ -181,6 +129,11 @@ export const convertBusinessTypeFromAPI = (apiBusinessType: BusinessType): Busin
   services: apiBusinessType.recommendedFeatures?.map(f => f.key) || [],
 });
 
+/**
+ * Convert API Feature to legacy AppFeatureLocal format
+ * @param apiFeature - Feature from API
+ * @returns AppFeatureLocal format
+ */
 export const convertFeatureFromAPI = (apiFeature: Feature): AppFeatureLocal => ({
   id: apiFeature.key,
   name: apiFeature.title,

@@ -3,46 +3,6 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { LandingDataService } from './landing-data.service';
 import { BaseResponseDto } from '../common/dto';
 
-// DTOs para las respuestas
-export interface BusinessTypeDto {
-  id: number;
-  key: string;
-  title: string;
-  subtitle?: string;
-  description: string;
-  icon: string;
-  order: number;
-  recommendedFeatures?: FeatureDto[];
-}
-
-export interface FeatureDto {
-  id: number;
-  key: string;
-  title: string;
-  subtitle?: string;
-  description: string;
-  price: number;
-  category: 'ESSENTIAL' | 'BUSINESS' | 'ADVANCED';
-  isRecommended: boolean;
-  isPopular: boolean;
-  order: number;
-  businessTypes: string[];
-}
-
-export interface PlanDto {
-  id: number;
-  type: 'web' | 'app' | 'complete';
-  name: string;
-  description?: string;
-  basePrice: number;
-}
-
-export interface LandingConfigDto {
-  businessTypes: BusinessTypeDto[];
-  features: FeatureDto[];
-  plans: PlanDto[];
-}
-
 @ApiTags('Landing Data')
 @Controller('landing-data')
 export class LandingDataController {
@@ -52,13 +12,13 @@ export class LandingDataController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ 
     summary: 'Get complete landing configuration',
-    description: 'Retrieve all business types, features and plans in a single optimized request'
+    description: 'Retrieve all business types, features and plans'
   })
   @ApiResponse({ 
     status: 200, 
-    description: 'Landing configuration retrieved successfully',
+    description: 'Landing configuration retrieved successfully'
   })
-  async getLandingConfig(): Promise<BaseResponseDto<LandingConfigDto>> {
+  async getLandingConfig(): Promise<BaseResponseDto> {
     return this.landingDataService.getLandingConfig();
   }
 
@@ -70,9 +30,9 @@ export class LandingDataController {
   })
   @ApiResponse({ 
     status: 200, 
-    description: 'Business types retrieved successfully',
+    description: 'Business types retrieved successfully'
   })
-  async getBusinessTypes(): Promise<BaseResponseDto<BusinessTypeDto[]>> {
+  async getBusinessTypes(): Promise<BaseResponseDto> {
     return this.landingDataService.getBusinessTypes();
   }
 
@@ -84,9 +44,9 @@ export class LandingDataController {
   })
   @ApiResponse({ 
     status: 200, 
-    description: 'Features retrieved successfully',
+    description: 'Features retrieved successfully'
   })
-  async getFeatures(): Promise<BaseResponseDto<FeatureDto[]>> {
+  async getFeatures(): Promise<BaseResponseDto> {
     return this.landingDataService.getFeatures();
   }
 
@@ -99,11 +59,11 @@ export class LandingDataController {
   @ApiParam({ name: 'businessType', example: 'fotografo' })
   @ApiResponse({ 
     status: 200, 
-    description: 'Recommended features retrieved successfully',
+    description: 'Recommended features retrieved successfully'
   })
   async getFeaturesForBusinessType(
     @Param('businessType') businessType: string
-  ): Promise<BaseResponseDto<FeatureDto[]>> {
+  ): Promise<BaseResponseDto> {
     return this.landingDataService.getFeaturesForBusinessType(businessType);
   }
 
@@ -115,9 +75,9 @@ export class LandingDataController {
   })
   @ApiResponse({ 
     status: 200, 
-    description: 'Plans retrieved successfully',
+    description: 'Plans retrieved successfully'
   })
-  async getPlans(): Promise<BaseResponseDto<PlanDto[]>> {
+  async getPlans(): Promise<BaseResponseDto> {
     return this.landingDataService.getPlans();
   }
 
@@ -130,11 +90,11 @@ export class LandingDataController {
   @ApiParam({ name: 'businessType', example: 'fotografo' })
   @ApiResponse({ 
     status: 200, 
-    description: 'Business type configuration retrieved successfully',
+    description: 'Business type configuration retrieved successfully'
   })
   async getBusinessTypeConfig(
     @Param('businessType') businessType: string
-  ): Promise<BaseResponseDto<BusinessTypeDto>> {
+  ): Promise<BaseResponseDto> {
     return this.landingDataService.getBusinessTypeWithFeatures(businessType);
   }
 }

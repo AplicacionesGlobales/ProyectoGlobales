@@ -9,7 +9,7 @@ import { PlanService } from '../common/services/plan.service';
 import { PaymentService } from '../common/services/payment.service';
 import { ColorPaletteService } from './services/color-palette.service';
 import * as bcrypt from 'bcryptjs';
-import { ValidateResetCodeDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, LoginAdminDto, LoginClientDto, AdminAuthResponse, ValidateCodeResponseDto } from './dto';
+import { ValidateResetCodeDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto } from './dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BrandRegistrationResponseDto } from './dto/brand-registration-response.dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';

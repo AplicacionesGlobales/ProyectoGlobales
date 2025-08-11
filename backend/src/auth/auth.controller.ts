@@ -14,7 +14,6 @@ import {
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
 import { AUTH_SUCCESS_RESPONSE } from '../common/templates';
-import { AdminAuthResponse, LoginAdminDto, LoginClientDto } from './dto/login-admin.dto';
 
 @ApiTags('Autenticación')
 @Controller('auth')

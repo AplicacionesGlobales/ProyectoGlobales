@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
-import { BusinessTypeDto, FeatureDto, PlanDto, LandingConfigDto } from './landing-data.controller';
+import { BusinessTypeDto, FeatureDto, PlanDto, LandingConfigDto } from './types';
 
 @Injectable()
 export class LandingDataService {
