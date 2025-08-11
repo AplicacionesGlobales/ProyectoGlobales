@@ -208,6 +208,22 @@ model BrandPlan {
   @@map("brand_plans")
 }
 
+// Modelo para tipos de negocio
+model BusinessType {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique // ID único como "photographer", "masseur", etc.
+  title       String   // Título principal (ej: "Fotógrafo")
+  subtitle    String?  // Subtítulo opcional
+  description String   // Descripción detallada
+  icon        String   // Nombre del ícono de Lucide React
+  isActive    Boolean  @default(true)
+  order       Int      @default(0) // Para ordenamiento
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("business_types")
+}
+
 // Relación many-to-many entre Brand y Feature
 model BrandFeature {
   id        Int      @id @default(autoincrement())

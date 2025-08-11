@@ -1,24 +1,31 @@
-// Business types with recommended services
-export interface BusinessType {
+// This file now serves as legacy types and fallback data
+// The main data should come from the backend API via landingService
+
+import { BusinessType, Feature, Plan } from './api/types';
+
+// Legacy interfaces for backward compatibility
+export interface BusinessTypeLocal {
   id: string;
   name: string;
-  icon: string; // Changed from emoji to icon ID
-  services: string[]; // IDs of recommended services
+  icon: string;
+  services: string[];
 }
 
-// Available services/features for apps
-export interface AppFeature {
+export interface AppFeatureLocal {
   id: string;
   name: string;
   description: string;
-  icon: string; // Changed from emoji to icon ID
+  icon: string;
   category: 'core' | 'business' | 'advanced';
   popular?: boolean;
-  price: number; // Monthly price in USD
+  price: number;
 }
 
-// Business types configuration
-export const BUSINESS_TYPES: BusinessType[] = [
+// Re-export API types for convenience
+export type { BusinessType, Feature, Plan };
+
+// Fallback data (should be replaced by API calls)
+export const BUSINESS_TYPES: BusinessTypeLocal[] = [
   { 
     id: "fotografo", 
     name: "Fotógrafo", 
@@ -65,13 +72,12 @@ export const BUSINESS_TYPES: BusinessType[] = [
     id: "otro", 
     name: "Otro Servicio", 
     icon: "otro", 
-    services: ["citas", "pagos"] // Minimal set for custom business
+    services: ["citas", "pagos"]
   },
 ];
 
-// Available app features
-export const APP_FEATURES: AppFeature[] = [
-  // Core features
+// Fallback features (should be replaced by API calls)
+export const APP_FEATURES: AppFeatureLocal[] = [
   {
     id: "citas",
     name: "Sistema de Citas",
@@ -99,12 +105,10 @@ export const APP_FEATURES: AppFeature[] = [
     popular: true,
     price: 8,
   },
-  
-  // Business features
   {
     id: "ubicaciones",
     name: "Servicios a Domicilio",
-    description: "Para negocios que van donde el cliente (fotógrafos, masajistas, entrenadores)",
+    description: "Para negocios que van donde el cliente",
     icon: "ubicaciones",
     category: "business",
     price: 12,
@@ -133,8 +137,6 @@ export const APP_FEATURES: AppFeature[] = [
     category: "business",
     price: 6,
   },
-  
-  // Advanced features
   {
     id: "reportes",
     name: "Reportes Avanzados",
@@ -153,20 +155,38 @@ export const APP_FEATURES: AppFeature[] = [
   },
 ];
 
-// Helper functions
-export const getBusinessType = (id: string): BusinessType | undefined => {
+// Helper functions that work with both legacy and new data
+export const getBusinessType = (id: string): BusinessTypeLocal | undefined => {
   return BUSINESS_TYPES.find(type => type.id === id);
 };
 
-export const getAppFeature = (id: string): AppFeature | undefined => {
+export const getAppFeature = (id: string): AppFeatureLocal | undefined => {
   return APP_FEATURES.find(feature => feature.id === id);
 };
 
-export const getRecommendedFeatures = (businessTypeId: string): AppFeature[] => {
+export const getRecommendedFeatures = (businessTypeId: string): AppFeatureLocal[] => {
   const businessType = getBusinessType(businessTypeId);
   if (!businessType) return [];
   
   return businessType.services
     .map(serviceId => getAppFeature(serviceId))
-    .filter((feature): feature is AppFeature => feature !== undefined);
+    .filter((feature): feature is AppFeatureLocal => feature !== undefined);
 };
+
+// Conversion helpers for API data
+export const convertBusinessTypeFromAPI = (apiBusinessType: BusinessType): BusinessTypeLocal => ({
+  id: apiBusinessType.key,
+  name: apiBusinessType.title,
+  icon: apiBusinessType.icon,
+  services: apiBusinessType.recommendedFeatures?.map(f => f.key) || [],
+});
+
+export const convertFeatureFromAPI = (apiFeature: Feature): AppFeatureLocal => ({
+  id: apiFeature.key,
+  name: apiFeature.title,
+  description: apiFeature.description,
+  icon: apiFeature.key, // Use key as icon identifier
+  category: apiFeature.category.toLowerCase() as 'core' | 'business' | 'advanced',
+  popular: apiFeature.isPopular,
+  price: apiFeature.price,
+});

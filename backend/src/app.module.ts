@@ -4,7 +4,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PaymentModule } from './payment/payment.module';
-import { FeatureModule } from './feature/feature.module';
+import { LandingDataModule } from './landing-data/landing-data.module';
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { FeatureModule } from './feature/feature.module';
     HealthModule, 
     AuthModule, 
     PaymentModule,
-    FeatureModule
+    LandingDataModule
   ],
   controllers: [],
   providers: [],
