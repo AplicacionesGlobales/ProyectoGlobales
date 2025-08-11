@@ -5,9 +5,16 @@ import {
   RegisterResponse,
   LoginRequest,
   LoginResponse,
+  ValidateEmailRequest,
   ValidateEmailResponse,
+  ValidateUsernameRequest,
   ValidateUsernameResponse,
-  ForgotPasswordResponse
+  ForgotPasswordResponse,
+  ValidateResetCodeRequest,
+  ValidateResetCodeResponse,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
+  BaseResponseDto
 } from './types';
 
 // Función helper para hacer requests
@@ -84,9 +91,53 @@ export const validateUsername = async (username: string): Promise<ValidateUserna
 };
 
 export const forgotPassword = async (email: string): Promise<ForgotPasswordResponse> => {
-  return apiRequest<ForgotPasswordResponse>(
+  const apiResponse = await apiRequest<BaseResponseDto<ForgotPasswordResponse>>(
     API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
     'POST',
     { email }
   );
+  
+  // Extraer la data del wrapper BaseResponseDto
+  if (apiResponse.successful && apiResponse.data) {
+    return apiResponse.data;
+  } else {
+    // Si hay error, lanzar excepción con el mensaje
+    const errorMessage = apiResponse.error?.[0]?.description || 'Error al enviar código de recuperación';
+    throw new Error(errorMessage);
+  }
+};
+
+// Nuevos endpoints para reset password
+export const validateResetCode = async (data: ValidateResetCodeRequest): Promise<ValidateResetCodeResponse> => {
+  const apiResponse = await apiRequest<BaseResponseDto<ValidateResetCodeResponse>>(
+    API_ENDPOINTS.AUTH.VALIDATE_RESET_CODE,
+    'POST',
+    data
+  );
+  
+  // Extraer la data del wrapper BaseResponseDto
+  if (apiResponse.successful && apiResponse.data) {
+    return apiResponse.data;
+  } else {
+    // Si hay error, lanzar excepción con el mensaje
+    const errorMessage = apiResponse.error?.[0]?.description || 'Error al validar código';
+    throw new Error(errorMessage);
+  }
+};
+
+export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPasswordResponse> => {
+  const apiResponse = await apiRequest<BaseResponseDto<ResetPasswordResponse>>(
+    API_ENDPOINTS.AUTH.RESET_PASSWORD,
+    'POST',
+    data
+  );
+  
+  // Extraer la data del wrapper BaseResponseDto
+  if (apiResponse.successful && apiResponse.data) {
+    return apiResponse.data;
+  } else {
+    // Si hay error, lanzar excepción con el mensaje
+    const errorMessage = apiResponse.error?.[0]?.description || 'Error al restablecer contraseña';
+    throw new Error(errorMessage);
+  }
 };

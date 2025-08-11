@@ -3,14 +3,20 @@ import {
   loginUser, 
   validateEmail as validateEmailEndpoint, 
   validateUsername as validateUsernameEndpoint, 
-  forgotPassword as forgotPasswordEndpoint 
-} from '../api';
+  forgotPassword as forgotPasswordEndpoint,
+  validateResetCode as validateResetCodeEndpoint,
+  resetPassword as resetPasswordEndpoint
+} from '../api/endpoints';
 import { 
   RegisterRequest, 
   RegisterResponse, 
   LoginRequest, 
   LoginResponse, 
-  ForgotPasswordResponse 
+  ForgotPasswordResponse,
+  ValidateResetCodeRequest,
+  ValidateResetCodeResponse,
+  ResetPasswordRequest,
+  ResetPasswordResponse
 } from '../api/types';
 import { RegisterFormData, LoginFormData } from '../types/auth.types';
 
@@ -20,6 +26,8 @@ export interface IAuthService {
   validateEmail(email: string): Promise<boolean>;
   validateUsername(username: string): Promise<boolean>;
   forgotPassword(email: string): Promise<ForgotPasswordResponse>;
+  validateResetCode(data: ValidateResetCodeRequest): Promise<ValidateResetCodeResponse>;
+  resetPassword(data: ResetPasswordRequest): Promise<ResetPasswordResponse>;
 }
 
 class AuthService implements IAuthService {
@@ -81,6 +89,22 @@ class AuthService implements IAuthService {
   async forgotPassword(email: string): Promise<ForgotPasswordResponse> {
     try {
       return await forgotPasswordEndpoint(email);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async validateResetCode(data: ValidateResetCodeRequest): Promise<ValidateResetCodeResponse> {
+    try {
+      return await validateResetCodeEndpoint(data);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async resetPassword(data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+    try {
+      return await resetPasswordEndpoint(data);
     } catch (error) {
       throw error;
     }

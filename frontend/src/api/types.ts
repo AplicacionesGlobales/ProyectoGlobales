@@ -1,4 +1,16 @@
-// Types para Request y Response de cada endpoint
+// Base Response Types (para match con backend)
+export interface ErrorDetail {
+  code: number;
+  description?: string;
+  field?: string;
+  message?: string;
+}
+
+export interface BaseResponseDto<T = any> {
+  successful: boolean;
+  data?: T;
+  error?: ErrorDetail[];
+}
 
 // Health Endpoint
 export interface HealthRequest {
@@ -67,12 +79,44 @@ export interface ValidateUsernameResponse {
   message?: string;
 }
 
-export interface ForgotPasswordRequest {
-  email: string;
-}
-
+// Forgot Password Types
 export interface ForgotPasswordResponse {
   success: boolean;
   message: string;
 }
 
+// Wrapped response from backend
+export interface ForgotPasswordApiResponse extends BaseResponseDto<ForgotPasswordResponse> {}
+
+// Validate Reset Code Types
+export interface ValidateResetCodeRequest {
+  code: string;
+  email: string;
+}
+
+export interface ValidateResetCodeResponse {
+  valid: boolean;
+  message: string;
+  userId?: number;
+  email?: string;
+}
+
+// Wrapped response from backend
+export interface ValidateResetCodeApiResponse extends BaseResponseDto<ValidateResetCodeResponse> {}
+
+// Reset Password Types
+export interface ResetPasswordRequest {
+  code: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+  errors?: { [key: string]: string[] };
+}
+
+// Wrapped response from backend
+export interface ResetPasswordApiResponse extends BaseResponseDto<ResetPasswordResponse> {}

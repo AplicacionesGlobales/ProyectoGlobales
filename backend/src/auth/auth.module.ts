@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config'; // ✅ Importar ConfigModule
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -12,11 +13,12 @@ import { ColorPaletteService } from './services/color-palette.service';
 
 @Module({
   imports: [
+    ConfigModule, 
     PrismaModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'your-secret-key',
       signOptions: { 
-        expiresIn: '7d' // Token válido por 7 días
+        expiresIn: '7d'
       },
     }),
   ],

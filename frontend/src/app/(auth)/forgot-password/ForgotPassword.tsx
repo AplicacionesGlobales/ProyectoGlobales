@@ -1,3 +1,4 @@
+// screens/auth/forgot-password.tsx (Actualizado)
 import React from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, Text } from 'react-native';
 import { styled } from 'nativewind';
@@ -12,15 +13,12 @@ const StyledKeyboardAvoidingView = styled(KeyboardAvoidingView);
 
 export default function ForgotPasswordScreen() {
   const handleBackToLogin = () => {
-    // Usar router de Expo Router para navegar
     router.back();
-    // O también puedes usar: router.push('/(auth)/login');
   };
 
   const handleSuccess = () => {
-    console.log('Password reset email sent successfully');
-    // Opcional: navegar a una pantalla de confirmación o volver al login
-    // router.push('/(auth)/login');
+    console.log('Password reset completed successfully');
+    router.push('/(auth)/login');
   };
 
   return (
@@ -104,7 +102,7 @@ export default function ForgotPasswordScreen() {
                 color: 'rgba(255, 255, 255, 0.9)',
                 textAlign: 'center',
               }}>
-                Te ayudamos a recuperar tu acceso
+                Proceso seguro de 3 pasos
               </Text>
             </View>
 

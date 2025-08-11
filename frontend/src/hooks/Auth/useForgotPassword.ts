@@ -1,8 +1,8 @@
-// hooks/useForgotPassword.ts
 import { useState } from 'react';
-import { authService } from '../services/authService';
-import { ForgotPasswordResponse } from '../api/types';
+import { authService } from '../../services/authService';
+import {  ForgotPasswordResponse } from '../../api/types';
 
+// Hook para solicitar código de reset
 export const useForgotPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export const useForgotPassword = () => {
       setIsSuccess(true);
       return response;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al enviar el correo de recuperación';
+      const errorMessage = err instanceof Error ? err.message : 'Error al enviar el código de recuperación';
       setError(errorMessage);
       return null;
     } finally {

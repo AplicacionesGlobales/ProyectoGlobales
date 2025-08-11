@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../common/services/email/email.service';
@@ -18,7 +19,12 @@ export class AuthService {
     private jwtService: JwtService,
     private emailService: EmailService,
     private cryptoService: CryptoService,
+    private configService: ConfigService
   ) {}
+
+  private get appName(): string {
+    return this.configService.get<string>('APP_NAME') || 'WhiteLabel';
+  }
 
   async registerClient(registerDto: RegisterClientDto): Promise<BaseResponseDto<AuthResponse>> {
     const errors: ErrorDetail[] = [];
@@ -204,7 +210,7 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
       to: email.toLowerCase(),
       subject: 'Código para restablecer tu contraseña',
       html: this.emailService.loadTemplate('password-reset', {
-        appName: process.env.APP_NAME || 'WhiteLabel',
+        appName: this.appName,
         userName: user.firstName || '',
         resetCode,
         supportEmail: process.env.SUPPORT_EMAIL || 'soporte@tuapp.com',
@@ -439,9 +445,9 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
       // Enviar email de notificación
       await this.emailService.sendEmail({
         to: email.toLowerCase(),
-        subject: `${process.env.APP_NAME || 'WhiteLabel'} - Contraseña Actualizada`,
+        subject: `${this.appName} - Contraseña Actualizada`,
         html: this.emailService.loadTemplate('password-updated', {
-          appName: process.env.APP_NAME || 'WhiteLabel',
+          appName: this.appName,
           userName: user.firstName || 'Usuario',
           updateTime,
           emergencyCode,

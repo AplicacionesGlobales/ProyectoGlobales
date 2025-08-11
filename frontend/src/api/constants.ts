@@ -8,6 +8,7 @@ export const API_ENDPOINTS = {
     VALIDATE_EMAIL: '/auth/validate-email',
     VALIDATE_USERNAME: '/auth/validate-username',
     FORGOT_PASSWORD: '/auth/forgot-password',
+    VALIDATE_RESET_CODE: '/auth/validate-reset-code', // Nuevo endpoint
     RESET_PASSWORD: '/auth/reset-password',
   },
 } as const;
