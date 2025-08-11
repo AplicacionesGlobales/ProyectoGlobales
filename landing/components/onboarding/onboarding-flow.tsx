@@ -10,7 +10,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react"
 import { PersonalInfoStep } from "./steps/personal-info-step"
 import { BusinessInfoStep } from "./steps/business-info-step"
 import { FeaturesStep } from "./steps/features-step"
-import { CustomizationStep } from "./steps/customization-step"
+import { CustomizationStepNew } from "../customization-step-new"
 import { PricingStep } from "./steps/pricing-step"
 import { ConfirmationStep } from "./steps/confirmation-step"
 import { PaymentStep } from "./steps/payment-step"
@@ -28,7 +28,10 @@ export interface OnboardingData {
   selectedFeatures: string[]
   customization: {
     colorPalette: string
-    logo?: File
+    customColors: string[]
+    logoUrl?: File
+    isotopoUrl?: File
+    imagotipoUrl?: File
   }
   plan: {
     type: "monthly" | "annual"
@@ -61,7 +64,8 @@ export function OnboardingFlow() {
     businessType: "",
     selectedFeatures: [],
     customization: {
-      colorPalette: ""
+      colorPalette: "",
+      customColors: ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"]
     },
     plan: {
       type: "monthly",
@@ -72,6 +76,35 @@ export function OnboardingFlow() {
 
   const updateData = (stepData: Partial<OnboardingData>) => {
     setData(prev => ({ ...prev, ...stepData }))
+  }
+
+  const handleCustomColorChange = (index: number, color: string) => {
+    const newColors = [...data.customization.customColors]
+    newColors[index] = color
+    updateData({
+      customization: {
+        ...data.customization,
+        customColors: newColors
+      }
+    })
+  }
+
+  const handleFileChange = (field: string, file: File | null) => {
+    updateData({
+      customization: {
+        ...data.customization,
+        [field]: file
+      }
+    })
+  }
+
+  const handleCustomizationChange = (field: string, value: any) => {
+    updateData({
+      customization: {
+        ...data.customization,
+        [field]: value
+      }
+    })
   }
 
   const nextStep = () => {
@@ -122,12 +155,40 @@ export function OnboardingFlow() {
         )
       case 4:
         return (
-          <CustomizationStep
-            customization={data.customization}
-            onChange={(customization) => updateData({ customization })}
-            onNext={nextStep}
-            onPrev={prevStep}
-          />
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900">Personaliza tu App</h2>
+              <p className="mt-2 text-gray-600">
+                Elige los colores y sube tus logos para darle identidad a tu aplicación
+              </p>
+            </div>
+            <CustomizationStepNew
+              formData={{
+                paletaColores: data.customization.colorPalette,
+                coloresPersonalizados: data.customization.customColors,
+                logotipo: data.customization.logoUrl || null,
+                isotipo: data.customization.isotopoUrl || null,
+                imagotipo: data.customization.imagotipoUrl || null,
+              }}
+              onInputChange={handleCustomizationChange}
+              onCustomColorChange={handleCustomColorChange}
+              onFileChange={handleFileChange}
+            />
+            <div className="flex justify-between">
+              <Button onClick={prevStep} variant="outline" className="flex items-center gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                Anterior
+              </Button>
+              <Button 
+                onClick={nextStep} 
+                disabled={!data.customization.colorPalette} 
+                className="flex items-center gap-2"
+              >
+                Continuar
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         )
       case 5:
         return (
