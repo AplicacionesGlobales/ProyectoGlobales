@@ -18,6 +18,11 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "seed": "ts-node prisma/seeds/index.ts",
+    "seed:business-types": "ts-node prisma/seeds/01-business-types.ts",
+    "seed:features": "ts-node prisma/seeds/02-features.ts",
+    "seed:plans": "ts-node prisma/seeds/03-plans.ts",
+    "seed:users": "ts-node prisma/seeds/04-users.ts",
     "prisma:seed": "ts-node src/prisma/seed.ts"
   },
   "dependencies": {
