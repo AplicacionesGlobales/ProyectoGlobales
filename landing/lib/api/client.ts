@@ -22,6 +22,12 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
+    console.log('🌐 ApiClient making request:', {
+      url,
+      method: options.method || 'GET',
+      baseUrl: this.baseUrl,
+      endpoint
+    });
     
     try {
       const response = await fetch(url, {
@@ -33,14 +39,31 @@ class ApiClient {
         },
       });
 
+      console.log('📡 Fetch response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('📦 Response data parsed:', {
+        success: data.success,
+        hasData: !!data.data,
+        dataType: typeof data.data
+      });
+      
       return data;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('🚨 API request failed:', {
+        url,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
       throw error;
     }
   }
@@ -55,6 +78,31 @@ class ApiClient {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     });
+  }
+
+  async postFormData<T>(endpoint: string, formData: FormData, options?: RequestInit): Promise<ApiResponse<T>> {
+    const url = `${this.baseUrl}${endpoint}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          // Don't set Content-Type for FormData - browser will set it automatically with boundary
+          ...(options?.headers || {}),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('API FormData request failed:', error);
+      throw error;
+    }
   }
 
   async put<T>(endpoint: string, data?: any, options?: RequestInit): Promise<ApiResponse<T>> {

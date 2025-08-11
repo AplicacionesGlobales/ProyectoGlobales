@@ -1,38 +1,39 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Icon } from "@/lib/icons"
 
 const services = [
   {
-    emoji: "📅",
+    iconId: "citas",
     title: "Gestión de Citas Inteligente",
     description:
       "Sistema completo de reservas con calendario personalizable, tipos de citas configurables y recordatorios automáticos.",
   },
   {
-    emoji: "📍",
-    title: "Ubicaciones Precisas",
+    iconId: "ubicaciones",
+    title: "Servicios a Domicilio",
     description:
-      "Permite a tus clientes marcar ubicaciones exactas en el mapa. Perfecto para fotógrafos, camarógrafos y servicios a domicilio.",
+      "Permite a tus clientes marcar ubicaciones exactas en el mapa. Perfecto para fotógrafos, camarógrafos y servicios móviles.",
   },
   {
-    emoji: "📁",
+    iconId: "archivos",
     title: "Gestión de Archivos",
     description:
       "Comparte y recibe archivos con tus clientes. Portfolios, contratos, resultados y más, todo organizado por cita.",
   },
   {
-    emoji: "💳",
+    iconId: "pagos",
     title: "Pagos Integrados",
     description:
       "Acepta pagos directamente en la app. Adelantos, pagos completos y métodos locales. Los pagos se depositan automáticamente a tu cuenta todos los miércoles.",
   },
   {
-    emoji: "🎨",
+    iconId: "galerias",
     title: "Tipos de Citas Personalizables",
     description:
       "Define diferentes tipos de servicios con duraciones, precios y requisitos específicos. Sesión fotográfica, consulta médica, corte de cabello, etc.",
   },
   {
-    emoji: "📊",
+    iconId: "reportes",
     title: "Reportes y Analytics",
     description:
       "Conoce tus patrones de reservas, ingresos por período, clientes frecuentes y optimiza tu negocio con datos reales.",
@@ -59,7 +60,9 @@ export function ServicesSection() {
               className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-gradient-to-br from-white to-gray-50"
             >
               <CardHeader className="pb-4">
-                <div className="text-5xl mb-4">{service.emoji}</div>
+                <div className="mb-4">
+                  <Icon name={service.iconId} size={48} className="text-blue-600" />
+                </div>
                 <CardTitle className="text-xl">{service.title}</CardTitle>
               </CardHeader>
               <CardContent>

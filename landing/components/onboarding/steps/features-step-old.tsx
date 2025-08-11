@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { APP_FEATURES, getRecommendedFeatures, getBusinessType, AppFeature } from "@/lib/business-types"
+import { Icon } from "@/lib/icons"
 
 interface FeaturesStepProps {
   features: string[]
@@ -147,7 +148,7 @@ export function FeaturesStep({ selectedFeatures, onChange, onNext, onPrev }: Fea
               />
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
-                  <span className="text-2xl">{service.emoji}</span>
+                  <Icon name={service.icon} size={24} className="text-blue-600" />
                   <h3 className="font-medium text-gray-900">{service.name}</h3>
                   <Badge variant="outline">${service.price}/mes</Badge>
                 </div>

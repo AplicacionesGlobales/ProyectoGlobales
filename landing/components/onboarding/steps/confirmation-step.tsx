@@ -6,8 +6,9 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { authService, BrandRegistrationData } from "@/lib/api"
-import { getBusinessType, getAppFeature } from "@/lib/business-types"
+import { authService, BrandRegistrationData } from "@/lib/api/auth"
+import { useLandingData } from "@/hooks/use-landing-data"
+import { Icon } from "@/lib/icons"
 
 interface ConfirmationStepProps {
   data: {
@@ -18,17 +19,23 @@ interface ConfirmationStepProps {
       phone: string
       businessName: string
       description: string
+      password: string
+      confirmPassword: string
     }
     businessType: string
     selectedFeatures: string[]
     customization: {
       colorPalette: string
-      logo?: File
+      customColors: string[]
+      logoUrl?: File
+      isotopoUrl?: File
+      imagotipoUrl?: File
     }
     plan: {
-      type: "monthly" | "annual"
+      type: "web" | "app" | "complete"
       features: string[]
       price: number
+      billingPeriod?: "monthly" | "annual"
     }
   }
   onNext: () => void
@@ -64,33 +71,113 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
   const [isRegistering, setIsRegistering] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const businessTypeInfo = getBusinessType(data.businessType)
+  const { 
+    businessTypes, 
+    features, 
+    loading, 
+    error: apiError,
+    getBusinessTypeByKey 
+  } = useLandingData();
+
+  const businessTypeInfo = getBusinessTypeByKey(data.businessType)
+  
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-lg text-gray-600">Cargando datos...</span>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (apiError) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 text-lg mb-4">Error al cargar los datos.</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
   
   const handleRegister = async () => {
     setIsRegistering(true)
     setError(null)
 
     try {
-      // Prepare registration data
+      // Generate a shorter, cleaner username
+      const cleanEmail = data.personalInfo.email.split('@')[0]
+      const shortId = Math.random().toString(36).substring(2, 8) // 6 character random string
+      const username = `${cleanEmail}_${shortId}`
+
+      // Preparar paleta de colores
+      let finalColorPalette;
+      if (data.customization.colorPalette === 'custom' && data.customization.customColors && data.customization.customColors.length >= 5) {
+        // Si es custom y tiene al menos 5 colores, usar esos colores
+        finalColorPalette = {
+          primary: data.customization.customColors[0],
+          secondary: data.customization.customColors[1], 
+          accent: data.customization.customColors[2],
+          neutral: data.customization.customColors[3],
+          success: data.customization.customColors[4]
+        };
+      } else {
+        // Si es una paleta predeterminada, usar esa paleta
+        finalColorPalette = colorPalettes[data.customization.colorPalette] || colorPalettes.modern;
+      }
+
+      // Prepare complete registration data with ALL flow information
       const registrationData: BrandRegistrationData = {
-        // User info
+        // User authentication info
         email: data.personalInfo.email,
-        username: data.personalInfo.email.split('@')[0] + '_' + Date.now(), // Generate unique username
-        password: 'temp_password_' + Date.now(), // Generate temporary password
+        username: username,
+        password: data.personalInfo.password,
         firstName: data.personalInfo.firstName,
         lastName: data.personalInfo.lastName,
 
         // Brand info
         brandName: data.personalInfo.businessName,
         brandDescription: data.personalInfo.description || undefined,
-        brandAddress: undefined, // Could be added to personal info form
         brandPhone: data.personalInfo.phone || undefined,
 
-        // Color palette
-        colorPalette: colorPalettes[data.customization.colorPalette] || colorPalettes.modern
+        // Business details
+        businessType: data.businessType,
+        selectedFeatures: data.selectedFeatures,
+
+        // Customization
+        colorPalette: finalColorPalette,
+
+        // Images/Files (FormData will be handled separately)
+        logoFile: data.customization.logoUrl,
+        isotopoFile: data.customization.isotopoUrl,
+        imagotipoFile: data.customization.imagotipoUrl,
+
+        // Plan and pricing information
+        plan: {
+          type: data.plan.type,
+          price: data.plan.price,
+          features: data.plan.features,
+          billingPeriod: data.plan.billingPeriod || 'monthly'
+        },
+
+        // Additional metadata
+        registrationDate: new Date().toISOString(),
+        source: 'landing_onboarding'
       }
 
-      console.log('Registering brand:', registrationData)
+      console.log('=== DATOS COMPLETOS ENVIADOS A LA API ===')
+      console.log('Datos del formulario completo:', JSON.stringify(data, null, 2))
+      console.log('=== DATOS PROCESADOS PARA LA API ===')
+      console.log('Registration Data enviada:', JSON.stringify(registrationData, null, 2))
+      console.log('=== DETALLES ADICIONALES ===')
+      console.log('Business Type:', data.businessType)
+      console.log('Selected Features:', data.selectedFeatures)
+      console.log('Plan:', data.plan)
+      console.log('Customization:', data.customization)
+      console.log('=========================================')
 
       // Test backend connection first
       const healthCheck = await authService.healthCheck()
@@ -156,6 +243,10 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
               <p className="font-medium">{data.personalInfo.phone || 'No especificado'}</p>
             </div>
             <div>
+              <p className="text-gray-500">Contraseña</p>
+              <p className="font-medium">{'*'.repeat(data.personalInfo.password.length)} (configurada)</p>
+            </div>
+            <div className="md:col-span-2">
               <p className="text-gray-500">Nombre del negocio</p>
               <p className="font-medium">{data.personalInfo.businessName}</p>
             </div>
@@ -175,8 +266,8 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <h3 className="font-semibold text-gray-900">Tipo de Negocio</h3>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-2xl">{businessTypeInfo?.emoji}</span>
-            <p className="font-medium">{businessTypeInfo?.name || data.businessType}</p>
+            <Icon name={businessTypeInfo?.icon || "otro"} size={24} className="text-blue-600" />
+            <p className="font-medium">{businessTypeInfo?.title || data.businessType}</p>
           </div>
         </Card>
 
@@ -188,11 +279,11 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
           </div>
           <div className="flex flex-wrap gap-2">
             {data.selectedFeatures.map((featureId) => {
-              const feature = getAppFeature(featureId)
+              const feature = features.find(f => f.key === featureId)
               return (
                 <Badge key={featureId} variant="secondary" className="px-3 py-1">
-                  <span className="mr-1">{feature?.icon}</span>
-                  {feature?.name || featureId}
+                  <span className="mr-1">📱</span>
+                  {feature?.title || featureId}
                 </Badge>
               )
             })}
@@ -217,14 +308,65 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <CreditCard className="w-5 h-5 text-orange-500" />
             <h3 className="font-semibold text-gray-900">Plan Seleccionado</h3>
           </div>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="font-medium capitalize">{data.plan.type === 'monthly' ? 'Mensual' : 'Anual'}</p>
-              <p className="text-sm text-gray-500">{data.selectedFeatures.length} funciones incluidas</p>
+          
+          {/* Plan type and basic info */}
+          <div className="mb-4">
+            <p className="font-medium capitalize text-lg">
+              {data.plan.type === 'web' ? 'Solo Web' : 
+               data.plan.type === 'app' ? 'Solo App Móvil' : 
+               'Web + App Completa'} - {data.plan.billingPeriod === 'monthly' ? 'Mensual' : 'Anual'}
+            </p>
+            <p className="text-sm text-gray-500">{data.selectedFeatures.length} funciones seleccionadas</p>
+          </div>
+
+          {/* Price breakdown */}
+          <div className="space-y-2 mb-4 p-4 bg-gray-50 rounded-lg">
+            <div className="flex justify-between text-sm">
+              <span>Plan base:</span>
+              <span>
+                {data.plan.type === 'web' ? (
+                  '$0/mes'
+                ) : data.plan.billingPeriod === 'annual' ? (
+                  `$${data.plan.type === 'app' ? '59' : '60'} × 12 × 0.8 = $${data.plan.type === 'app' ? '566' : '576'}/año`
+                ) : (
+                  `$${data.plan.type === 'app' ? '59' : '60'}/mes`
+                )}
+              </span>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold">${data.plan.price}</p>
-              <p className="text-sm text-gray-500">{data.plan.type === 'monthly' ? '/mes' : '/año'}</p>
+            
+            {data.selectedFeatures.length > 0 && (
+              <>
+                <div className="text-sm font-medium text-gray-700 pt-2 border-t">Funciones adicionales:</div>
+                {data.selectedFeatures.map(featureId => {
+                  const feature = features.find(f => f.key === featureId);
+                  if (!feature) return null;
+                  const monthlyPrice = feature.price;
+                  const yearlyPrice = data.plan.billingPeriod === 'annual' ? monthlyPrice * 12 * 0.8 : monthlyPrice;
+                  
+                  return (
+                    <div key={featureId} className="flex justify-between text-sm">
+                      <span>• {feature.title}</span>
+                      <span>
+                        {data.plan.billingPeriod === 'annual' 
+                          ? `$${monthlyPrice} × 12 × 0.8 = $${yearlyPrice.toFixed(2)}/año`
+                          : `$${monthlyPrice}/mes`
+                        }
+                      </span>
+                    </div>
+                  );
+                })}
+                {data.plan.billingPeriod === 'annual' && (
+                  <div className="flex justify-between text-sm text-green-600 pt-1 border-t">
+                    <span>Descuento anual (20%):</span>
+                    <span>¡Incluido!</span>
+                  </div>
+                )}
+              </>
+            )}
+            
+            <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+              <span>Total:</span>
+              <span>${data.plan.price.toFixed(2)}{data.plan.billingPeriod === 'monthly' ? '/mes' : '/año'}</span>
             </div>
           </div>
         </Card>

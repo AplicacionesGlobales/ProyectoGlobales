@@ -4,9 +4,14 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../common/services/email/email.service';
 import { CryptoService } from '../common/services/crypto.service';
+import { FileService } from '../common/services/file.service';
+import { PlanService } from '../common/services/plan.service';
+import { PaymentService } from '../common/services/payment.service';
+import { ColorPaletteService } from './services/color-palette.service';
 import * as bcrypt from 'bcryptjs';
-import { ValidateResetCodeDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, LoginAdminDto, LoginClientDto, AdminAuthResponse, ValidateCodeResponseDto } from './dto';
+import { ValidateResetCodeDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto } from './dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
+import { BrandRegistrationResponseDto } from './dto/brand-registration-response.dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole } from '../../generated/prisma';
 import { randomBytes } from 'crypto';
@@ -19,7 +24,11 @@ export class AuthService {
     private jwtService: JwtService,
     private emailService: EmailService,
     private cryptoService: CryptoService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private fileService: FileService,
+    private planService: PlanService,
+    private paymentService: PaymentService,
+    private colorPaletteService: ColorPaletteService
   ) {}
 
   private get appName(): string {
@@ -495,225 +504,16 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
 
   // ==================== BRAND REGISTRATION METHOD ====================
 
-  /**
-   * Login para usuarios ADMIN/ROOT
-   * @param loginDto Datos de login del admin
-   * @returns Promise con la respuesta de autenticación
-   */
-  async loginAdmin(loginDto: LoginAdminDto): Promise<BaseResponseDto<AdminAuthResponse>> {
+  async registerBrand(createBrandDto: CreateBrandDto): Promise<BaseResponseDto<BrandRegistrationResponseDto>> {
     const errors: ErrorDetail[] = [];
 
     try {
-      // Para ADMIN/ROOT, buscamos en UserBrand por email y brandId
-      if (!loginDto.brandId) {
-        errors.push({ 
-          code: ERROR_CODES.BRAND_NOT_EXISTS, 
-          description: 'Se requiere especificar una marca para el login' 
-        });
-        return BaseResponseDto.error(errors);
-      }
-
-      const userBrand = await this.prisma.userBrand.findFirst({
-        where: { 
-          email: loginDto.email.toLowerCase(),
-          brandId: loginDto.brandId,
-          isActive: true
-        },
-        include: {
-          user: {
-            include: {
-              brands: true, // Marcas que posee (para ROOT)
-              userBrands: {
-                include: { brand: true }
-              }
-            }
-          },
-          brand: true
-        }
-      });
-
-      if (!userBrand) {
-        errors.push({ 
-          code: ERROR_CODES.USER_NOT_FOUND, 
-          description: ERROR_MESSAGES.USER_NOT_FOUND 
-        });
-        return BaseResponseDto.error(errors);
-      }
-
-      // Verificar que es ADMIN o ROOT
-      if (userBrand.user.role !== UserRole.ADMIN && userBrand.user.role !== UserRole.ROOT) {
-        errors.push({ 
-          code: ERROR_CODES.INSUFFICIENT_PERMISSIONS, 
-          description: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS 
-        });
-        return BaseResponseDto.error(errors);
-      }
-
-      // Verificar contraseña
-      const passwordValid = await bcrypt.compare(loginDto.password, userBrand.passwordHash);
-      if (!passwordValid) {
-        errors.push({ 
-          code: ERROR_CODES.INVALID_CREDENTIALS, 
-          description: ERROR_MESSAGES.INVALID_CREDENTIALS 
-        });
-        return BaseResponseDto.error(errors);
-      }
-
-      // Generar JWT
-      const token = this.jwtService.sign({
-        userId: userBrand.user.id,
-        userBrandId: userBrand.id,
-        brandId: loginDto.brandId,
-        role: userBrand.user.role,
-      });
-
-      // Preparar lista de marcas accesibles
-      const accessibleBrands = [
-        // Marcas que posee como ROOT
-        ...userBrand.user.brands.map(brand => ({
-          id: brand.id,
-          name: brand.name,
-          description: brand.description || undefined,
-          isOwner: true
-        })),
-        // Marcas asignadas como CLIENT/ADMIN
-        ...userBrand.user.userBrands.map(ub => ({
-          id: ub.brand.id,
-          name: ub.brand.name,
-          description: ub.brand.description || undefined,
-          isOwner: false
-        }))
-      ];
-
-      const response: AdminAuthResponse = {
-        user: {
-          id: userBrand.user.id,
-          email: userBrand.email,
-          username: userBrand.user.username,
-          firstName: userBrand.user.firstName || undefined,
-          lastName: userBrand.user.lastName || undefined,
-          role: userBrand.user.role,
-        },
-        brand: {
-          id: userBrand.brand.id,
-          name: userBrand.brand.name,
-        },
-        token,
-        brands: accessibleBrands,
-        selectedBrand: {
-          id: userBrand.brand.id,
-          name: userBrand.brand.name,
-          description: userBrand.brand.description || undefined,
-        }
-      };
-
-      return BaseResponseDto.success(response);
-
-    } catch (error) {
-      console.error('Error en loginAdmin:', error);
-      errors.push({ 
-        code: ERROR_CODES.INTERNAL_ERROR, 
-        description: ERROR_MESSAGES.INTERNAL_ERROR 
-      });
-      return BaseResponseDto.error(errors);
-    }
-  }
-
-  /**
-   * Login para usuarios CLIENT
-   * @param loginDto Datos de login del cliente
-   * @returns Promise con la respuesta de autenticación
-   */
-  async loginClient(loginDto: LoginClientDto): Promise<BaseResponseDto<AuthResponse>> {
-    const errors: ErrorDetail[] = [];
-
-    try {
-      // Buscar UserBrand por email y brandId
-      const userBrand = await this.prisma.userBrand.findFirst({
-        where: {
-          email: loginDto.email.toLowerCase(),
-          brandId: loginDto.brandId,
-          isActive: true
-        },
-        include: {
-          user: true,
-          brand: true
-        }
-      });
-
-      if (!userBrand) {
-        errors.push({ 
-          code: ERROR_CODES.USER_NOT_FOUND, 
-          description: ERROR_MESSAGES.USER_NOT_FOUND 
-        });
-        return BaseResponseDto.error(errors);
-      }
-
-      // Verificar contraseña
-      const passwordValid = await bcrypt.compare(loginDto.password, userBrand.passwordHash);
-      if (!passwordValid) {
-        errors.push({ 
-          code: ERROR_CODES.INVALID_CREDENTIALS, 
-          description: ERROR_MESSAGES.INVALID_CREDENTIALS 
-        });
-        return BaseResponseDto.error(errors);
-      }
-
-      // Verificar que el usuario esté activo
-      if (!userBrand.user.isActive) {
-        errors.push({ 
-          code: ERROR_CODES.USER_INACTIVE, 
-          description: ERROR_MESSAGES.USER_INACTIVE 
-        });
-        return BaseResponseDto.error(errors);
-      }
-
-      // Generar JWT
-      const token = this.jwtService.sign({
-        userId: userBrand.user.id,
-        userBrandId: userBrand.id,
-        brandId: loginDto.brandId,
-        role: userBrand.user.role,
-      });
-
-      const response: AuthResponse = {
-        user: {
-          id: userBrand.user.id,
-          email: userBrand.email,
-          username: userBrand.user.username,
-          firstName: userBrand.user.firstName || undefined,
-          lastName: userBrand.user.lastName || undefined,
-          role: userBrand.user.role,
-        },
-        brand: {
-          id: userBrand.brand.id,
-          name: userBrand.brand.name,
-        },
-        token,
-      };
-
-      return BaseResponseDto.success(response);
-
-    } catch (error) {
-      console.error('Error en loginClient:', error);
-      errors.push({ 
-        code: ERROR_CODES.INTERNAL_ERROR, 
-        description: ERROR_MESSAGES.INTERNAL_ERROR 
-      });
-      return BaseResponseDto.error(errors);
-    }
-  }
-
-  async registerBrand(createBrandDto: CreateBrandDto): Promise<BaseResponseDto<any>> {
-    const errors: ErrorDetail[] = [];
-
-    try {
-      // Verificar que el email no exista como usuario
-      const existingUser = await this.prisma.user.findFirst({
+      // Verificar que el email no exista
+      const existingUserByEmail = await this.prisma.user.findFirst({
         where: { email: createBrandDto.email }
       });
 
-      if (existingUser) {
+      if (existingUserByEmail) {
         errors.push({ 
           code: ERROR_CODES.EMAIL_EXISTS, 
           description: ERROR_MESSAGES.EMAIL_EXISTS 
@@ -721,61 +521,145 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
         return BaseResponseDto.error(errors);
       }
 
-      // Crear la marca y el usuario en una transacción
+      // Verificar que el username no exista
+      const existingUserByUsername = await this.prisma.user.findFirst({
+        where: { username: createBrandDto.username }
+      });
+
+      if (existingUserByUsername) {
+        errors.push({ 
+          code: ERROR_CODES.USERNAME_EXISTS, 
+          description: ERROR_MESSAGES.USERNAME_EXISTS 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Procesar archivos de imágenes si existen
+      let logoUrl: string | undefined;
+      let isotopoUrl: string | undefined;
+      let imagotipoUrl: string | undefined;
+
+      // Crear la marca, usuario, plan y procesamiento en una transacción
       const result = await this.prisma.$transaction(async (prisma) => {
-        // Crear el usuario ROOT/propietario
+        // 1. Crear el usuario ROOT/propietario
+        const hashedPassword = await bcrypt.hash(createBrandDto.password, 12);
+        
         const user = await prisma.user.create({
           data: {
             email: createBrandDto.email,
-            username: createBrandDto.email, // Usar email como username por defecto
-            firstName: createBrandDto.ownerName.split(' ')[0],
-            lastName: createBrandDto.ownerName.split(' ').slice(1).join(' ') || '',
-            role: UserRole.ROOT, // Usuario ROOT es el propietario de la marca
+            username: createBrandDto.username,
+            firstName: createBrandDto.firstName,
+            lastName: createBrandDto.lastName,
+            role: UserRole.ROOT
           }
         });
 
-        // Crear la marca
+        // 2. Crear la marca
         const brand = await prisma.brand.create({
           data: {
-            name: createBrandDto.name,
-            description: createBrandDto.description,
-            phone: createBrandDto.phone,
-            ownerId: user.id, // Relación con el usuario ROOT
-            logoUrl: createBrandDto.logoUrl,
-            isotopoUrl: createBrandDto.isotopoUrl,
-            imagotipoUrl: createBrandDto.imagotipoUrl,
+            name: createBrandDto.brandName,
+            description: createBrandDto.brandDescription,
+            phone: createBrandDto.brandPhone,
+            ownerId: user.id,
+            businessType: createBrandDto.businessType,
+            selectedFeatures: createBrandDto.selectedFeatures || []
           }
         });
 
-        // Crear paleta de colores si se proporcionó
-        if (createBrandDto.customColors && createBrandDto.customColors.length >= 5) {
-          await prisma.colorPalette.create({
-            data: {
-              brandId: brand.id,
-              primary: createBrandDto.customColors[0],
-              secondary: createBrandDto.customColors[1],
-              accent: createBrandDto.customColors[2],
-              neutral: createBrandDto.customColors[3],
-              success: createBrandDto.customColors[4],
-            }
-          });
+        // 3. Procesar archivos después de crear la marca (necesitamos el ID)
+        if (createBrandDto.logoFile) {
+          const logoResult = await this.fileService.uploadBrandImage(brand.id, createBrandDto.logoFile, 'logo');
+          if (logoResult.success) {
+            logoUrl = logoResult.url;
+            await prisma.brand.update({
+              where: { id: brand.id },
+              data: { logoUrl }
+            });
+          }
         }
 
-        // Crear UserBrand para el acceso del propietario
-        const salt = randomBytes(32).toString('hex') + Date.now().toString();
-        const hashedPassword = await bcrypt.hash(createBrandDto.password, 12);
+        if (createBrandDto.isotopoFile) {
+          const isotopoResult = await this.fileService.uploadBrandImage(brand.id, createBrandDto.isotopoFile, 'isotopo');
+          if (isotopoResult.success) {
+            isotopoUrl = isotopoResult.url;
+            await prisma.brand.update({
+              where: { id: brand.id },
+              data: { isotopoUrl }
+            });
+          }
+        }
 
+        if (createBrandDto.imagotipoFile) {
+          const imagotipoResult = await this.fileService.uploadBrandImage(brand.id, createBrandDto.imagotipoFile, 'imagotipo');
+          if (imagotipoResult.success) {
+            imagotipoUrl = imagotipoResult.url;
+            await prisma.brand.update({
+              where: { id: brand.id },
+              data: { imagotipoUrl }
+            });
+          }
+        }
+
+        // 4. Crear paleta de colores
+        const colorPalette = await prisma.colorPalette.create({
+          data: {
+            brandId: brand.id,
+            primary: createBrandDto.colorPalette.primary,
+            secondary: createBrandDto.colorPalette.secondary,
+            accent: createBrandDto.colorPalette.accent,
+            neutral: createBrandDto.colorPalette.neutral,
+            success: createBrandDto.colorPalette.success
+          }
+        });
+
+        // 6. Crear plan de suscripción
+        const brandPlan = await this.planService.createBrandPlan(
+          brand.id,
+          createBrandDto.plan.type as any,
+          createBrandDto.selectedFeatures || [],
+          createBrandDto.plan.billingPeriod as any
+        );
+
+        // 7. Procesar pago si es necesario
+        let paymentResult;
+        if (Number(brandPlan.price) > 0) {
+          paymentResult = await this.paymentService.processPaymentForPlan(
+            brand.id,
+            brandPlan.id,
+            Number(brandPlan.price),
+            {
+              registrationDate: createBrandDto.registrationDate,
+              source: createBrandDto.source,
+              planType: createBrandDto.plan.type
+            }
+          );
+        }
+
+        // 8. Crear UserBrand para el acceso del propietario
+        const salt = randomBytes(32).toString('hex') + Date.now().toString();
+        
         await prisma.userBrand.create({
           data: {
             userId: user.id,
             brandId: brand.id,
             email: createBrandDto.email,
             passwordHash: hashedPassword,
-            salt: salt,
+            salt: salt
           }
         });
 
-        return { brand, user };
+        return { 
+          brand: { 
+            ...brand, 
+            logoUrl, 
+            isotopoUrl, 
+            imagotipoUrl 
+          }, 
+          user, 
+          colorPalette, 
+          brandPlan, 
+          paymentResult 
+        };
       });
 
       // Generar JWT token
@@ -787,22 +671,53 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
       };
       const token = this.jwtService.sign(payload);
 
-      const response = {
-        message: 'Marca y usuario creados exitosamente',
+      // Construir respuesta completa
+      const response: BrandRegistrationResponseDto = {
         user: {
           id: result.user.id,
           email: result.user.email,
           username: result.user.username,
-          firstName: result.user.firstName,
-          lastName: result.user.lastName,
-          role: result.user.role,
+          firstName: result.user.firstName || '',
+          lastName: result.user.lastName || '',
+          role: result.user.role
         },
         brand: {
           id: result.brand.id,
           name: result.brand.name,
+          description: result.brand.description || undefined,
+          phone: result.brand.phone || undefined,
+          businessType: result.brand.businessType || undefined,
+          features: result.brand.selectedFeatures || [],
+          logoUrl: result.brand.logoUrl,
+          isotopoUrl: result.brand.isotopoUrl,
+          imagotipoUrl: result.brand.imagotipoUrl
         },
-        token,
+        colorPalette: {
+          id: result.colorPalette.id,
+          primary: result.colorPalette.primary,
+          secondary: result.colorPalette.secondary,
+          accent: result.colorPalette.accent,
+          neutral: result.colorPalette.neutral,
+          success: result.colorPalette.success
+        },
+        plan: {
+          id: result.brandPlan.id,
+          type: result.brandPlan.plan.type,
+          price: Number(result.brandPlan.price),
+          features: createBrandDto.plan.features,
+          billingPeriod: result.brandPlan.billingPeriod
+        },
+        token
       };
+
+      // Agregar información de pago si existe
+      if (result.paymentResult) {
+        response.payment = {
+          status: result.paymentResult.success ? 'completed' : 'pending',
+          tilopayReference: result.paymentResult.tilopayTransactionId,
+          processedAt: new Date().toISOString()
+        };
+      }
 
       return BaseResponseDto.success(response);
 
@@ -810,7 +725,7 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
       console.error('Error en registerBrand:', error);
       errors.push({ 
         code: ERROR_CODES.INTERNAL_ERROR, 
-        description: ERROR_MESSAGES.INTERNAL_ERROR 
+        description: `Registration failed: ${error.message}` 
       });
       return BaseResponseDto.error(errors);
     }

@@ -25,9 +25,10 @@ interface PaymentStepProps {
       logo?: File
     }
     plan: {
-      type: "monthly" | "annual"
+      type: "web" | "app" | "complete"
       features: string[]
       price: number
+      billingPeriod?: "monthly" | "annual"
     }
   }
   onComplete: () => void
@@ -110,14 +111,18 @@ export function PaymentStep({ data, onComplete, onPrev }: PaymentStepProps) {
         <h3 className="font-semibold text-gray-900 mb-4">Resumen de la orden</h3>
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span>Plan {data.plan.type === "monthly" ? "Mensual" : "Anual"}</span>
-            <span>${data.plan.price}/mes</span>
+            <span>
+              Plan {data.plan.type === 'web' ? 'Solo Web' : 
+                    data.plan.type === 'app' ? 'Solo App Móvil' : 
+                    'Web + App Completa'} - {data.plan.billingPeriod === "monthly" ? "Mensual" : "Anual"}
+            </span>
+            <span>${data.plan.price}{data.plan.billingPeriod === "monthly" ? "/mes" : "/año"}</span>
           </div>
           <div className="flex justify-between">
             <span>Funciones adicionales ({data.selectedFeatures.length})</span>
             <span>Incluidas</span>
           </div>
-          {data.plan.type === "annual" && (
+          {data.plan.billingPeriod === "annual" && (
             <div className="flex justify-between text-green-600">
               <span>Descuento anual</span>
               <span>-20%</span>
@@ -126,7 +131,7 @@ export function PaymentStep({ data, onComplete, onPrev }: PaymentStepProps) {
           <hr className="my-2" />
           <div className="flex justify-between font-semibold text-lg">
             <span>Total a pagar hoy:</span>
-            <span>${data.plan.price}{data.plan.type === "annual" ? " x 12 meses" : ""}</span>
+            <span>${data.plan.price.toFixed(2)}</span>
           </div>
         </div>
       </Card>

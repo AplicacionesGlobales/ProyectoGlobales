@@ -1,53 +1,80 @@
 "use client"
 
-import { useState } from "react"
+import React from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, ArrowRight, Check, Star } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, Star, Loader2 } from "lucide-react"
+import { useLandingData } from "@/hooks/use-landing-data"
 
 const plans = [
   {
-    id: "monthly",
-    name: "Plan Mensual",
-    description: "Ideal para empezar",
-    basePrice: 49,
+    id: "web",
+    name: "Solo Web",
+    description: "Perfecto para empezar online",
+    basePrice: 0,
     discount: 0,
     period: "mes",
+    yearlyPrice: 0,
     features: [
-      "Hasta 100 citas por mes",
-      "1 usuario administrador",
-      "Soporte por email",
-      "Almacenamiento básico (1GB)"
+      "Sitio web responsive",
+      "Gestión básica de citas",
+      "Dominio personalizado",
+      "3.8% + $0.40 por transacción",
+      "Soporte por email"
     ],
-    popular: false
+    popular: false,
+    badge: "Sin Mensualidad",
+    badgeColor: "bg-green-100 text-green-800"
   },
   {
-    id: "annual",
-    name: "Plan Anual",
-    description: "Ahorra 20% pagando anual",
-    basePrice: 39,
-    discount: 20,
+    id: "app",
+    name: "Solo App Móvil",
+    description: "La experiencia móvil completa",
+    basePrice: 59,
+    discount: 0,
     period: "mes",
+    yearlyPrice: 590, // 59 * 10 months (2 months free)
+    monthlyEquivalent: 49,
     features: [
-      "Citas ilimitadas",
-      "Hasta 3 usuarios",
-      "Soporte prioritario",
-      "Almacenamiento extendido (5GB)",
-      "Reportes avanzados",
-      "Backup automático"
+      "App en App Store y Google Play",
+      "Notificaciones push",
+      "Funciones avanzadas de citas",
+      "3.8% + $0.40 por transacción",
+      "Soporte prioritario"
     ],
-    popular: true
+    popular: true,
+    badge: "Más Popular",
+    badgeColor: "bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+  },
+  {
+    id: "complete",
+    name: "Web + App Completa",
+    description: "La solución completa para tu negocio",
+    basePrice: 60,
+    discount: 0,
+    period: "mes",
+    yearlyPrice: 600, // 60 * 10 months (2 months free)
+    monthlyEquivalent: 50,
+    features: [
+      "Todo lo anterior incluido",
+      "Sincronización total",
+      "Analytics avanzados",
+      "3.8% + $0.40 por transacción",
+      "Soporte 24/7"
+    ],
+    popular: false
   }
 ]
 
 interface PricingStepProps {
   plan: {
-    type: "monthly" | "annual"
+    type: "web" | "app" | "complete"
     features: string[]
     price: number
+    billingPeriod?: "monthly" | "annual"
   }
   selectedFeatures: string[]
   onChange: (plan: any) => void
@@ -56,61 +83,187 @@ interface PricingStepProps {
 }
 
 export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }: PricingStepProps) {
-  const handlePlanChange = (planType: "monthly" | "annual") => {
-    const selectedPlan = plans.find(p => p.id === planType)
-    if (selectedPlan) {
+  const [billingPeriod, setBillingPeriod] = React.useState<"monthly" | "annual">(plan.billingPeriod || "monthly")
+  const { plans, features, loading, error, calculateTotalPrice } = useLandingData();
+
+  const selectedPlan = plans.find(p => p.type === plan.type)
+  
+  // Calculate features price using the API data (always called)
+  const featuresPrice = selectedFeatures.reduce((total, featureKey) => {
+    const feature = features.find(f => f.key === featureKey);
+    return total + (feature?.price || 0);
+  }, 0)
+
+  const calculateFinalPrice = (planOption: any, billing: "monthly" | "annual") => {
+    const basePrice = planOption.basePrice || 0
+    const totalMonthlyPrice = basePrice + featuresPrice
+    
+    if (billing === "annual") {
+      // For annual: apply 20% discount
+      return (totalMonthlyPrice * 12 * 0.8)
+    }
+    return totalMonthlyPrice
+  }
+
+  const finalPrice = selectedPlan ? calculateFinalPrice(selectedPlan, billingPeriod) : 0
+
+  // Get plan features based on type (always called)
+  const getPlanFeatures = (planType: string) => {
+    switch (planType) {
+      case 'web':
+        return [
+          "Sitio web responsive",
+          "Gestión básica de citas",
+          "Dominio personalizado",
+          "3.8% + $0.40 por transacción",
+          "Soporte por email",
+        ];
+      case 'app':
+        return [
+          "App en App Store y Google Play",
+          "Notificaciones push",
+          "Funciones avanzadas de citas",
+          "3.8% + $0.40 por transacción",
+          "Soporte prioritario",
+        ];
+      case 'complete':
+        return [
+          "Todo lo anterior incluido",
+          "Sincronización total",
+          "Analytics avanzados",
+          "3.8% + $0.40 por transacción",
+          "Soporte 24/7",
+        ];
+      case 'app':
+        return [
+          "App en App Store y Google Play",
+          "Notificaciones push",
+          "Funciones avanzadas de citas",
+          "3.8% + $0.40 por transacción",
+          "Soporte prioritario"
+        ];
+      case 'complete':
+        return [
+          "Todo de los planes anteriores",
+          "App y sitio web",
+          "Integraciones avanzadas",
+          "3.8% + $0.40 por transacción",
+          "Soporte 24/7 prioritario"
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const handlePlanChange = (planType: "web" | "app" | "complete") => {
+    const selectedPlanOption = plans.find(p => p.type === planType)
+    if (selectedPlanOption) {
+      const newFinalPrice = calculateFinalPrice(selectedPlanOption, billingPeriod)
+      
       onChange({
         type: planType,
-        features: selectedPlan.features,
-        price: selectedPlan.basePrice
+        features: getPlanFeatures(planType),
+        price: newFinalPrice,
+        billingPeriod: billingPeriod
       })
     }
   }
 
-  const selectedPlan = plans.find(p => p.id === plan.type)
-  const featuresPrice = selectedFeatures.reduce((total, featureId) => {
-    // Simulated feature pricing
-    const featurePrices: { [key: string]: number } = {
-      'citas': 20,
-      'ubicaciones': 15,
-      'archivos': 18,
-      'pagos': 25,
-      'tipos-citas': 12,
-      'reportes': 15
+  const handleBillingPeriodChange = (newBillingPeriod: "monthly" | "annual") => {
+    setBillingPeriod(newBillingPeriod)
+    if (selectedPlan) {
+      const newFinalPrice = calculateFinalPrice(selectedPlan, newBillingPeriod)
+      onChange({
+        type: plan.type,
+        features: getPlanFeatures(plan.type),
+        price: newFinalPrice,
+        billingPeriod: newBillingPeriod
+      })
     }
-    return total + (featurePrices[featureId] || 0)
-  }, 0)
+  }
 
-  const totalPrice = (selectedPlan?.basePrice || 0) + featuresPrice
-  const finalPrice = plan.type === "annual" ? totalPrice * 0.8 : totalPrice
+  // Update price when features change
+  React.useEffect(() => {
+    if (selectedPlan) {
+      onChange({
+        type: plan.type,
+        features: getPlanFeatures(plan.type),
+        price: finalPrice,
+        billingPeriod: billingPeriod
+      })
+    }
+  }, [selectedFeatures, finalPrice, plan.type, billingPeriod])
 
-  const isValid = plan.type && (plan.type === "monthly" || plan.type === "annual")
+  const isValid = plan.type && ["web", "app", "complete"].includes(plan.type)
+
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-lg text-gray-600">Cargando planes...</span>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 text-lg mb-4">Error al cargar los planes.</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900">Elige tu plan</h2>
         <p className="mt-2 text-gray-600">
-          Selecciona el plan que mejor se adapte a tus necesidades
+          Selecciona el tipo de aplicación que mejor se adapte a tus necesidades
         </p>
+      </div>
+
+      {/* Billing Period Toggle */}
+      <div className="flex justify-center mb-6">
+        <div className="bg-gray-100 p-1 rounded-lg">
+          <Button
+            variant={billingPeriod === "monthly" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => handleBillingPeriodChange("monthly")}
+          >
+            Mensual
+          </Button>
+          <Button
+            variant={billingPeriod === "annual" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => handleBillingPeriodChange("annual")}
+            className="ml-1"
+          >
+            Anual (-20%)
+          </Button>
+        </div>
       </div>
 
       <RadioGroup
         value={plan.type}
-        onValueChange={(value) => handlePlanChange(value as "monthly" | "annual")}
+        onValueChange={(value) => handlePlanChange(value as "web" | "app" | "complete")}
       >
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-3">
           {plans.map((planOption) => (
-            <div key={planOption.id} className="relative">
+            <div key={planOption.type} className="relative">
               <Card
                 className={`p-6 cursor-pointer transition-all hover:shadow-lg ${
-                  plan.type === planOption.id
+                  plan.type === planOption.type
                     ? "ring-2 ring-purple-500 bg-purple-50"
                     : "hover:bg-gray-50"
                 }`}
-                onClick={() => handlePlanChange(planOption.id as "monthly" | "annual")}
+                onClick={() => handlePlanChange(planOption.type as "web" | "app" | "complete")}
               >
-                {planOption.popular && (
+                {planOption.type === 'app' && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
                       <Star className="w-3 h-3 mr-1" />
@@ -120,8 +273,8 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
                 )}
                 
                 <div className="flex items-center space-x-2 mb-4">
-                  <RadioGroupItem value={planOption.id} id={planOption.id} />
-                  <Label htmlFor={planOption.id} className="text-lg font-semibold cursor-pointer">
+                  <RadioGroupItem value={planOption.type} id={planOption.type} />
+                  <Label htmlFor={planOption.type} className="text-lg font-semibold cursor-pointer">
                     {planOption.name}
                   </Label>
                 </div>
@@ -130,20 +283,22 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
                   <div>
                     <p className="text-gray-600">{planOption.description}</p>
                     <div className="mt-2">
-                      <span className="text-3xl font-bold text-gray-900">
-                        ${planOption.basePrice}
-                      </span>
-                      <span className="text-gray-600">/{planOption.period}</span>
-                      {planOption.discount > 0 && (
-                        <Badge variant="secondary" className="ml-2">
-                          -{planOption.discount}%
+                      <div>
+                        <span className="text-3xl font-bold text-gray-900">
+                          ${planOption.basePrice}
+                        </span>
+                        <span className="text-gray-600">/mes</span>
+                      </div>
+                      {planOption.type === 'web' && (
+                        <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+                          Sin Mensualidad
                         </Badge>
                       )}
                     </div>
                   </div>
 
                   <ul className="space-y-2">
-                    {planOption.features.map((feature, index) => (
+                    {getPlanFeatures(planOption.type).map((feature, index) => (
                       <li key={index} className="flex items-center space-x-2">
                         <Check className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-gray-600">{feature}</span>
@@ -163,28 +318,36 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
         <div className="space-y-2">
           <div className="flex justify-between">
             <span>Plan base:</span>
-            <span>${selectedPlan?.basePrice || 0}/{selectedPlan?.period}</span>
+            <span>
+              ${selectedPlan?.basePrice || 0}/mes
+            </span>
           </div>
           {featuresPrice > 0 && (
             <div className="flex justify-between">
               <span>Funciones adicionales:</span>
-              <span>${featuresPrice}/mes</span>
+              <span>
+                ${billingPeriod === "annual" ? featuresPrice * 12 : featuresPrice}
+                {billingPeriod === "annual" ? "/año" : "/mes"}
+              </span>
             </div>
           )}
-          {plan.type === "annual" && (
+          {billingPeriod === "annual" && featuresPrice > 0 && (
             <div className="flex justify-between text-green-600">
-              <span>Descuento anual (20%):</span>
-              <span>-${(totalPrice * 0.2).toFixed(2)}</span>
+              <span>Descuento anual (20%) en funciones:</span>
+              <span>-${(featuresPrice * 12 * 0.2).toFixed(2)}</span>
             </div>
           )}
           <hr className="my-2" />
           <div className="flex justify-between font-semibold text-lg">
             <span>Total:</span>
-            <span>${finalPrice.toFixed(2)}/{plan.type === "annual" ? "mes" : selectedPlan?.period}</span>
+            <span>
+              ${finalPrice.toFixed(2)}
+              /{billingPeriod === "annual" ? "año" : "mes"}
+            </span>
           </div>
-          {plan.type === "annual" && (
-            <p className="text-sm text-gray-600">
-              Facturado anualmente: ${(finalPrice * 12).toFixed(2)}
+          {billingPeriod === "annual" && (
+            <p className="text-sm text-gray-600 text-center mt-2">
+              ¡Pagas todo el año de una vez!
             </p>
           )}
         </div>

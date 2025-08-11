@@ -1,190 +1,145 @@
-// Business types with recommended services
-export interface BusinessType {
+// This file now serves as legacy types and minimal fallback data
+// The main data should ALWAYS come from the backend API via landingService
+// Use useLandingData hook instead of these fallback constants
+
+import { BusinessType, Feature, Plan } from './api/types';
+
+// Legacy interfaces for backward compatibility ONLY
+// These should not be used in new code - use API types instead
+export interface BusinessTypeLocal {
   id: string;
   name: string;
-  emoji: string;
-  services: string[]; // IDs of recommended services
+  icon: string;
+  services: string[];
 }
 
-// Available services/features for apps
-export interface AppFeature {
+export interface AppFeatureLocal {
   id: string;
   name: string;
   description: string;
   icon: string;
   category: 'core' | 'business' | 'advanced';
   popular?: boolean;
+  price: number;
 }
 
-// Business types configuration
-export const BUSINESS_TYPES: BusinessType[] = [
+// Re-export API types for convenience
+export type { BusinessType, Feature, Plan };
+
+// DEPRECATED: Minimal fallback data for emergency use only
+// ⚠️  DO NOT USE THESE IN NEW CODE - Use useLandingData hook instead
+// These are kept only for extreme fallback scenarios when API is completely unavailable
+
+const EMERGENCY_BUSINESS_TYPES: BusinessTypeLocal[] = [
   { 
     id: "fotografo", 
     name: "Fotógrafo", 
-    emoji: "📸", 
-    services: ["citas", "ubicaciones", "archivos", "pagos", "galerias"] 
-  },
-  { 
-    id: "camarografo", 
-    name: "Camarógrafo", 
-    emoji: "🎥", 
-    services: ["citas", "ubicaciones", "archivos", "pagos", "galerias"] 
-  },
-  { 
-    id: "medico", 
-    name: "Médico/Dentista", 
-    emoji: "🦷", 
-    services: ["citas", "archivos", "pagos", "reportes", "recordatorios"] 
+    icon: "fotografo", 
+    services: ["citas", "pagos", "clientes"] 
   },
   { 
     id: "estilista", 
     name: "Estilista/Barbero", 
-    emoji: "💇", 
-    services: ["citas", "pagos", "galerias", "recordatorios"] 
-  },
-  { 
-    id: "consultor", 
-    name: "Consultor", 
-    emoji: "💼", 
-    services: ["citas", "archivos", "pagos", "reportes", "videollamadas"] 
-  },
-  { 
-    id: "masajista", 
-    name: "Masajista/Spa", 
-    emoji: "💆", 
-    services: ["citas", "ubicaciones", "pagos", "recordatorios"] 
-  },
-  { 
-    id: "entrenador", 
-    name: "Entrenador Personal", 
-    emoji: "🏋️", 
-    services: ["citas", "ubicaciones", "archivos", "pagos", "seguimiento"] 
+    icon: "estilista", 
+    services: ["citas", "pagos", "clientes"] 
   },
   { 
     id: "otro", 
     name: "Otro Servicio", 
-    emoji: "🏢", 
-    services: ["citas", "pagos"] // Minimal set for custom business
+    icon: "otro", 
+    services: ["citas", "pagos"]
   },
 ];
 
-// Available app features
-export const APP_FEATURES: AppFeature[] = [
-  // Core features
+const EMERGENCY_APP_FEATURES: AppFeatureLocal[] = [
   {
     id: "citas",
     name: "Sistema de Citas",
     description: "Agenda y gestión de citas online",
-    icon: "📅",
+    icon: "citas",
     category: "core",
     popular: true,
+    price: 20,
   },
   {
     id: "pagos",
     name: "Pagos Online",
     description: "Procesar pagos y facturación",
-    icon: "💳",
+    icon: "pagos",
     category: "core",
     popular: true,
+    price: 25,
   },
   {
     id: "clientes",
     name: "Base de Clientes",
     description: "Gestión de información de clientes",
-    icon: "👥",
+    icon: "clientes",
     category: "core",
     popular: true,
-  },
-  
-  // Business features
-  {
-    id: "ubicaciones",
-    name: "Multi-ubicaciones",
-    description: "Gestión de múltiples sucursales",
-    icon: "📍",
-    category: "business",
-  },
-  {
-    id: "archivos",
-    name: "Gestión de Archivos",
-    description: "Almacenamiento y compartir archivos",
-    icon: "📁",
-    category: "business",
-  },
-  {
-    id: "galerias",
-    name: "Galerías de Trabajo",
-    description: "Mostrar tu portafolio visual",
-    icon: "🖼️",
-    category: "business",
-  },
-  {
-    id: "recordatorios",
-    name: "Recordatorios SMS/Email",
-    description: "Notificaciones automáticas",
-    icon: "🔔",
-    category: "business",
-  },
-  {
-    id: "inventario",
-    name: "Control de Inventario",
-    description: "Gestión de productos y stock",
-    icon: "📦",
-    category: "business",
-  },
-  
-  // Advanced features
-  {
-    id: "reportes",
-    name: "Reportes Avanzados",
-    description: "Analytics y métricas de negocio",
-    icon: "📊",
-    category: "advanced",
-  },
-  {
-    id: "videollamadas",
-    name: "Videollamadas",
-    description: "Consultas virtuales integradas",
-    icon: "📹",
-    category: "advanced",
-  },
-  {
-    id: "seguimiento",
-    name: "Seguimiento de Progreso",
-    description: "Track de objetivos y resultados",
-    icon: "📈",
-    category: "advanced",
-  },
-  {
-    id: "automatizacion",
-    name: "Automatización",
-    description: "Workflows y procesos automáticos",
-    icon: "🤖",
-    category: "advanced",
-  },
-  {
-    id: "integraciones",
-    name: "Integraciones",
-    description: "Conectar con otras herramientas",
-    icon: "🔗",
-    category: "advanced",
+    price: 8,
   },
 ];
 
-// Helper functions
-export const getBusinessType = (id: string): BusinessType | undefined => {
-  return BUSINESS_TYPES.find(type => type.id === id);
+// ⚠️ DEPRECATED HELPER FUNCTIONS - Use useLandingData hook instead!
+// These functions are only for legacy compatibility and emergency fallback
+// For new code, use: const { businessTypes, features } = useLandingData();
+
+/**
+ * @deprecated Use useLandingData().getBusinessTypeByKey() instead
+ */
+export const getBusinessType = (id: string): BusinessTypeLocal | undefined => {
+  console.warn('⚠️ DEPRECATED: getBusinessType() - Use useLandingData().getBusinessTypeByKey() instead');
+  return EMERGENCY_BUSINESS_TYPES.find(type => type.id === id);
 };
 
-export const getAppFeature = (id: string): AppFeature | undefined => {
-  return APP_FEATURES.find(feature => feature.id === id);
+/**
+ * @deprecated Use useLandingData().features.find() instead
+ */
+export const getAppFeature = (id: string): AppFeatureLocal | undefined => {
+  console.warn('⚠️ DEPRECATED: getAppFeature() - Use useLandingData().features.find() instead');
+  return EMERGENCY_APP_FEATURES.find(feature => feature.id === id);
 };
 
-export const getRecommendedFeatures = (businessTypeId: string): AppFeature[] => {
+/**
+ * @deprecated Use useLandingData().getRecommendedFeatures() instead
+ */
+export const getRecommendedFeatures = (businessTypeId: string): AppFeatureLocal[] => {
+  console.warn('⚠️ DEPRECATED: getRecommendedFeatures() - Use useLandingData().getRecommendedFeatures() instead');
   const businessType = getBusinessType(businessTypeId);
   if (!businessType) return [];
   
   return businessType.services
     .map(serviceId => getAppFeature(serviceId))
-    .filter((feature): feature is AppFeature => feature !== undefined);
+    .filter((feature): feature is AppFeatureLocal => feature !== undefined);
 };
+
+// Modern conversion helpers for API data (RECOMMENDED)
+// These are useful for converting API responses to legacy formats if needed
+
+/**
+ * Convert API BusinessType to legacy BusinessTypeLocal format
+ * @param apiBusinessType - BusinessType from API
+ * @returns BusinessTypeLocal format
+ */
+export const convertBusinessTypeFromAPI = (apiBusinessType: BusinessType): BusinessTypeLocal => ({
+  id: apiBusinessType.key,
+  name: apiBusinessType.title,
+  icon: apiBusinessType.icon,
+  services: apiBusinessType.recommendedFeatures?.map(f => f.key) || [],
+});
+
+/**
+ * Convert API Feature to legacy AppFeatureLocal format
+ * @param apiFeature - Feature from API
+ * @returns AppFeatureLocal format
+ */
+export const convertFeatureFromAPI = (apiFeature: Feature): AppFeatureLocal => ({
+  id: apiFeature.key,
+  name: apiFeature.title,
+  description: apiFeature.description,
+  icon: apiFeature.key, // Use key as icon identifier
+  category: apiFeature.category.toLowerCase() as 'core' | 'business' | 'advanced',
+  popular: apiFeature.isPopular,
+  price: apiFeature.price,
+});

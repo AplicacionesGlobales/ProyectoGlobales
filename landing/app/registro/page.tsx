@@ -11,6 +11,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ArrowLeft, ArrowRight, Upload, Check, Smartphone, Monitor, FileImage, Clock, Palette } from "lucide-react"
 import Link from "next/link"
 import { CustomizationStepNew } from "@/components/customization-step-new"
+import { Icon } from "@/lib/icons"
+import { useLandingData } from "@/hooks/use-landing-data"
 
 const steps = [
   { id: 1, title: "Información Personal", description: "Cuéntanos sobre ti" },
@@ -22,68 +24,19 @@ const steps = [
   { id: 7, title: "Pago", description: "Procesar suscripción" },
 ]
 
-const businessTypes = [
-  { id: "fotografo", name: "Fotógrafo", emoji: "📸", services: ["citas", "ubicaciones", "archivos", "pagos"] },
-  { id: "camarografo", name: "Camarógrafo", emoji: "🎥", services: ["citas", "ubicaciones", "archivos", "pagos"] },
-  { id: "medico", name: "Médico/Dentista", emoji: "🦷", services: ["citas", "archivos", "pagos", "reportes"] },
-  { id: "estilista", name: "Estilista/Barbero", emoji: "💇", services: ["citas", "archivos", "pagos"] },
-  { id: "consultor", name: "Consultor", emoji: "💼", services: ["citas", "archivos", "pagos", "reportes"] },
-  { id: "masajista", name: "Masajista/Spa", emoji: "💆", services: ["citas", "ubicaciones", "pagos"] },
-  {
-    id: "entrenador",
-    name: "Entrenador Personal",
-    emoji: "🏋️",
-    services: ["citas", "ubicaciones", "archivos", "pagos"],
-  },
-  { id: "otro", name: "Otro Servicio", emoji: "🏢", services: [] },
-]
-
-const services = [
-  {
-    id: "citas",
-    name: "Gestión de Citas Avanzada",
-    emoji: "📅",
-    description: "Sistema completo de reservas con tipos de citas personalizables y recordatorios automáticos",
-    price: 20,
-  },
-  {
-    id: "ubicaciones",
-    name: "Ubicaciones en Mapa",
-    emoji: "📍",
-    description: "Permite a clientes marcar ubicaciones exactas en el mapa para servicios a domicilio",
-    price: 15,
-  },
-  {
-    id: "archivos",
-    name: "Gestión de Archivos",
-    emoji: "📁",
-    description: "Comparte portfolios, contratos, resultados y documentos organizados por cita",
-    price: 18,
-  },
-  {
-    id: "pagos",
-    name: "Pagos Integrados",
-    emoji: "💳",
-    description: "Acepta pagos directamente en la app. Los pagos se depositan a tu cuenta todos los martes.",
-    price: 25,
-  },
-  {
-    id: "tipos-citas",
-    name: "Tipos de Citas Personalizables",
-    emoji: "🎨",
-    description: "Define diferentes servicios con duraciones, precios y requisitos específicos",
-    price: 12,
-  },
-  {
-    id: "reportes",
-    name: "Reportes y Analytics",
-    emoji: "📊",
-    description: "Estadísticas de reservas, ingresos, clientes frecuentes y patrones de negocio",
-    price: 15,
-  },
-]
-
 export default function RegistroPage() {
+  const { config, businessTypes, features, plans, loading, error, calculateTotalPrice } = useLandingData()
+  
+  // Console logs para debug
+  console.log('RegistroPage - Data state:', {
+    config,
+    businessTypes: businessTypes?.length,
+    features: features?.length,
+    plans: plans?.length,
+    loading,
+    error
+  })
+  
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     // Paso 1: Información Personal
@@ -122,9 +75,9 @@ export default function RegistroPage() {
     }
 
     const basePrice: Record<"app" | "completo", number> = { app: 59, completo: 60 }
-    const serviceCost = servicios.reduce((total, serviceId) => {
-      const service = services.find((s) => s.id === serviceId)
-      return total + (service?.price || 0)
+    const serviceCost = servicios.reduce((total, featureKey) => {
+      const feature = features.find((f) => f.key === featureKey)
+      return total + (feature?.price || 0)
     }, 0)
     
     const monthlyTotal = basePrice[tipoPlan] + serviceCost;
@@ -163,11 +116,11 @@ export default function RegistroPage() {
   }
 
   const handleBusinessTypeSelect = (businessType: string) => {
-    const selectedBusiness = businessTypes.find((b) => b.id === businessType)
+    const selectedBusiness = businessTypes.find((b) => b.key === businessType)
     setFormData((prev) => ({
       ...prev,
       tipoNegocio: businessType,
-      serviciosSeleccionados: selectedBusiness?.services || [],
+      serviciosSeleccionados: selectedBusiness?.recommendedFeatures?.map(f => f.key) || [],
     }))
   }
 
@@ -179,6 +132,40 @@ export default function RegistroPage() {
 
   const handleFileChange = (field: string, file: File | null) => {
     setFormData((prev) => ({ ...prev, [field]: file }))
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Cargando formulario de registro...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center">
+              <p className="text-red-600 mb-4">Error al cargar los datos: {error}</p>
+              <Button onClick={() => window.location.reload()}>
+                Intentar de nuevo
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const renderStep = () => {
@@ -261,15 +248,17 @@ export default function RegistroPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
                   {businessTypes.map((business) => (
                     <Card
-                      key={business.id}
+                      key={business.key}
                       className={`cursor-pointer transition-all hover:shadow-md ${
-                        formData.tipoNegocio === business.id ? "ring-2 ring-purple-500 bg-purple-50" : ""
+                        formData.tipoNegocio === business.key ? "ring-2 ring-purple-500 bg-purple-50" : ""
                       }`}
-                      onClick={() => handleBusinessTypeSelect(business.id)}
+                      onClick={() => handleBusinessTypeSelect(business.key)}
                     >
                       <CardContent className="p-4 text-center">
-                        <div className="text-2xl mb-2">{business.emoji}</div>
-                        <div className="text-sm font-medium">{business.name}</div>
+                        <div className="mb-2">
+                          <Icon name={business.icon} size={24} className="text-blue-600" />
+                        </div>
+                        <div className="text-sm font-medium">{business.title}</div>
                       </CardContent>
                     </Card>
                   ))}
@@ -311,25 +300,27 @@ export default function RegistroPage() {
             </div>
 
             <div className="grid gap-4">
-              {services.map((service) => (
+              {features.map((feature) => (
                 <Card
-                  key={service.id}
+                  key={feature.key}
                   className={`cursor-pointer transition-all hover:shadow-md ${
-                    formData.serviciosSeleccionados.includes(service.id) ? "ring-2 ring-purple-500 bg-purple-50" : ""
+                    formData.serviciosSeleccionados.includes(feature.key) ? "ring-2 ring-purple-500 bg-purple-50" : ""
                   }`}
-                  onClick={() => handleServiceToggle(service.id)}
+                  onClick={() => handleServiceToggle(feature.key)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-4">
-                      <div className="text-2xl">{service.emoji}</div>
+                      <div>
+                        <Icon name={feature.key} size={24} className="text-blue-600" />
+                      </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold">{service.name}</h3>
-                          <div className="text-sm font-semibold text-purple-600">+${service.price}/mes</div>
+                          <h3 className="font-semibold">{feature.title}</h3>
+                          <div className="text-sm font-semibold text-purple-600">+${feature.price}/mes</div>
                         </div>
-                        <p className="text-sm text-gray-600">{service.description}</p>
+                        <p className="text-sm text-gray-600">{feature.description}</p>
                       </div>
-                      {formData.serviciosSeleccionados.includes(service.id) && (
+                      {formData.serviciosSeleccionados.includes(feature.key) && (
                         <Check className="h-5 w-5 text-purple-600" />
                       )}
                     </div>
@@ -343,9 +334,9 @@ export default function RegistroPage() {
                     <span className="font-semibold">Costo adicional por funciones:</span>
                     <span className="text-lg font-bold text-purple-600">
                       +$
-                      {formData.serviciosSeleccionados.reduce((total, serviceId) => {
-                        const service = services.find((s) => s.id === serviceId)
-                        return total + (service?.price || 0)
+                      {formData.serviciosSeleccionados.reduce((total, featureKey) => {
+                        const feature = features.find((f) => f.key === featureKey)
+                        return total + (feature?.price || 0)
                       }, 0)}
                       /mes
                     </span>
@@ -457,9 +448,9 @@ export default function RegistroPage() {
                               ) : (
                                 <>
                                   Base: $59 + Funciones: $
-                                  {formData.serviciosSeleccionados.reduce((total, serviceId) => {
-                                    const service = services.find((s) => s.id === serviceId)
-                                    return total + (service?.price || 0)
+                                  {formData.serviciosSeleccionados.reduce((total, featureKey) => {
+                                    const feature = features.find((f) => f.key === featureKey)
+                                    return total + (feature?.price || 0)
                                   }, 0)}
                                 </>
                               )}
@@ -505,9 +496,9 @@ export default function RegistroPage() {
                               ) : (
                                 <>
                                   Base: $60 + Funciones: $
-                                  {formData.serviciosSeleccionados.reduce((total, serviceId) => {
-                                    const service = services.find((s) => s.id === serviceId)
-                                    return total + (service?.price || 0)
+                                  {formData.serviciosSeleccionados.reduce((total, featureKey) => {
+                                    const feature = features.find((f) => f.key === featureKey)
+                                    return total + (feature?.price || 0)
                                   }, 0)}
                                 </>
                               )}
@@ -746,7 +737,6 @@ export default function RegistroPage() {
                 </div>
                 <div className="text-xs text-center hidden md:block">
                   <div className="font-medium">{step.title}</div>
-                  <div className="text-gray-500">{step.description}</div>
                 </div>
               </div>
             ))}
