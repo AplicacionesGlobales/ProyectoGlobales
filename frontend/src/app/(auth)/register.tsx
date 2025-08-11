@@ -273,7 +273,17 @@ export default function RegisterScreen() {
   ) => {
     const isFocused = focusedField === field;
     const hasError = validationErrors[field];
-    const isValid = value && !hasError && !isFocused;
+    
+    // For email and username, also consider availability validation
+    let isValid = value && !hasError && !isFocused;
+    
+    if (field === 'email' && isEmailAvailable === false) {
+      isValid = false; // Email is taken, so not valid
+    }
+    
+    if (field === 'username' && isUsernameAvailable === false) {
+      isValid = false; // Username is taken, so not valid
+    }
 
     return (
       <Animated.View style={{ 
