@@ -70,21 +70,22 @@ export class AuthService {
         });
       }
 
-      // Verificar email único en marca
-      if (brand) {
-        const existingUserBrand = await this.prisma.userBrand.findFirst({
-          where: {
-            email: registerDto.email,
-            brandId: registerDto.branchId
+      // Verificar email único - debe ser único globalmente pero permitir registro en diferentes marcas
+      let existingUserWithEmail = await this.prisma.user.findFirst({
+        where: { email: registerDto.email },
+        include: {
+          userBrands: {
+            where: { brandId: registerDto.branchId }
           }
-        });
-
-        if (existingUserBrand) {
-          errors.push({ 
-            code: ERROR_CODES.EMAIL_EXISTS_IN_BRANCH, 
-            description: ERROR_MESSAGES.EMAIL_EXISTS_IN_BRANCH 
-          });
         }
+      });
+
+      // Si existe el usuario y ya está registrado en esta marca
+      if (existingUserWithEmail && existingUserWithEmail.userBrands.length > 0) {
+        errors.push({ 
+          code: ERROR_CODES.EMAIL_EXISTS_IN_BRANCH, 
+          description: ERROR_MESSAGES.EMAIL_EXISTS_IN_BRANCH 
+        });
       }
 
       if (errors.length > 0) {
@@ -92,11 +93,9 @@ export class AuthService {
       }
 
       // Crear/obtener usuario
-      let user = await this.prisma.user.findFirst({
-        where: { username: registerDto.username }
-      });
+      let user;
 
-      if (!user) {
+      if (!existingUserWithEmail) {
         user = await this.prisma.user.create({
           data: {
             email: registerDto.email,
@@ -104,11 +103,16 @@ export class AuthService {
             firstName: registerDto.firstName,
             lastName: registerDto.lastName,
             role: UserRole.CLIENT,
+          },
+          include: {
+            userBrands: true
           }
         });
+      } else {
+        user = existingUserWithEmail;
       }
 
-      // Crear UserBrand
+      // Crear UserBrand (sin email, solo la relación)
       const passwordHash = await bcrypt.hash(registerDto.password, 12);
       const salt = randomBytes(32).toString('hex');
 
@@ -116,7 +120,6 @@ export class AuthService {
         data: {
           userId: user.id,
           brandId: registerDto.branchId,
-          email: registerDto.email,
           passwordHash,
           salt,
         }
@@ -165,21 +168,11 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
   try {
     const { email } = forgotPasswordDto;
     
-    // Buscar usuario por email principal o en UserBrand
+    // Buscar usuario por email principal
     const user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: email.toLowerCase() },
-          {
-            userBrands: {
-              some: { email: email.toLowerCase() }
-            }
-          }
-        ]
-      },
+      where: { email: email.toLowerCase() },
       include: {
         userBrands: {
-          where: { email: email.toLowerCase() },
           include: { brand: true }
         }
       }
@@ -359,9 +352,7 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
       const user = await this.prisma.user.findUnique({
         where: { id: validation.data.userId },
         include: {
-          userBrands: {
-            where: { email: email.toLowerCase() }
-          }
+          userBrands: true
         }
       });
 
@@ -374,20 +365,11 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
 
       // Actualizar contraseña en transacción
       await this.prisma.$transaction([
-        // Si el email coincide con el email principal del usuario, actualizar la tabla User
-        ...(user.email === email.toLowerCase() ? [
-          this.prisma.user.update({
-            where: { id: validation.data.userId },
-            data: { /* No actualizamos password en User porque no tiene campo password */ },
-          })
-        ] : []),
-        
-        // Si hay UserBrand con ese email, actualizar ahí
+        // Actualizar contraseña en todas las UserBrand del usuario
         ...(user.userBrands.length > 0 ? [
           this.prisma.userBrand.updateMany({
             where: {
               userId: validation.data.userId,
-              email: email.toLowerCase()
             },
             data: { passwordHash: hashedPassword },
           })
@@ -656,7 +638,6 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
           data: {
             userId: user.id,
             brandId: brand.id,
-            email: createBrandDto.email,
             passwordHash: hashedPassword,
             salt: salt
           }
@@ -759,15 +740,24 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
         return BaseResponseDto.success({ isAvailable: !existingUser });
       }
 
-      // Para CLIENT: verificar en la marca específica
-      const existingUserBrand = await this.prisma.userBrand.findFirst({
-        where: { 
-          email: normalizedEmail,
-          brandId: brandId
+      // Para CLIENT: verificar si el email ya existe y si ya está registrado en esa marca
+      const existingUser = await this.prisma.user.findFirst({
+        where: { email: normalizedEmail },
+        include: {
+          userBrands: {
+            where: { brandId: brandId }
+          }
         }
       });
 
-      return BaseResponseDto.success({ isAvailable: !existingUserBrand });
+      // Si el usuario no existe, está disponible
+      if (!existingUser) {
+        return BaseResponseDto.success({ isAvailable: true });
+      }
+
+      // Si el usuario existe pero no está en esta marca, está disponible para esta marca
+      const isAlreadyInBrand = existingUser.userBrands.length > 0;
+      return BaseResponseDto.success({ isAvailable: !isAlreadyInBrand });
 
     } catch (error) {
       return BaseResponseDto.error([{ 

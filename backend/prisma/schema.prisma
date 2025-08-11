@@ -10,7 +10,7 @@ datasource db {
 
 model User {
   id                 Int                 @id @default(autoincrement())
-  email              String
+  email              String              @unique
   username           String              @unique
   firstName          String?
   lastName           String?
@@ -52,7 +52,6 @@ model Brand {
 
 model UserBrand {
   id           Int      @id @default(autoincrement())
-  email        String
   passwordHash String
   salt         String   @unique
   isActive     Boolean  @default(true)
