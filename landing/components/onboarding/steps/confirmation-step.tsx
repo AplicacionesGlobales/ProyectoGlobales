@@ -6,8 +6,8 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { authService, BrandRegistrationData } from "@/lib/api"
-import { getBusinessType, getAppFeature, APP_FEATURES } from "@/lib/business-types"
+import { authService, BrandRegistrationData } from "@/lib/api/auth"
+import { useLandingData } from "@/hooks/use-landing-data"
 import { Icon } from "@/lib/icons"
 
 interface ConfirmationStepProps {
@@ -71,7 +71,37 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
   const [isRegistering, setIsRegistering] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const businessTypeInfo = getBusinessType(data.businessType)
+  const { 
+    businessTypes, 
+    features, 
+    loading, 
+    error: apiError,
+    getBusinessTypeByKey 
+  } = useLandingData();
+
+  const businessTypeInfo = getBusinessTypeByKey(data.businessType)
+  
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-lg text-gray-600">Cargando datos...</span>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (apiError) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 text-lg mb-4">Error al cargar los datos.</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
   
   const handleRegister = async () => {
     setIsRegistering(true)
@@ -237,7 +267,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
           </div>
           <div className="flex items-center gap-3">
             <Icon name={businessTypeInfo?.icon || "otro"} size={24} className="text-blue-600" />
-            <p className="font-medium">{businessTypeInfo?.name || data.businessType}</p>
+            <p className="font-medium">{businessTypeInfo?.title || data.businessType}</p>
           </div>
         </Card>
 
@@ -249,11 +279,11 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
           </div>
           <div className="flex flex-wrap gap-2">
             {data.selectedFeatures.map((featureId) => {
-              const feature = getAppFeature(featureId)
+              const feature = features.find(f => f.key === featureId)
               return (
                 <Badge key={featureId} variant="secondary" className="px-3 py-1">
-                  <span className="mr-1">{feature?.icon}</span>
-                  {feature?.name || featureId}
+                  <span className="mr-1">📱</span>
+                  {feature?.title || featureId}
                 </Badge>
               )
             })}
@@ -308,14 +338,14 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
               <>
                 <div className="text-sm font-medium text-gray-700 pt-2 border-t">Funciones adicionales:</div>
                 {data.selectedFeatures.map(featureId => {
-                  const feature = APP_FEATURES.find(f => f.id === featureId);
+                  const feature = features.find(f => f.key === featureId);
                   if (!feature) return null;
                   const monthlyPrice = feature.price;
                   const yearlyPrice = data.plan.billingPeriod === 'annual' ? monthlyPrice * 12 * 0.8 : monthlyPrice;
                   
                   return (
                     <div key={featureId} className="flex justify-between text-sm">
-                      <span>• {feature.name}</span>
+                      <span>• {feature.title}</span>
                       <span>
                         {data.plan.billingPeriod === 'annual' 
                           ? `$${monthlyPrice} × 12 × 0.8 = $${yearlyPrice.toFixed(2)}/año`

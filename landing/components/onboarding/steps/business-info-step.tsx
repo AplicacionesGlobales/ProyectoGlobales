@@ -25,7 +25,7 @@ export function BusinessInfoStep({ businessType, onChange, onNext, onPrev }: Bus
 
   const isValid = businessType !== ""
 
-  // Loading state
+  // Handle loading state
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -35,7 +35,7 @@ export function BusinessInfoStep({ businessType, onChange, onNext, onPrev }: Bus
     );
   }
 
-  // Error state
+  // Handle error state
   if (error) {
     return (
       <div className="text-center py-20">
@@ -43,6 +43,18 @@ export function BusinessInfoStep({ businessType, onChange, onNext, onPrev }: Bus
         <Button onClick={() => window.location.reload()} variant="outline">
           Reintentar
         </Button>
+      </div>
+    );
+  }
+
+  // Handle empty businessTypes (additional safety check)
+  if (!businessTypes || businessTypes.length === 0) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
+          <p className="text-gray-600">Cargando tipos de negocio...</p>
+        </div>
       </div>
     );
   }
@@ -57,7 +69,7 @@ export function BusinessInfoStep({ businessType, onChange, onNext, onPrev }: Bus
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {businessTypes.map((type) => {
+        {Array.isArray(businessTypes) && businessTypes.map((type) => {
           const recommendedFeatures = getRecommendedFeatures(type.key)
           
           return (
