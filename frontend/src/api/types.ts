@@ -7,9 +7,9 @@ export interface ErrorDetail {
 }
 
 export interface BaseResponseDto<T = any> {
-  successful: boolean;
+  success: boolean;  // Cambio de 'successful' a 'success'
   data?: T;
-  error?: ErrorDetail[];
+  errors?: ErrorDetail[];  // Cambio de 'error' a 'errors'
 }
 
 // Health Endpoint

@@ -96,11 +96,11 @@ export const forgotPassword = async (email: string): Promise<ForgotPasswordRespo
   );
   
   // Extraer la data del wrapper BaseResponseDto
-  if (apiResponse.successful && apiResponse.data) {
+  if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
   } else {
     // Si hay error, lanzar excepción con el mensaje
-    const errorMessage = apiResponse.error?.[0]?.description || 'Error al enviar código de recuperación';
+    const errorMessage = apiResponse.errors?.[0]?.description || 'Error al enviar código de recuperación';
     throw new Error(errorMessage);
   }
 };
@@ -114,11 +114,11 @@ export const validateResetCode = async (data: ValidateResetCodeRequest): Promise
   );
   
   // Extraer la data del wrapper BaseResponseDto
-  if (apiResponse.successful && apiResponse.data) {
+  if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
   } else {
     // Si hay error, lanzar excepción con el mensaje
-    const errorMessage = apiResponse.error?.[0]?.description || 'Error al validar código';
+    const errorMessage = apiResponse.errors?.[0]?.description || 'Error al validar código';
     throw new Error(errorMessage);
   }
 };
@@ -131,11 +131,11 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
   );
   
   // Extraer la data del wrapper BaseResponseDto
-  if (apiResponse.successful && apiResponse.data) {
+  if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
   } else {
     // Si hay error, lanzar excepción con el mensaje
-    const errorMessage = apiResponse.error?.[0]?.description || 'Error al restablecer contraseña';
+    const errorMessage = apiResponse.errors?.[0]?.description || 'Error al restablecer contraseña';
     throw new Error(errorMessage);
   }
 };

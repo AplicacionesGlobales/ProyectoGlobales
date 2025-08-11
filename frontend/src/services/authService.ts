@@ -81,7 +81,7 @@ class AuthService implements IAuthService {
   async validateEmail(email: string): Promise<boolean> {
     try {
       const response = await validateEmailEndpoint(email, getBrandId());
-      return response.successful && response.data ? response.data.isAvailable : true;
+      return response.success && response.data ? response.data.isAvailable : true;
     } catch (error) {
       console.warn('Email validation failed:', error);
       return true; // Assume available if validation fails

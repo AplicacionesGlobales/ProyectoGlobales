@@ -12,6 +12,7 @@ import {
   ResetPasswordResponseDto,
 } from './dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
+import { ValidateEmailDto, EmailValidationResponseDto } from './dto/validate-email.dto';
 import { BaseResponseDto } from '../common/dto';
 import { AUTH_SUCCESS_RESPONSE } from '../common/templates';
 
@@ -22,10 +23,10 @@ export class AuthController {
 
   // ==================== REGISTRATION ENDPOINTS ====================
   @Post('register/client')
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Registrar cliente en sucursal' })
   @ApiBody({ type: RegisterClientDto })
-  @ApiResponse({ status: 201, description: 'Cliente registrado exitosamente', schema: AUTH_SUCCESS_RESPONSE })
+  @ApiResponse({ status: 200, description: 'Cliente registrado', type: BaseResponseDto })
   async registerClient(
     @Body(ValidationPipe) registerDto: RegisterClientDto
   ): Promise<BaseResponseDto<AuthResponse>> {
@@ -34,18 +35,10 @@ export class AuthController {
 
 
   @Post('register/brand')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({summary: 'Registrar nueva marca con usuario administrador'})
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Registrar nueva marca con usuario administrador' })
   @ApiBody({ type: CreateBrandDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Marca y usuario administrador creados exitosamente',
-    type: () => BaseResponseDto
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Email ya existe o datos inválidos'
-  })
+  @ApiResponse({ status: 200, description: 'Marca registrada', type: BaseResponseDto })
   async registerBrand(
     @Body(ValidationPipe) createBrandDto: CreateBrandDto
   ): Promise<BaseResponseDto<any>> {
@@ -57,9 +50,16 @@ export class AuthController {
   @Post('validate-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Validar disponibilidad de email' })
-  @ApiResponse({ status: 200, description: 'Email validado' })
-  async validateEmail(@Body() { email, brandId }: { email: string; brandId?: number }) {
-    return this.authService.validateEmail(email, brandId);
+  @ApiBody({ type: ValidateEmailDto })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Email validado exitosamente',
+    type: BaseResponseDto<EmailValidationResponseDto>
+  })
+  async validateEmail(
+    @Body(ValidationPipe) validateEmailDto: ValidateEmailDto
+  ): Promise<BaseResponseDto<EmailValidationResponseDto>> {
+    return this.authService.validateEmail(validateEmailDto.email, validateEmailDto.brandId);
   }
 
   // ==================== LOGIN ENDPOINTS ====================
