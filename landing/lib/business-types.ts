@@ -2,7 +2,7 @@
 export interface BusinessType {
   id: string;
   name: string;
-  emoji: string;
+  icon: string; // Changed from emoji to icon ID
   services: string[]; // IDs of recommended services
 }
 
@@ -11,7 +11,7 @@ export interface AppFeature {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  icon: string; // Changed from emoji to icon ID
   category: 'core' | 'business' | 'advanced';
   popular?: boolean;
 }
@@ -21,49 +21,49 @@ export const BUSINESS_TYPES: BusinessType[] = [
   { 
     id: "fotografo", 
     name: "Fotógrafo", 
-    emoji: "📸", 
+    icon: "fotografo", 
     services: ["citas", "ubicaciones", "archivos", "pagos", "galerias"] 
   },
   { 
     id: "camarografo", 
     name: "Camarógrafo", 
-    emoji: "🎥", 
+    icon: "camarografo", 
     services: ["citas", "ubicaciones", "archivos", "pagos", "galerias"] 
   },
   { 
     id: "medico", 
     name: "Médico/Dentista", 
-    emoji: "🦷", 
+    icon: "medico", 
     services: ["citas", "archivos", "pagos", "reportes", "recordatorios"] 
   },
   { 
     id: "estilista", 
     name: "Estilista/Barbero", 
-    emoji: "💇", 
+    icon: "estilista", 
     services: ["citas", "pagos", "galerias", "recordatorios"] 
   },
   { 
     id: "consultor", 
     name: "Consultor", 
-    emoji: "💼", 
-    services: ["citas", "archivos", "pagos", "reportes", "videollamadas"] 
+    icon: "consultor", 
+    services: ["citas", "archivos", "pagos", "reportes"] 
   },
   { 
     id: "masajista", 
     name: "Masajista/Spa", 
-    emoji: "💆", 
+    icon: "masajista", 
     services: ["citas", "ubicaciones", "pagos", "recordatorios"] 
   },
   { 
     id: "entrenador", 
     name: "Entrenador Personal", 
-    emoji: "🏋️", 
+    icon: "entrenador", 
     services: ["citas", "ubicaciones", "archivos", "pagos", "seguimiento"] 
   },
   { 
     id: "otro", 
     name: "Otro Servicio", 
-    emoji: "🏢", 
+    icon: "otro", 
     services: ["citas", "pagos"] // Minimal set for custom business
   },
 ];
@@ -75,7 +75,7 @@ export const APP_FEATURES: AppFeature[] = [
     id: "citas",
     name: "Sistema de Citas",
     description: "Agenda y gestión de citas online",
-    icon: "📅",
+    icon: "citas",
     category: "core",
     popular: true,
   },
@@ -83,7 +83,7 @@ export const APP_FEATURES: AppFeature[] = [
     id: "pagos",
     name: "Pagos Online",
     description: "Procesar pagos y facturación",
-    icon: "💳",
+    icon: "pagos",
     category: "core",
     popular: true,
   },
@@ -91,7 +91,7 @@ export const APP_FEATURES: AppFeature[] = [
     id: "clientes",
     name: "Base de Clientes",
     description: "Gestión de información de clientes",
-    icon: "👥",
+    icon: "clientes",
     category: "core",
     popular: true,
   },
@@ -101,35 +101,28 @@ export const APP_FEATURES: AppFeature[] = [
     id: "ubicaciones",
     name: "Multi-ubicaciones",
     description: "Gestión de múltiples sucursales",
-    icon: "📍",
+    icon: "ubicaciones",
     category: "business",
   },
   {
     id: "archivos",
     name: "Gestión de Archivos",
     description: "Almacenamiento y compartir archivos",
-    icon: "📁",
+    icon: "archivos",
     category: "business",
   },
   {
     id: "galerias",
     name: "Galerías de Trabajo",
     description: "Mostrar tu portafolio visual",
-    icon: "🖼️",
+    icon: "galerias",
     category: "business",
   },
   {
     id: "recordatorios",
-    name: "Recordatorios SMS/Email",
-    description: "Notificaciones automáticas",
-    icon: "🔔",
-    category: "business",
-  },
-  {
-    id: "inventario",
-    name: "Control de Inventario",
-    description: "Gestión de productos y stock",
-    icon: "📦",
+    name: "Recordatorios Email",
+    description: "Notificaciones automáticas por email",
+    icon: "recordatorios",
     category: "business",
   },
   
@@ -138,35 +131,14 @@ export const APP_FEATURES: AppFeature[] = [
     id: "reportes",
     name: "Reportes Avanzados",
     description: "Analytics y métricas de negocio",
-    icon: "📊",
-    category: "advanced",
-  },
-  {
-    id: "videollamadas",
-    name: "Videollamadas",
-    description: "Consultas virtuales integradas",
-    icon: "📹",
+    icon: "reportes",
     category: "advanced",
   },
   {
     id: "seguimiento",
     name: "Seguimiento de Progreso",
     description: "Track de objetivos y resultados",
-    icon: "📈",
-    category: "advanced",
-  },
-  {
-    id: "automatizacion",
-    name: "Automatización",
-    description: "Workflows y procesos automáticos",
-    icon: "🤖",
-    category: "advanced",
-  },
-  {
-    id: "integraciones",
-    name: "Integraciones",
-    description: "Conectar con otras herramientas",
-    icon: "🔗",
+    icon: "seguimiento",
     category: "advanced",
   },
 ];

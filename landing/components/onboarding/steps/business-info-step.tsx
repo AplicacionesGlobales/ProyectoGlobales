@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { BUSINESS_TYPES, getRecommendedFeatures } from "@/lib/business-types"
+import { Icon } from "@/lib/icons"
 
 interface BusinessInfoStepProps {
   businessType: string
@@ -41,7 +42,7 @@ export function BusinessInfoStep({ businessType, onChange, onNext, onPrev }: Bus
               onClick={() => onChange(type.id)}
             >
               <div className="text-center space-y-2">
-                <div className="text-3xl">{type.emoji}</div>
+                <Icon name={type.icon} size={32} className="text-blue-600" />
                 <h3 className="font-medium text-gray-900">{type.name}</h3>
                 <div className="flex flex-wrap gap-1 justify-center">
                   {recommendedFeatures.slice(0, 3).map((feature) => (

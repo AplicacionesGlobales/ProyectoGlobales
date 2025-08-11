@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, Cre
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { authService, BrandRegistrationData } from "@/lib/api"
 import { getBusinessType, getAppFeature } from "@/lib/business-types"
+import { Icon } from "@/lib/icons"
 
 interface ConfirmationStepProps {
   data: {
@@ -175,7 +176,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <h3 className="font-semibold text-gray-900">Tipo de Negocio</h3>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-2xl">{businessTypeInfo?.emoji}</span>
+            <Icon name={businessTypeInfo?.icon || "otro"} size={24} className="text-blue-600" />
             <p className="font-medium">{businessTypeInfo?.name || data.businessType}</p>
           </div>
         </Card>

@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ArrowLeft, ArrowRight, Upload, Check, Smartphone, Monitor, FileImage, Clock, Palette } from "lucide-react"
 import Link from "next/link"
 import { CustomizationStepNew } from "@/components/customization-step-new"
+import { Icon } from "@/lib/icons"
 
 const steps = [
   { id: 1, title: "Información Personal", description: "Cuéntanos sobre ti" },
@@ -23,61 +24,61 @@ const steps = [
 ]
 
 const businessTypes = [
-  { id: "fotografo", name: "Fotógrafo", emoji: "📸", services: ["citas", "ubicaciones", "archivos", "pagos"] },
-  { id: "camarografo", name: "Camarógrafo", emoji: "🎥", services: ["citas", "ubicaciones", "archivos", "pagos"] },
-  { id: "medico", name: "Médico/Dentista", emoji: "🦷", services: ["citas", "archivos", "pagos", "reportes"] },
-  { id: "estilista", name: "Estilista/Barbero", emoji: "💇", services: ["citas", "archivos", "pagos"] },
-  { id: "consultor", name: "Consultor", emoji: "💼", services: ["citas", "archivos", "pagos", "reportes"] },
-  { id: "masajista", name: "Masajista/Spa", emoji: "💆", services: ["citas", "ubicaciones", "pagos"] },
+  { id: "fotografo", name: "Fotógrafo", icon: "fotografo", services: ["citas", "ubicaciones", "archivos", "pagos"] },
+  { id: "camarografo", name: "Camarógrafo", icon: "camarografo", services: ["citas", "ubicaciones", "archivos", "pagos"] },
+  { id: "medico", name: "Médico/Dentista", icon: "medico", services: ["citas", "archivos", "pagos", "reportes"] },
+  { id: "estilista", name: "Estilista/Barbero", icon: "estilista", services: ["citas", "archivos", "pagos"] },
+  { id: "consultor", name: "Consultor", icon: "consultor", services: ["citas", "archivos", "pagos", "reportes"] },
+  { id: "masajista", name: "Masajista/Spa", icon: "masajista", services: ["citas", "ubicaciones", "pagos"] },
   {
     id: "entrenador",
     name: "Entrenador Personal",
-    emoji: "🏋️",
+    icon: "entrenador",
     services: ["citas", "ubicaciones", "archivos", "pagos"],
   },
-  { id: "otro", name: "Otro Servicio", emoji: "🏢", services: [] },
+  { id: "otro", name: "Otro Servicio", icon: "otro", services: [] },
 ]
 
 const services = [
   {
     id: "citas",
     name: "Gestión de Citas Avanzada",
-    emoji: "📅",
+    icon: "citas",
     description: "Sistema completo de reservas con tipos de citas personalizables y recordatorios automáticos",
     price: 20,
   },
   {
     id: "ubicaciones",
     name: "Ubicaciones en Mapa",
-    emoji: "📍",
+    icon: "ubicaciones",
     description: "Permite a clientes marcar ubicaciones exactas en el mapa para servicios a domicilio",
     price: 15,
   },
   {
     id: "archivos",
     name: "Gestión de Archivos",
-    emoji: "📁",
+    icon: "archivos",
     description: "Comparte portfolios, contratos, resultados y documentos organizados por cita",
     price: 18,
   },
   {
     id: "pagos",
     name: "Pagos Integrados",
-    emoji: "💳",
+    icon: "pagos",
     description: "Acepta pagos directamente en la app. Los pagos se depositan a tu cuenta todos los martes.",
     price: 25,
   },
   {
     id: "tipos-citas",
     name: "Tipos de Citas Personalizables",
-    emoji: "🎨",
+    icon: "galerias",
     description: "Define diferentes servicios con duraciones, precios y requisitos específicos",
     price: 12,
   },
   {
     id: "reportes",
     name: "Reportes y Analytics",
-    emoji: "📊",
+    icon: "reportes",
     description: "Estadísticas de reservas, ingresos, clientes frecuentes y patrones de negocio",
     price: 15,
   },
@@ -268,7 +269,9 @@ export default function RegistroPage() {
                       onClick={() => handleBusinessTypeSelect(business.id)}
                     >
                       <CardContent className="p-4 text-center">
-                        <div className="text-2xl mb-2">{business.emoji}</div>
+                        <div className="mb-2">
+                          <Icon name={business.icon} size={24} className="text-blue-600" />
+                        </div>
                         <div className="text-sm font-medium">{business.name}</div>
                       </CardContent>
                     </Card>
@@ -321,7 +324,9 @@ export default function RegistroPage() {
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-4">
-                      <div className="text-2xl">{service.emoji}</div>
+                      <div>
+                        <Icon name={service.icon} size={24} className="text-blue-600" />
+                      </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <h3 className="font-semibold">{service.name}</h3>
