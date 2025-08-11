@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Alert, 
   Text, 
   TextInput, 
   TouchableOpacity, 
@@ -16,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useError, ErrorUtils, InlineError } from '@/components/ui/errors';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -34,8 +34,18 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [errors, setErrors] = useState<any>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, string | null>>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // Refs for focusing on first error
+  const firstNameInputRef = useRef<TextInput>(null);
+  const lastNameInputRef = useRef<TextInput>(null);
+  const emailInputRef = useRef<TextInput>(null);
+  const usernameInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
+
+  const { showToast, showModal, showSuccess, showValidationErrors } = useError();
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -86,96 +96,137 @@ export default function RegisterScreen() {
     }).start();
   }, [password]);
 
-  const validateField = (field: string, value: string) => {
-    let error = '';
-    
-    switch(field) {
-      case 'firstName':
-        if (!value.trim()) error = 'First name is required';
-        else if (value.length < 2) error = 'Too short';
-        break;
-      case 'lastName':
-        if (!value.trim()) error = 'Last name is required';
-        else if (value.length < 2) error = 'Too short';
-        break;
-      case 'email':
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!value) error = 'Email is required';
-        else if (!emailRegex.test(value)) error = 'Invalid email format';
-        break;
-      case 'username':
-        if (!value) error = 'Username is required';
-        else if (value.length < 3) error = 'At least 3 characters';
-        else if (!/^[a-zA-Z0-9_]+$/.test(value)) error = 'Only letters, numbers, and underscores';
-        break;
-      case 'password':
-        if (!value) error = 'Password is required';
-        else if (value.length < 8) error = 'At least 8 characters';
-        break;
-      case 'confirmPassword':
-        if (!value) error = 'Please confirm password';
-        else if (value !== password) error = 'Passwords don\'t match';
-        break;
+  // Debounced validation for individual fields
+  const debouncedValidation = useRef(
+    ErrorUtils.debounceValidation((field: string, value: string, additionalValue?: string) => {
+      const error = ErrorUtils.validateSingleField(field, value, additionalValue);
+      setValidationErrors(prev => ({ ...prev, [field]: error }));
+    }, 300)
+  ).current;
+
+  const validateField = (field: string, value: string): string | null => {
+    const error = ErrorUtils.validateSingleField(field, value, field === 'confirmPassword' ? password : undefined);
+    setValidationErrors(prev => ({ ...prev, [field]: error }));
+    return error;
+  };
+
+  const focusFirstErrorField = (errors: Record<string, string | null>) => {
+    if (errors.firstName) {
+      firstNameInputRef.current?.focus();
+    } else if (errors.lastName) {
+      lastNameInputRef.current?.focus();
+    } else if (errors.email) {
+      emailInputRef.current?.focus();
+    } else if (errors.username) {
+      usernameInputRef.current?.focus();
+    } else if (errors.password) {
+      passwordInputRef.current?.focus();
+    } else if (errors.confirmPassword) {
+      confirmPasswordInputRef.current?.focus();
     }
-    
-    setErrors((prev: any) => ({ ...prev, [field]: error }));
-    return !error;
   };
 
   const handleRegister = async () => {
-    // Validate all fields
-    const isFirstNameValid = validateField('firstName', firstName);
-    const isLastNameValid = validateField('lastName', lastName);
-    const isEmailValid = validateField('email', email);
-    const isUsernameValid = validateField('username', username);
-    const isPasswordValid = validateField('password', password);
-    const isConfirmValid = validateField('confirmPassword', confirmPassword);
+    // Validate all fields synchronously
+    const localErrors = ErrorUtils.validateRegistrationForm(
+      firstName,
+      lastName,
+      email,
+      username,
+      password,
+      confirmPassword
+    );
     
-    if (!isFirstNameValid || !isLastNameValid || !isEmailValid || 
-        !isUsernameValid || !isPasswordValid || !isConfirmValid) {
-      Alert.alert('Validation Error', 'Please fix all errors before continuing');
+    // Update state once
+    setValidationErrors(localErrors);
+    
+    // Check if there are any errors
+    const hasErrors = Object.values(localErrors).some(error => error !== null);
+    
+    if (hasErrors) {
+      // Focus first error field
+      focusFirstErrorField(localErrors);
+      
+      // Show validation errors
+      const fieldErrors = Object.entries(localErrors)
+        .filter(([_, error]) => error !== null)
+        .map(([field, message]) => ({ field, message: message! }));
+      
+      showValidationErrors(fieldErrors);
       return;
     }
 
     if (!termsAccepted) {
-      Alert.alert('Terms Required', 'Please accept the terms and conditions');
+      showToast('Please accept the terms and conditions', 'warning', 'medium');
       return;
     }
 
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert(
-        '🎉 Success!', 
-        `Welcome ${firstName}! Your account has been created successfully.`,
-        [
-          {
-            text: 'Get Started',
-            onPress: () => router.replace('/')
+    try {
+      // Simulate API call with potential server errors
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          // Simulate different scenarios
+          const scenario = Math.random();
+          
+          if (scenario < 0.1) {
+            // Simulate username already exists
+            reject({
+              response: {
+                status: 409,
+                data: {
+                  field: 'username',
+                  message: 'This username is already taken'
+                }
+              }
+            });
+          } else if (scenario < 0.2) {
+            // Simulate email already exists
+            reject({
+              response: {
+                status: 409,
+                data: {
+                  field: 'email',
+                  message: 'An account with this email already exists'
+                }
+              }
+            });
+          } else {
+            resolve(true);
           }
-        ]
-      );
-    }, 2000);
+        }, 2000);
+      });
+
+      showSuccess(`Welcome ${firstName}! Your account has been created successfully.`, 4000);
+      setTimeout(() => {
+        router.replace('/');
+      }, 1000);
+      
+    } catch (error: any) {
+      // Handle server errors
+      if (error?.response?.status === 409 && error?.response?.data?.field) {
+        // Handle field-specific server errors
+        const serverError = error.response.data;
+        setValidationErrors(prev => ({
+          ...prev,
+          [serverError.field]: serverError.message
+        }));
+        showToast(serverError.message, 'error', 'high');
+        
+        // Focus the problematic field
+        focusFirstErrorField({ [serverError.field]: serverError.message });
+      } else {
+        showToast('Registration failed. Please try again.', 'error', 'high');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const navigateToLogin = () => {
     router.navigate('./login');
   };
-  Alert.alert(
-  '🎉 ¡Registro Exitoso!', 
-  `Bienvenido ${firstName}! Tu cuenta ha sido creada exitosamente.\n\nAhora vamos a configurar tu plan.`,
-  [
-    {
-      text: 'Seleccionar Plan',
-      onPress: () => {
-        router.replace('./plan-selection'); 
-      }
-    }
-  ],
-  { cancelable: false }
-);
 
   const getPasswordStrengthColor = () => {
     if (passwordStrength < 40) return '#ef4444';
@@ -197,6 +248,18 @@ export default function RegisterScreen() {
     { met: /[@$!%*?&#]/.test(password), text: 'One special character' },
   ];
 
+  const getFieldRef = (field: string) => {
+    switch (field) {
+      case 'firstName': return firstNameInputRef;
+      case 'lastName': return lastNameInputRef;
+      case 'email': return emailInputRef;
+      case 'username': return usernameInputRef;
+      case 'password': return passwordInputRef;
+      case 'confirmPassword': return confirmPasswordInputRef;
+      default: return null;
+    }
+  };
+
   const renderInput = (
     value: string,
     setValue: (text: string) => void,
@@ -206,7 +269,7 @@ export default function RegisterScreen() {
     options: any = {}
   ) => {
     const isFocused = focusedField === field;
-    const hasError = errors[field];
+    const hasError = validationErrors[field];
     const isValid = value && !hasError && !isFocused;
 
     return (
@@ -249,6 +312,7 @@ export default function RegisterScreen() {
             style={{ marginRight: 10 }}
           />
           <TextInput
+            ref={getFieldRef(field)}
             style={{
               flex: 1,
               paddingVertical: Platform.OS === 'ios' ? 14 : 10,
@@ -260,13 +324,17 @@ export default function RegisterScreen() {
             value={value}
             onChangeText={(text) => {
               setValue(text);
-              if (errors[field]) {
-                setErrors((prev: any) => ({ ...prev, [field]: '' }));
+              // Clear error immediately when user starts typing
+              if (validationErrors[field]) {
+                setValidationErrors((prev: any) => ({ ...prev, [field]: null }));
               }
+              // Debounced validation for real-time feedback
+              debouncedValidation(field, text);
             }}
             onFocus={() => setFocusedField(field)}
             onBlur={() => {
               setFocusedField(null);
+              // Immediate validation on blur
               validateField(field, value);
             }}
             secureTextEntry={options.secureTextEntry}
@@ -287,12 +355,16 @@ export default function RegisterScreen() {
             <Ionicons name="checkmark-circle" size={20} color="#10b981" />
           )}
         </View>
-        {hasError && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, marginLeft: 2 }}>
-            <Ionicons name="alert-circle" size={14} color="#ef4444" style={{ marginRight: 4 }} />
-            <Text style={{ color: '#ef4444', fontSize: 12 }}>{hasError}</Text>
-          </View>
-        )}
+        
+        {/* Error component */}
+        <InlineError
+          message={hasError || ''}
+          type="validation"
+          visible={!!hasError}
+          compact={true}
+          showIcon={true}
+          dismissible={false}
+        />
       </Animated.View>
     );
   };

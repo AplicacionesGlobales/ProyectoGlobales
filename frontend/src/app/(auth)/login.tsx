@@ -5,7 +5,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ActivityIndicator, 
-  Alert, 
   Text, 
   TextInput, 
   TouchableOpacity, 
@@ -18,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useError, ErrorUtils, InlineError } from '@/components/ui/errors';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -28,10 +28,15 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [errors, setErrors] = useState<any>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, string | null>>({});
   const [rememberMe, setRememberMe] = useState(false);
   
+  // Refs for focusing on first error
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  
   const { login } = useApp();
+  const { showToast, showModal, showApiError, showSuccess } = useError();
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -61,32 +66,52 @@ export default function LoginScreen() {
     ]).start();
   }, []);
 
-  const validateField = (field: string, value: string) => {
-    let error = '';
-    
-    switch(field) {
-      case 'email':
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!value) error = 'Email is required';
-        else if (!emailRegex.test(value)) error = 'Invalid email format';
-        break;
-      case 'password':
-        if (!value) error = 'Password is required';
-        else if (value.length < 6) error = 'Minimum 6 characters';
-        break;
+  // Debounced validation for individual fields
+  const debouncedValidation = useRef(
+    ErrorUtils.debounceValidation((field: string, value: string) => {
+      const error = ErrorUtils.validateSingleField(field, value);
+      setValidationErrors(prev => ({ ...prev, [field]: error }));
+    }, 300)
+  ).current;
+
+  const validateField = (field: string, value: string): string | null => {
+    const error = ErrorUtils.validateSingleField(field, value);
+    setValidationErrors(prev => ({ ...prev, [field]: error }));
+    return error;
+  };
+
+  const focusFirstErrorField = (errors: Record<string, string | null>) => {
+    if (errors.email) {
+      emailInputRef.current?.focus();
+    } else if (errors.password) {
+      passwordInputRef.current?.focus();
     }
-    
-    setErrors((prev: any) => ({ ...prev, [field]: error }));
-    return !error;
   };
 
   const handleLogin = async () => {
-    // Validate fields
-    const isEmailValid = validateField('email', email);
-    const isPasswordValid = validateField('password', password);
+    // Validate all fields synchronously
+    const localErrors = ErrorUtils.validateLoginForm(email, password);
     
-    if (!isEmailValid || !isPasswordValid) {
-      Alert.alert('Validation Error', 'Please fix all errors');
+    // Update state once
+    setValidationErrors(localErrors);
+    
+    // Check if there are any errors
+    const hasErrors = Object.values(localErrors).some(error => error !== null);
+    
+    if (hasErrors) {
+      // Focus first error field
+      focusFirstErrorField(localErrors);
+      
+      // Show validation errors
+      const fieldErrors = Object.entries(localErrors)
+        .filter(([_, error]) => error !== null)
+        .map(([field, message]) => ({ field, message: message! }));
+      
+      if (fieldErrors.length === 1) {
+        showToast(fieldErrors[0].message, 'validation', 'medium');
+      } else {
+        showToast(`Please fix ${fieldErrors.length} validation errors`, 'validation', 'medium');
+      }
       return;
     }
 
@@ -95,6 +120,7 @@ export default function LoginScreen() {
       const success = await login(email, password);
       if (success) {
         const isAdmin = email === 'admin@test.com';
+        showSuccess('Login successful! Redirecting...', 2000);
         
         setTimeout(() => {
           try {
@@ -109,10 +135,17 @@ export default function LoginScreen() {
           }
         }, 100);
       } else {
-        Alert.alert('Error', 'Invalid credentials');
+        showToast('Invalid email or password', 'error', 'high');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Login failed');
+    } catch (error: any) {
+      // Handle server errors
+      if (error?.response?.status === 401) {
+        showToast('Invalid credentials', 'error', 'high');
+      } else if (error?.response?.status === 429) {
+        showToast('Too many login attempts. Please try again later.', 'error', 'high');
+      } else {
+        showApiError(error, 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -123,13 +156,16 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      '🔐 Reset Password', 
+    showModal(
+      'Reset Password',
       'Enter your email and we\'ll send you instructions to reset your password.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Send', onPress: () => console.log('Send recovery email') }
-      ]
+      'info',
+      'medium',
+      () => console.log('Send recovery email'),
+      'Send',
+      undefined,
+      undefined,
+      true
     );
   };
 
@@ -146,9 +182,9 @@ export default function LoginScreen() {
   const testHealthAPI = async () => {
     try {
       await healthCheck();
-      Alert.alert('✅ API Test', 'API is working correctly.');
+      showSuccess('API is working correctly', 3000);
     } catch (error) {
-      Alert.alert('❌ API Test', 'Error connecting to API.');
+      showToast('Error connecting to API', 'error', 'high');
       console.error('API Error:', error);
     }
   };
@@ -162,7 +198,7 @@ export default function LoginScreen() {
     options: any = {}
   ) => {
     const isFocused = focusedField === field;
-    const hasError = errors[field];
+    const hasError = validationErrors[field];
     const isValid = value && !hasError && !isFocused;
 
     return (
@@ -205,6 +241,7 @@ export default function LoginScreen() {
             style={{ marginRight: 10 }}
           />
           <TextInput
+            ref={field === 'email' ? emailInputRef : field === 'password' ? passwordInputRef : undefined}
             style={{
               flex: 1,
               paddingVertical: Platform.OS === 'ios' ? 14 : 10,
@@ -216,9 +253,12 @@ export default function LoginScreen() {
             value={value}
             onChangeText={(text) => {
               setValue(text);
-              if (errors[field]) {
-                setErrors((prev: any) => ({ ...prev, [field]: '' }));
+              // Clear error immediately when user starts typing
+              if (validationErrors[field]) {
+                setValidationErrors(prev => ({ ...prev, [field]: null }));
               }
+              // Use debounced validation for real-time feedback
+              debouncedValidation(field, text);
             }}
             onFocus={() => setFocusedField(field)}
             onBlur={() => {
@@ -243,12 +283,16 @@ export default function LoginScreen() {
             <Ionicons name="checkmark-circle" size={20} color="#10b981" />
           )}
         </View>
-        {hasError && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, marginLeft: 2 }}>
-            <Ionicons name="alert-circle" size={14} color="#ef4444" style={{ marginRight: 4 }} />
-            <Text style={{ color: '#ef4444', fontSize: 12 }}>{hasError}</Text>
-          </View>
-        )}
+        
+        {/* Error component */}
+        <InlineError
+          message={hasError || ''}
+          type="validation"
+          visible={!!hasError}
+          compact={true}
+          showIcon={true}
+          dismissible={false}
+        />
       </Animated.View>
     );
   };
