@@ -8,10 +8,10 @@ export const API_ENDPOINTS = {
     VALIDATE_EMAIL: '/auth/validate-email',
     VALIDATE_USERNAME: '/auth/validate-username',
     FORGOT_PASSWORD: '/auth/forgot-password',
-    VALIDATE_RESET_CODE: '/auth/validate-reset-code', // Nuevo endpoint
+    VALIDATE_RESET_CODE: '/auth/validate-reset-code',
     RESET_PASSWORD: '/auth/reset-password',
   },
 } as const;
 
 // Base URL (ajusta según tu servidor)
-export const BASE_URL = 'https://748q43kg-3000.use2.devtunnels.ms';
+export const BASE_URL = 'http://localhost:3000';

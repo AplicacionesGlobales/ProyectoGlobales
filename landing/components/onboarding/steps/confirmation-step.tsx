@@ -19,12 +19,17 @@ interface ConfirmationStepProps {
       phone: string
       businessName: string
       description: string
+      password: string
+      confirmPassword: string
     }
     businessType: string
     selectedFeatures: string[]
     customization: {
       colorPalette: string
-      logo?: File
+      customColors: string[]
+      logoUrl?: File
+      isotopoUrl?: File
+      imagotipoUrl?: File
     }
     plan: {
       type: "web" | "app" | "complete"
@@ -73,23 +78,49 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
     setError(null)
 
     try {
-      // Prepare registration data
+      // Generate a shorter, cleaner username
+      const cleanEmail = data.personalInfo.email.split('@')[0]
+      const shortId = Math.random().toString(36).substring(2, 8) // 6 character random string
+      const username = `${cleanEmail}_${shortId}`
+
+      // Prepare complete registration data with ALL flow information
       const registrationData: BrandRegistrationData = {
-        // User info
+        // User authentication info
         email: data.personalInfo.email,
-        username: data.personalInfo.email.split('@')[0] + '_' + Date.now(), // Generate unique username
-        password: 'temp_password_' + Date.now(), // Generate temporary password
+        username: username,
+        password: data.personalInfo.password,
         firstName: data.personalInfo.firstName,
         lastName: data.personalInfo.lastName,
 
         // Brand info
         brandName: data.personalInfo.businessName,
         brandDescription: data.personalInfo.description || undefined,
-        brandAddress: undefined, // Could be added to personal info form
         brandPhone: data.personalInfo.phone || undefined,
 
-        // Color palette
-        colorPalette: colorPalettes[data.customization.colorPalette] || colorPalettes.modern
+        // Business details
+        businessType: data.businessType,
+        selectedFeatures: data.selectedFeatures,
+
+        // Customization
+        colorPalette: colorPalettes[data.customization.colorPalette] || colorPalettes.modern,
+        customColors: data.customization.customColors || [],
+
+        // Images/Files (FormData will be handled separately)
+        logoFile: data.customization.logoUrl,
+        isotopoFile: data.customization.isotopoUrl,
+        imagotipoFile: data.customization.imagotipoUrl,
+
+        // Plan and pricing information
+        plan: {
+          type: data.plan.type,
+          price: data.plan.price,
+          features: data.plan.features,
+          billingPeriod: data.plan.billingPeriod || 'monthly'
+        },
+
+        // Additional metadata
+        registrationDate: new Date().toISOString(),
+        source: 'landing_onboarding'
       }
 
       console.log('=== DATOS COMPLETOS ENVIADOS A LA API ===')
@@ -167,6 +198,10 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
               <p className="font-medium">{data.personalInfo.phone || 'No especificado'}</p>
             </div>
             <div>
+              <p className="text-gray-500">Contraseña</p>
+              <p className="font-medium">{'*'.repeat(data.personalInfo.password.length)} (configurada)</p>
+            </div>
+            <div className="md:col-span-2">
               <p className="text-gray-500">Nombre del negocio</p>
               <p className="font-medium">{data.personalInfo.businessName}</p>
             </div>

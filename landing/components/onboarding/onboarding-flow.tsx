@@ -24,6 +24,8 @@ export interface OnboardingData {
     phone: string
     businessName: string
     description: string
+    password: string
+    confirmPassword: string
   }
   businessType: string
   selectedFeatures: string[]
@@ -61,7 +63,9 @@ export function OnboardingFlow() {
       email: "",
       phone: "",
       businessName: "",
-      description: ""
+      description: "",
+      password: "",
+      confirmPassword: ""
     },
     businessType: "",
     selectedFeatures: [],
