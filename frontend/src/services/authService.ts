@@ -31,7 +31,12 @@ export interface IAuthService {
 }
 
 class AuthService implements IAuthService {
-  
+  private baseURL: string;
+
+  constructor(baseURL: string = process.env.API_URL || 'http://localhost:3000') {
+    this.baseURL = baseURL;
+  }
+
   async register(data: Omit<RegisterFormData, 'confirmPassword'>): Promise<RegisterResponse> {
     try {
       // Validar que firstName y lastName estén presentes
