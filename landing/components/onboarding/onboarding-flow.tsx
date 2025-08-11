@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, ArrowRight, Check } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, Home } from "lucide-react"
+import Link from "next/link"
 
 // Import individual step components
 import { PersonalInfoStep } from "./steps/personal-info-step"
@@ -99,12 +100,33 @@ export function OnboardingFlow() {
   }
 
   const handleCustomizationChange = (field: string, value: any) => {
-    updateData({
-      customization: {
-        ...data.customization,
-        [field]: value
+    console.log('handleCustomizationChange called with:', field, value); // Debug log
+    
+    // Mapear correctamente los campos
+    if (field === "paletaColores") {
+      updateData({
+        customization: {
+          ...data.customization,
+          colorPalette: value
+        }
+      })
+    } else {
+      // Para otros campos como logos
+      const fieldMapping: { [key: string]: string } = {
+        'logotipo': 'logoUrl',
+        'isotipo': 'isotopoUrl', 
+        'imagotipo': 'imagotipoUrl'
       }
-    })
+      
+      const mappedField = fieldMapping[field] || field
+      
+      updateData({
+        customization: {
+          ...data.customization,
+          [mappedField]: value
+        }
+      })
+    }
   }
 
   const nextStep = () => {
@@ -284,6 +306,16 @@ export function OnboardingFlow() {
             {renderStep()}
           </CardContent>
         </Card>
+
+        {/* Navigation to Home */}
+        <div className="mt-8 flex justify-center">
+          <Link href="/">
+            <Button variant="outline" className="flex items-center gap-2 px-6 py-3">
+              <Home className="w-4 h-4" />
+              Volver al Inicio
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   )

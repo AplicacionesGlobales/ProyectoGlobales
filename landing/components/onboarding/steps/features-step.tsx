@@ -74,20 +74,26 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
             onChange={() => handleFeatureToggle(feature.id)}
           />
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">{feature.icon}</span>
-              <h3 className="font-semibold">{feature.name}</h3>
-              {isRecommended && (
-                <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
-                  <Lightbulb className="w-3 h-3 mr-1" />
-                  Recomendado
-                </Badge>
-              )}
-              {feature.popular && (
-                <Badge variant="secondary" className="bg-orange-100 text-orange-700 text-xs">
-                  Popular
-                </Badge>
-              )}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{feature.icon}</span>
+                <h3 className="font-semibold">{feature.name}</h3>
+                {isRecommended && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                    <Lightbulb className="w-3 h-3 mr-1" />
+                    Recomendado
+                  </Badge>
+                )}
+                {feature.popular && (
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-700 text-xs">
+                    Popular
+                  </Badge>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="font-semibold text-lg text-blue-600">${feature.price}</span>
+                <span className="text-sm text-gray-500">/mes</span>
+              </div>
             </div>
             <p className="text-sm text-gray-600">{feature.description}</p>
           </div>
@@ -156,14 +162,27 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
 
       {/* Selection summary */}
       <div className="bg-gray-50 p-4 rounded-lg">
-        <p className="text-sm text-gray-600">
-          Has seleccionado <strong>{selectedFeatures.length}</strong> funciones
-          {recommendedIds.length > 0 && (
-            <span className="text-green-600 ml-2">
-              (incluye {selectedFeatures.filter(id => recommendedIds.includes(id)).length} recomendadas)
-            </span>
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-gray-600">
+            Has seleccionado <strong>{selectedFeatures.length}</strong> funciones
+            {recommendedIds.length > 0 && (
+              <span className="text-green-600 ml-2">
+                (incluye {selectedFeatures.filter(id => recommendedIds.includes(id)).length} recomendadas)
+              </span>
+            )}
+          </p>
+          {selectedFeatures.length > 0 && (
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Costo adicional mensual:</p>
+              <p className="text-lg font-bold text-blue-600">
+                ${selectedFeatures.reduce((total, featureId) => {
+                  const feature = APP_FEATURES.find(f => f.id === featureId);
+                  return total + (feature?.price || 0);
+                }, 0)}/mes
+              </p>
+            </div>
           )}
-        </p>
+        </div>
       </div>
 
       {/* Navigation */}

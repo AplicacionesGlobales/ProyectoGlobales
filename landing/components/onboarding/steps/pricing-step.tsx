@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, ArrowRight, Check, Star } from "lucide-react"
+import { APP_FEATURES } from "@/lib/business-types"
 
 const plans = [
   {
@@ -59,33 +60,41 @@ interface PricingStepProps {
 }
 
 export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }: PricingStepProps) {
+  const selectedPlan = plans.find(p => p.id === plan.type)
+  
+  // Calculate features price using the APP_FEATURES data
+  const featuresPrice = selectedFeatures.reduce((total, featureId) => {
+    const feature = APP_FEATURES.find(f => f.id === featureId);
+    return total + (feature?.price || 0);
+  }, 0)
+
+  const totalPrice = (selectedPlan?.basePrice || 0) + featuresPrice
+  const finalPrice = plan.type === "annual" ? (totalPrice * 12 * 0.8) : totalPrice
+
   const handlePlanChange = (planType: "monthly" | "annual") => {
-    const selectedPlan = plans.find(p => p.id === planType)
-    if (selectedPlan) {
+    const selectedPlanOption = plans.find(p => p.id === planType)
+    if (selectedPlanOption) {
+      const newTotalPrice = selectedPlanOption.basePrice + featuresPrice
+      const newFinalPrice = planType === "annual" ? (newTotalPrice * 12 * 0.8) : newTotalPrice
+      
       onChange({
         type: planType,
-        features: selectedPlan.features,
-        price: selectedPlan.basePrice
+        features: selectedPlanOption.features,
+        price: newFinalPrice
       })
     }
   }
 
-  const selectedPlan = plans.find(p => p.id === plan.type)
-  const featuresPrice = selectedFeatures.reduce((total, featureId) => {
-    // Simulated feature pricing
-    const featurePrices: { [key: string]: number } = {
-      'citas': 20,
-      'ubicaciones': 15,
-      'archivos': 18,
-      'pagos': 25,
-      'tipos-citas': 12,
-      'reportes': 15
+  // Update price when features change
+  React.useEffect(() => {
+    if (selectedPlan) {
+      onChange({
+        type: plan.type,
+        features: selectedPlan.features,
+        price: finalPrice
+      })
     }
-    return total + (featurePrices[featureId] || 0)
-  }, 0)
-
-  const totalPrice = (selectedPlan?.basePrice || 0) + featuresPrice
-  const finalPrice = plan.type === "annual" ? totalPrice * 0.8 : totalPrice
+  }, [selectedFeatures, plan.type])
 
   const isValid = plan.type && (plan.type === "monthly" || plan.type === "annual")
 
@@ -206,7 +215,7 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
           <div className="flex justify-between font-semibold text-lg">
             <span>Total:</span>
             <span>
-              ${plan.type === "annual" ? (selectedPlan?.yearlyPrice || 0) + (featuresPrice * 12 * 0.8) : finalPrice.toFixed(2)}
+              ${finalPrice.toFixed(2)}
               /{plan.type === "annual" ? "año" : "mes"}
             </span>
           </div>

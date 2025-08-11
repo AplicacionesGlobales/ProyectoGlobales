@@ -14,6 +14,7 @@ export interface AppFeature {
   icon: string; // Changed from emoji to icon ID
   category: 'core' | 'business' | 'advanced';
   popular?: boolean;
+  price: number; // Monthly price in USD
 }
 
 // Business types configuration
@@ -78,6 +79,7 @@ export const APP_FEATURES: AppFeature[] = [
     icon: "citas",
     category: "core",
     popular: true,
+    price: 15,
   },
   {
     id: "pagos",
@@ -86,6 +88,7 @@ export const APP_FEATURES: AppFeature[] = [
     icon: "pagos",
     category: "core",
     popular: true,
+    price: 10,
   },
   {
     id: "clientes",
@@ -94,6 +97,7 @@ export const APP_FEATURES: AppFeature[] = [
     icon: "clientes",
     category: "core",
     popular: true,
+    price: 8,
   },
   
   // Business features
@@ -103,6 +107,7 @@ export const APP_FEATURES: AppFeature[] = [
     description: "Para negocios que van donde el cliente (fotógrafos, masajistas, entrenadores)",
     icon: "ubicaciones",
     category: "business",
+    price: 12,
   },
   {
     id: "archivos",
@@ -110,6 +115,7 @@ export const APP_FEATURES: AppFeature[] = [
     description: "Almacenamiento y compartir archivos",
     icon: "archivos",
     category: "business",
+    price: 7,
   },
   {
     id: "galerias",
@@ -117,6 +123,7 @@ export const APP_FEATURES: AppFeature[] = [
     description: "Mostrar tu portafolio visual",
     icon: "galerias",
     category: "business",
+    price: 9,
   },
   {
     id: "recordatorios",
@@ -124,6 +131,7 @@ export const APP_FEATURES: AppFeature[] = [
     description: "Notificaciones automáticas por email",
     icon: "recordatorios",
     category: "business",
+    price: 6,
   },
   
   // Advanced features
@@ -133,6 +141,7 @@ export const APP_FEATURES: AppFeature[] = [
     description: "Analytics y métricas de negocio",
     icon: "reportes",
     category: "advanced",
+    price: 18,
   },
   {
     id: "seguimiento",
@@ -140,6 +149,7 @@ export const APP_FEATURES: AppFeature[] = [
     description: "Track de objetivos y resultados",
     icon: "seguimiento",
     category: "advanced",
+    price: 14,
   },
 ];
 
