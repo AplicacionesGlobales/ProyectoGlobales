@@ -44,6 +44,11 @@ model Brand {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // URLs de logotipos
+  logoUrl      String? // Logotipo: nombre de la marca en texto
+  isotopoUrl   String? // Isotipo: solo símbolo/ícono sin texto
+  imagotipoUrl String? // Imagotipo: símbolo + nombre juntos
+
   // Relación con el usuario ROOT que es dueño de la marca
   ownerId Int
   owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)

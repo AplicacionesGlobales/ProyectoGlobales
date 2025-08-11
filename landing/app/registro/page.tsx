@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ArrowLeft, ArrowRight, Upload, Check, Smartphone, Monitor, FileImage, Clock, Palette } from "lucide-react"
 import Link from "next/link"
+import { CustomizationStepNew } from "@/components/customization-step-new"
 
 const steps = [
   { id: 1, title: "Información Personal", description: "Cuéntanos sobre ti" },
@@ -82,46 +83,6 @@ const services = [
   },
 ]
 
-const colorPalettes = [
-  {
-    id: "purple",
-    name: "Púrpura Elegante",
-    colors: ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"],
-    preview: "bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500",
-  },
-  {
-    id: "blue",
-    name: "Azul Profesional",
-    colors: ["#3B82F6", "#06B6D4", "#10B981", "#8B5CF6", "#F59E0B"],
-    preview: "bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500",
-  },
-  {
-    id: "green",
-    name: "Verde Natural",
-    colors: ["#10B981", "#34D399", "#06B6D4", "#3B82F6", "#8B5CF6"],
-    preview: "bg-gradient-to-r from-emerald-500 via-green-400 to-cyan-500",
-  },
-  {
-    id: "orange",
-    name: "Naranja Vibrante",
-    colors: ["#F59E0B", "#EF4444", "#EC4899", "#8B5CF6", "#3B82F6"],
-    preview: "bg-gradient-to-r from-amber-500 via-red-500 to-pink-500",
-  },
-  {
-    id: "dark",
-    name: "Elegante Oscuro",
-    colors: ["#1F2937", "#6B7280", "#374151", "#4B5563", "#9CA3AF"],
-    preview: "bg-gradient-to-r from-gray-800 via-gray-600 to-gray-500",
-  },
-  {
-    id: "custom",
-    name: "Personalizada",
-    colors: ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"],
-    preview: "bg-gradient-to-r from-purple-500 to-pink-500",
-    isCustom: true,
-  },
-]
-
 export default function RegistroPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
@@ -138,34 +99,34 @@ export default function RegistroPage() {
     ubicacion: "",
 
     // Paso 3: Funciones
-    serviciosSeleccionados: [],
+    serviciosSeleccionados: [] as string[],
 
     // Paso 4: Personalización
     paletaColores: "",
     coloresPersonalizados: ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"],
-    logotipo: null,
-    isotipo: null,
-    imagotipo: null,
+    logotipo: null as File | null,
+    isotipo: null as File | null,
+    imagotipo: null as File | null,
 
     // Paso 5: Plan
-    tipoPlan: "",
+    tipoPlan: "" as "app" | "completo" | "web" | "",
 
     // Paso 6: Datos de pago
     numeroCuenta: "",
   })
 
-  const calculatePrice = (servicios, tipoPlan) => {
-    if (tipoPlan === "web") {
+  const calculatePrice = (servicios: string[], tipoPlan: "app" | "completo" | "web" | "") => {
+    if (tipoPlan === "web" || tipoPlan === "") {
       // Para web, no hay costo base ni servicios adicionales, solo comisiones por transacción
       return 0
     }
 
-    const basePrice = { app: 59, completo: 60 }
+    const basePrice: Record<"app" | "completo", number> = { app: 59, completo: 60 }
     const serviceCost = servicios.reduce((total, serviceId) => {
       const service = services.find((s) => s.id === serviceId)
       return total + (service?.price || 0)
     }, 0)
-    return (basePrice[tipoPlan] || 0) + serviceCost
+    return basePrice[tipoPlan] + serviceCost
   }
 
   const nextStep = () => {
@@ -186,11 +147,11 @@ export default function RegistroPage() {
     }
   }
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleServiceToggle = (serviceId) => {
+  const handleServiceToggle = (serviceId: string) => {
     setFormData((prev) => ({
       ...prev,
       serviciosSeleccionados: prev.serviciosSeleccionados.includes(serviceId)
@@ -199,7 +160,7 @@ export default function RegistroPage() {
     }))
   }
 
-  const handleBusinessTypeSelect = (businessType) => {
+  const handleBusinessTypeSelect = (businessType: string) => {
     const selectedBusiness = businessTypes.find((b) => b.id === businessType)
     setFormData((prev) => ({
       ...prev,
@@ -208,10 +169,14 @@ export default function RegistroPage() {
     }))
   }
 
-  const handleCustomColorChange = (index, color) => {
+  const handleCustomColorChange = (index: number, color: string) => {
     const newColors = [...formData.coloresPersonalizados]
     newColors[index] = color
     setFormData((prev) => ({ ...prev, coloresPersonalizados: newColors }))
+  }
+
+  const handleFileChange = (field: string, file: File | null) => {
+    setFormData((prev) => ({ ...prev, [field]: file }))
   }
 
   const renderStep = () => {
@@ -391,161 +356,12 @@ export default function RegistroPage() {
 
       case 4:
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold mb-2">Personaliza tu app</h2>
-              <p className="text-gray-600">Elige los colores y sube tus logos</p>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <Label>Paleta de Colores (5 colores) *</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                  {colorPalettes.map((palette) => (
-                    <Card
-                      key={palette.id}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        formData.paletaColores === palette.id ? "ring-2 ring-purple-500" : ""
-                      }`}
-                      onClick={() => handleInputChange("paletaColores", palette.id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-4">
-                          <div className={`w-12 h-12 rounded-lg ${palette.preview}`}></div>
-                          <div>
-                            <h3 className="font-semibold flex items-center">
-                              {palette.isCustom && <Palette className="mr-2 h-4 w-4" />}
-                              {palette.name}
-                            </h3>
-                            <div className="flex space-x-1 mt-1">
-                              {palette.colors.map((color, index) => (
-                                <div key={index} className="w-3 h-3 rounded" style={{ backgroundColor: color }}></div>
-                              ))}
-                            </div>
-                          </div>
-                          {formData.paletaColores === palette.id && (
-                            <Check className="h-5 w-5 text-purple-600 ml-auto" />
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {formData.paletaColores === "custom" && (
-                  <Card className="border-2 border-purple-500 mt-4">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-4 flex items-center">
-                        <Palette className="mr-2 h-5 w-5" />
-                        Colores Personalizados (5 colores)
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        {formData.coloresPersonalizados.map((color, index) => (
-                          <div key={index}>
-                            <Label htmlFor={`color${index}`}>Color {index + 1}</Label>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <input
-                                type="color"
-                                id={`color${index}`}
-                                value={color}
-                                onChange={(e) => handleCustomColorChange(index, e.target.value)}
-                                className="w-12 h-10 rounded border-2 border-gray-300 cursor-pointer"
-                              />
-                              <Input
-                                value={color}
-                                onChange={(e) => handleCustomColorChange(index, e.target.value)}
-                                placeholder="#8B5CF6"
-                                className="flex-1"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-4">
-                        <Label>Vista Previa</Label>
-                        <div
-                          className="w-full h-12 rounded-lg mt-2"
-                          style={{
-                            background: `linear-gradient(to right, ${formData.coloresPersonalizados.join(", ")})`,
-                          }}
-                        ></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <Label className="text-base font-semibold">Logos de tu Marca</Label>
-                <p className="text-sm text-gray-600 mb-4">
-                  Sube los diferentes tipos de logos que usaremos en tu app. Preferiblemente con fondo transparente
-                  (PNG).
-                </p>
-
-                <div className="grid md:grid-cols-1 gap-6">
-                  <div>
-                    <Label className="font-medium">Logotipo</Label>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Solo el nombre de la marca en texto, sin ícono. Uso: facturas, encabezados, correos.
-                    </p>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-400 transition-colors">
-                      <FileImage className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-xs text-gray-600 mb-2">Formato horizontal • PNG con fondo transparente</p>
-                      <Button variant="outline" size="sm">
-                        Subir Logotipo
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="font-medium">Isotipo</Label>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Solo el símbolo o ícono de la marca, sin texto. Uso: iconos de app, favicon, redes sociales.
-                    </p>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-400 transition-colors">
-                      <FileImage className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-xs text-gray-600 mb-2">Cuadrado 1024x1024 • PNG con fondo transparente</p>
-                      <Button variant="outline" size="sm">
-                        Subir Isotipo
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="font-medium">Imagotipo</Label>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Símbolo + nombre de la marca juntos, pero que puedan funcionar por separado. Uso: login, pantallas
-                      públicas, publicidad.
-                    </p>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-400 transition-colors">
-                      <FileImage className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-xs text-gray-600 mb-2">Formato horizontal • PNG con fondo transparente</p>
-                      <Button variant="outline" size="sm">
-                        Subir Imagotipo
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <Card className="bg-blue-50 border-blue-200 mt-4">
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="text-blue-600 mt-0.5">💡</div>
-                      <div>
-                        <h4 className="font-medium text-blue-800 mb-1">Consejos para mejores resultados:</h4>
-                        <ul className="text-xs text-blue-700 space-y-1">
-                          <li>• Usa archivos PNG con fondo transparente</li>
-                          <li>• Asegúrate de que los logos se vean bien en fondos claros y oscuros</li>
-                          <li>• El isotipo debe ser cuadrado para iconos de app</li>
-                          <li>• Resolución mínima recomendada: 512x512 para isotipo, 1024x256 para logotipo</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
+          <CustomizationStepNew
+            formData={formData}
+            onInputChange={handleInputChange}
+            onCustomColorChange={handleCustomColorChange}
+            onFileChange={handleFileChange}
+          />
         )
 
       case 5:
