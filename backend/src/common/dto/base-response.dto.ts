@@ -1,6 +1,8 @@
 export class ErrorDetail {
   code: number;
-  description: string;
+  description?: string;
+  field?: string;
+  message?: string;
 }
 
 export class BaseResponseDto<T = any> {

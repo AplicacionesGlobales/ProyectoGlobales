@@ -20,19 +20,21 @@ export function CTASection() {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <Link href="/registro">
+            <Link href="/onboarding">
               <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100 text-lg px-8 py-4 h-auto">
                 Crear Mi App Ahora
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-white text-white hover:bg-white hover:text-purple-600 bg-transparent text-lg px-8 py-4 h-auto"
-            >
-              Hablar con un Experto
-            </Button>
+            <Link href="/auth/login">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white text-white hover:bg-white hover:text-purple-600 bg-transparent text-lg px-8 py-4 h-auto"
+              >
+                Ya Tengo Cuenta
+              </Button>
+            </Link>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-12 max-w-3xl">

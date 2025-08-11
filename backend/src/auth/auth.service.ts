@@ -4,7 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../common/services/email/email.service';
 import { CryptoService, ResetTokenPayload } from '../common/services/crypto.service';
 import * as bcrypt from 'bcryptjs';
-import { RegisterClientDto, AuthResponse, ForgotPasswordDto, ValidateResetTokenDto, ResetPasswordDto, ForgotPasswordResponseDto, ValidateTokenResponseDto, ResetPasswordResponseDto } from './dto';
+import { RegisterClientDto, AuthResponse, ForgotPasswordDto, ValidateResetTokenDto, ResetPasswordDto, ForgotPasswordResponseDto, ValidateTokenResponseDto, ResetPasswordResponseDto, LoginAdminDto, LoginClientDto, AdminAuthResponse } from './dto';
+import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole } from '../../generated/prisma';
 import { randomBytes } from 'crypto';
@@ -35,29 +36,29 @@ export class AuthService {
         });
       }
 
-      // Verificar sucursal existe
-      const branch = await this.prisma.branch.findUnique({
+      // Verificar marca existe
+      const brand = await this.prisma.brand.findUnique({
         where: { id: registerDto.branchId },
-        include: { business: { select: { name: true } } }
+        select: { id: true, name: true }
       });
 
-      if (!branch) {
+      if (!brand) {
         errors.push({ 
           code: ERROR_CODES.BRANCH_NOT_EXISTS, 
           description: ERROR_MESSAGES.BRANCH_NOT_EXISTS 
         });
       }
 
-      // Verificar email único en sucursal
-      if (branch) {
-        const existingUserBranch = await this.prisma.userBranch.findFirst({
+      // Verificar email único en marca
+      if (brand) {
+        const existingUserBrand = await this.prisma.userBrand.findFirst({
           where: {
             email: registerDto.email,
-            branchId: registerDto.branchId
+            brandId: registerDto.branchId
           }
         });
 
-        if (existingUserBranch) {
+        if (existingUserBrand) {
           errors.push({ 
             code: ERROR_CODES.EMAIL_EXISTS_IN_BRANCH, 
             description: ERROR_MESSAGES.EMAIL_EXISTS_IN_BRANCH 
@@ -86,25 +87,25 @@ export class AuthService {
         });
       }
 
-      // Crear UserBranch
+      // Crear UserBrand
       const passwordHash = await bcrypt.hash(registerDto.password, 12);
-      const apiKey = this.generateApiKey();
+      const salt = randomBytes(32).toString('hex');
 
-      const userBranch = await this.prisma.userBranch.create({
+      const userBrand = await this.prisma.userBrand.create({
         data: {
           userId: user.id,
-          branchId: registerDto.branchId,
+          brandId: registerDto.branchId,
           email: registerDto.email,
           passwordHash,
-          apiKey,
+          salt,
         }
       });
 
       // Generar JWT
       const token = this.jwtService.sign({
         userId: user.id,
-        userBranchId: userBranch.id,
-        branchId: registerDto.branchId,
+        userBrandId: userBrand.id,
+        brandId: registerDto.branchId,
         role: user.role,
       });
 
@@ -117,10 +118,9 @@ export class AuthService {
           lastName: user.lastName || undefined,
           role: user.role,
         },
-        branch: {
-          id: branch!.id,
-          name: branch!.name,
-          businessName: branch!.business.name,
+        brand: {
+          id: brand!.id,
+          name: brand!.name,
         },
         token,
       };
@@ -142,22 +142,22 @@ export class AuthService {
     try {
       const { email } = forgotPasswordDto;
       
-      // Buscar usuario por email principal o en UserBranch
+      // Buscar usuario por email principal o en UserBrand
       const user = await this.prisma.user.findFirst({
         where: {
           OR: [
             { email: email.toLowerCase() },
             {
-              userBranches: {
+              userBrands: {
                 some: { email: email.toLowerCase() }
               }
             }
           ]
         },
         include: {
-          userBranches: {
+          userBrands: {
             where: { email: email.toLowerCase() },
-            include: { branch: { include: { business: true } } }
+            include: { brand: true }
           }
         }
       });
@@ -334,11 +334,11 @@ export class AuthService {
         });
       }
 
-      // Determinar si actualizar usuario principal o UserBranch
+      // Determinar si actualizar usuario principal o UserBrand
       const user = await this.prisma.user.findUnique({
         where: { id: validation.data.userId },
         include: {
-          userBranches: {
+          userBrands: {
             where: { email: payload.email }
           }
         }
@@ -361,9 +361,9 @@ export class AuthService {
           })
         ] : []),
         
-        // Si hay UserBranch con ese email, actualizar ahí
-        ...(user.userBranches.length > 0 ? [
-          this.prisma.userBranch.updateMany({
+        // Si hay UserBrand con ese email, actualizar ahí
+        ...(user.userBrands.length > 0 ? [
+          this.prisma.userBrand.updateMany({
             where: {
               userId: validation.data.userId,
               email: payload.email
@@ -488,4 +488,335 @@ export class AuthService {
   private generateApiKey(): string {
     return randomBytes(32).toString('hex');
   }
+
+  private generateSalt(): string {
+    // Incluir timestamp para hacer el salt único incluso con la misma contraseña
+    const timestamp = Date.now().toString();
+    const random = randomBytes(16).toString('hex');
+    return `${random}_${timestamp}`;
+  }
+
+  // ==================== BRAND REGISTRATION METHOD ====================
+
+  /**
+   * Login para usuarios ADMIN/ROOT
+   * @param loginDto Datos de login del admin
+   * @returns Promise con la respuesta de autenticación
+   */
+  async loginAdmin(loginDto: LoginAdminDto): Promise<BaseResponseDto<AdminAuthResponse>> {
+    const errors: ErrorDetail[] = [];
+
+    try {
+      // Para ADMIN/ROOT, buscamos en UserBrand por email y brandId
+      if (!loginDto.brandId) {
+        errors.push({ 
+          code: ERROR_CODES.BRAND_NOT_EXISTS, 
+          description: 'Se requiere especificar una marca para el login' 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: { 
+          email: loginDto.email.toLowerCase(),
+          brandId: loginDto.brandId,
+          isActive: true
+        },
+        include: {
+          user: {
+            include: {
+              brands: true, // Marcas que posee (para ROOT)
+              userBrands: {
+                include: { brand: true }
+              }
+            }
+          },
+          brand: true
+        }
+      });
+
+      if (!userBrand) {
+        errors.push({ 
+          code: ERROR_CODES.USER_NOT_FOUND, 
+          description: ERROR_MESSAGES.USER_NOT_FOUND 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Verificar que es ADMIN o ROOT
+      if (userBrand.user.role !== UserRole.ADMIN && userBrand.user.role !== UserRole.ROOT) {
+        errors.push({ 
+          code: ERROR_CODES.INSUFFICIENT_PERMISSIONS, 
+          description: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Verificar contraseña
+      const passwordValid = await bcrypt.compare(loginDto.password, userBrand.passwordHash);
+      if (!passwordValid) {
+        errors.push({ 
+          code: ERROR_CODES.INVALID_CREDENTIALS, 
+          description: ERROR_MESSAGES.INVALID_CREDENTIALS 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Generar JWT
+      const token = this.jwtService.sign({
+        userId: userBrand.user.id,
+        userBrandId: userBrand.id,
+        brandId: loginDto.brandId,
+        role: userBrand.user.role,
+      });
+
+      // Preparar lista de marcas accesibles
+      const accessibleBrands = [
+        // Marcas que posee como ROOT
+        ...userBrand.user.brands.map(brand => ({
+          id: brand.id,
+          name: brand.name,
+          description: brand.description || undefined,
+          isOwner: true
+        })),
+        // Marcas asignadas como CLIENT/ADMIN
+        ...userBrand.user.userBrands.map(ub => ({
+          id: ub.brand.id,
+          name: ub.brand.name,
+          description: ub.brand.description || undefined,
+          isOwner: false
+        }))
+      ];
+
+      const response: AdminAuthResponse = {
+        user: {
+          id: userBrand.user.id,
+          email: userBrand.email,
+          username: userBrand.user.username,
+          firstName: userBrand.user.firstName || undefined,
+          lastName: userBrand.user.lastName || undefined,
+          role: userBrand.user.role,
+        },
+        brand: {
+          id: userBrand.brand.id,
+          name: userBrand.brand.name,
+        },
+        token,
+        brands: accessibleBrands,
+        selectedBrand: {
+          id: userBrand.brand.id,
+          name: userBrand.brand.name,
+          description: userBrand.brand.description || undefined,
+        }
+      };
+
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('Error en loginAdmin:', error);
+      errors.push({ 
+        code: ERROR_CODES.INTERNAL_ERROR, 
+        description: ERROR_MESSAGES.INTERNAL_ERROR 
+      });
+      return BaseResponseDto.error(errors);
+    }
+  }
+
+  /**
+   * Login para usuarios CLIENT
+   * @param loginDto Datos de login del cliente
+   * @returns Promise con la respuesta de autenticación
+   */
+  async loginClient(loginDto: LoginClientDto): Promise<BaseResponseDto<AuthResponse>> {
+    const errors: ErrorDetail[] = [];
+
+    try {
+      // Buscar UserBrand por email y brandId
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: {
+          email: loginDto.email.toLowerCase(),
+          brandId: loginDto.brandId,
+          isActive: true
+        },
+        include: {
+          user: true,
+          brand: true
+        }
+      });
+
+      if (!userBrand) {
+        errors.push({ 
+          code: ERROR_CODES.USER_NOT_FOUND, 
+          description: ERROR_MESSAGES.USER_NOT_FOUND 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Verificar contraseña
+      const passwordValid = await bcrypt.compare(loginDto.password, userBrand.passwordHash);
+      if (!passwordValid) {
+        errors.push({ 
+          code: ERROR_CODES.INVALID_CREDENTIALS, 
+          description: ERROR_MESSAGES.INVALID_CREDENTIALS 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Verificar que el usuario esté activo
+      if (!userBrand.user.isActive) {
+        errors.push({ 
+          code: ERROR_CODES.USER_INACTIVE, 
+          description: ERROR_MESSAGES.USER_INACTIVE 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Generar JWT
+      const token = this.jwtService.sign({
+        userId: userBrand.user.id,
+        userBrandId: userBrand.id,
+        brandId: loginDto.brandId,
+        role: userBrand.user.role,
+      });
+
+      const response: AuthResponse = {
+        user: {
+          id: userBrand.user.id,
+          email: userBrand.email,
+          username: userBrand.user.username,
+          firstName: userBrand.user.firstName || undefined,
+          lastName: userBrand.user.lastName || undefined,
+          role: userBrand.user.role,
+        },
+        brand: {
+          id: userBrand.brand.id,
+          name: userBrand.brand.name,
+        },
+        token,
+      };
+
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('Error en loginClient:', error);
+      errors.push({ 
+        code: ERROR_CODES.INTERNAL_ERROR, 
+        description: ERROR_MESSAGES.INTERNAL_ERROR 
+      });
+      return BaseResponseDto.error(errors);
+    }
+  }
+
+  async registerBrand(createBrandDto: CreateBrandDto): Promise<BaseResponseDto<any>> {
+    const errors: ErrorDetail[] = [];
+
+    try {
+      // Verificar que el email no exista como usuario
+      const existingUser = await this.prisma.user.findFirst({
+        where: { email: createBrandDto.email }
+      });
+
+      if (existingUser) {
+        errors.push({ 
+          code: ERROR_CODES.EMAIL_EXISTS, 
+          description: ERROR_MESSAGES.EMAIL_EXISTS 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Crear la marca y el usuario en una transacción
+      const result = await this.prisma.$transaction(async (prisma) => {
+        // Crear el usuario ROOT/propietario
+        const user = await prisma.user.create({
+          data: {
+            email: createBrandDto.email,
+            username: createBrandDto.email, // Usar email como username por defecto
+            firstName: createBrandDto.ownerName.split(' ')[0],
+            lastName: createBrandDto.ownerName.split(' ').slice(1).join(' ') || '',
+            role: UserRole.ROOT, // Usuario ROOT es el propietario de la marca
+          }
+        });
+
+        // Crear la marca
+        const brand = await prisma.brand.create({
+          data: {
+            name: createBrandDto.name,
+            description: createBrandDto.description,
+            phone: createBrandDto.phone,
+            ownerId: user.id, // Relación con el usuario ROOT
+            logoUrl: createBrandDto.logoUrl,
+            isotopoUrl: createBrandDto.isotopoUrl,
+            imagotipoUrl: createBrandDto.imagotipoUrl,
+          }
+        });
+
+        // Crear paleta de colores si se proporcionó
+        if (createBrandDto.customColors && createBrandDto.customColors.length >= 5) {
+          await prisma.colorPalette.create({
+            data: {
+              brandId: brand.id,
+              primary: createBrandDto.customColors[0],
+              secondary: createBrandDto.customColors[1],
+              accent: createBrandDto.customColors[2],
+              neutral: createBrandDto.customColors[3],
+              success: createBrandDto.customColors[4],
+            }
+          });
+        }
+
+        // Crear UserBrand para el acceso del propietario
+        const salt = randomBytes(32).toString('hex') + Date.now().toString();
+        const hashedPassword = await bcrypt.hash(createBrandDto.password, 12);
+
+        await prisma.userBrand.create({
+          data: {
+            userId: user.id,
+            brandId: brand.id,
+            email: createBrandDto.email,
+            passwordHash: hashedPassword,
+            salt: salt,
+          }
+        });
+
+        return { brand, user };
+      });
+
+      // Generar JWT token
+      const payload = { 
+        userId: result.user.id, 
+        email: result.user.email,
+        brandId: result.brand.id,
+        role: result.user.role 
+      };
+      const token = this.jwtService.sign(payload);
+
+      const response = {
+        message: 'Marca y usuario creados exitosamente',
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          username: result.user.username,
+          firstName: result.user.firstName,
+          lastName: result.user.lastName,
+          role: result.user.role,
+        },
+        brand: {
+          id: result.brand.id,
+          name: result.brand.name,
+        },
+        token,
+      };
+
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('Error en registerBrand:', error);
+      errors.push({ 
+        code: ERROR_CODES.INTERNAL_ERROR, 
+        description: ERROR_MESSAGES.INTERNAL_ERROR 
+      });
+      return BaseResponseDto.error(errors);
+    }
+  }
+
 }

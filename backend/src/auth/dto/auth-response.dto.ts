@@ -7,10 +7,9 @@ export class AuthResponse {
     lastName?: string;
     role: string;
   };
-  branch?: {
+  brand?: {
     id: number;
     name: string;
-    businessName: string;
   };
   token: string;
 }

@@ -7,14 +7,14 @@ async function main() {
   console.log('🌱 Seeding database...');
 
   // Limpiar datos existentes
-  await prisma.userBranch.deleteMany();
-  await prisma.branch.deleteMany();
-  await prisma.business.deleteMany();
+  await prisma.userBrand.deleteMany();
+  await prisma.colorPalette.deleteMany();
+  await prisma.brand.deleteMany();
   await prisma.user.deleteMany();
 
   console.log('🧹 Cleaned existing data');
 
-  // Crear usuario ROOT (dueño de comercio)
+  // Crear usuario ROOT (dueño de marca)
   const rootUser = await prisma.user.create({
     data: {
       email: 'owner@barbershop.com',
@@ -27,52 +27,32 @@ async function main() {
 
   console.log('✅ Created root user:', rootUser.email);
 
-  // Crear comercio principal
-  const business = await prisma.business.create({
+  // Crear marca principal
+  const mainBrand = await prisma.brand.create({
     data: {
       name: 'Barbershop Pro',
-      description: 'La mejor cadena de barberías de la ciudad',
+      description: 'La mejor barbería de la ciudad',
+      address: 'Av. Principal 123, Centro',
+      phone: '+1234567890',
       ownerId: rootUser.id,
     }
   });
 
-  console.log('✅ Created business:', business.name);
+  console.log('✅ Created brand:', mainBrand.name);
 
-  // Crear múltiples sucursales
-  const branches = await Promise.all([
-    // Sucursal Centro
-    prisma.branch.create({
-      data: {
-        name: 'Sucursal Centro',
-        address: 'Av. Principal 123, Centro',
-        phone: '+1234567890',
-        businessId: business.id,
-      }
-    }),
-    // Sucursal Norte  
-    prisma.branch.create({
-      data: {
-        name: 'Sucursal Norte',
-        address: 'Calle Norte 456, Zona Norte',
-        phone: '+1234567891',
-        businessId: business.id,
-      }
-    }),
-    // Sucursal Sur
-    prisma.branch.create({
-      data: {
-        name: 'Sucursal Sur',
-        address: 'Av. Sur 789, Zona Sur',
-        phone: '+1234567892',
-        businessId: business.id,
-      }
-    })
-  ]);
-
-  console.log('✅ Created branches:');
-  branches.forEach(branch => {
-    console.log(`   - ${branch.name} (ID: ${branch.id})`);
+  // Crear paleta de colores para la marca
+  const colorPalette = await prisma.colorPalette.create({
+    data: {
+      brandId: mainBrand.id,
+      primary: '#1a73e8',
+      secondary: '#34a853',
+      accent: '#fbbc04',
+      neutral: '#9aa0a6',
+      success: '#137333',
+    }
   });
+
+  console.log('✅ Created color palette for brand:', mainBrand.name);
 
   // Crear algunos clientes de ejemplo
   const clientUsers = await Promise.all([
@@ -101,63 +81,82 @@ async function main() {
     console.log(`   - ${user.firstName} ${user.lastName} (@${user.username})`);
   });
 
-  // Crear relaciones UserBranch (clientes registrados en sucursales)
-  const passwordHash = await bcrypt.hash('password123', 12);
-  
-  const userBranches = await Promise.all([
-    // Juan registrado en Sucursal Centro
-    prisma.userBranch.create({
+  // Crear algunos usuarios admin de ejemplo
+  const adminUsers = await Promise.all([
+    prisma.user.create({
       data: {
-        userId: clientUsers[0].id,
-        branchId: branches[0].id,
-        email: 'juan.centro@gmail.com',
-        passwordHash,
-        apiKey: generateApiKey(),
-      }
-    }),
-    // María registrada en Sucursal Norte
-    prisma.userBranch.create({
-      data: {
-        userId: clientUsers[1].id,
-        branchId: branches[1].id,
-        email: 'maria.norte@gmail.com', 
-        passwordHash,
-        apiKey: generateApiKey(),
-      }
-    }),
-    // Juan también registrado en Sucursal Norte (mismo usuario, diferente sucursal)
-    prisma.userBranch.create({
-      data: {
-        userId: clientUsers[0].id,
-        branchId: branches[1].id,
-        email: 'juan.norte@gmail.com',
-        passwordHash,
-        apiKey: generateApiKey(),
+        email: 'admin@barbershop.com',
+        username: 'admin_user',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: UserRole.ADMIN,
       }
     })
   ]);
 
-  console.log('✅ Created user-branch relationships:');
-  userBranches.forEach((ub, index) => {
-    console.log(`   - User ${ub.userId} → Branch ${ub.branchId} (${ub.email})`);
+  console.log('✅ Created admin users:');
+  adminUsers.forEach(user => {
+    console.log(`   - ${user.firstName} ${user.lastName} (@${user.username})`);
+  });
+
+  // Crear relaciones UserBrand (clientes registrados en la marca)
+  const passwordHash = await bcrypt.hash('password123', 12);
+  const salt1 = 'salt_' + Date.now() + '_1';
+  const salt2 = 'salt_' + Date.now() + '_2';
+  const salt3 = 'salt_' + Date.now() + '_3';
+  
+  const userBrands = await Promise.all([
+    // Juan registrado en la marca
+    prisma.userBrand.create({
+      data: {
+        userId: clientUsers[0].id,
+        brandId: mainBrand.id,
+        email: 'juan.barbershop@gmail.com',
+        passwordHash,
+        salt: salt1,
+      }
+    }),
+    // María registrada en la marca
+    prisma.userBrand.create({
+      data: {
+        userId: clientUsers[1].id,
+        brandId: mainBrand.id,
+        email: 'maria.barbershop@gmail.com', 
+        passwordHash,
+        salt: salt2,
+      }
+    }),
+    // Admin también registrado en la marca
+    prisma.userBrand.create({
+      data: {
+        userId: adminUsers[0].id,
+        brandId: mainBrand.id,
+        email: 'admin.barbershop@gmail.com',
+        passwordHash,
+        salt: salt3,
+      }
+    })
+  ]);
+
+  console.log('✅ Created user-brand relationships:');
+  userBrands.forEach((ub, index) => {
+    console.log(`   - User ${ub.userId} → Brand ${ub.brandId} (${ub.email})`);
   });
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('\n📋 Datos disponibles para testing:');
-  console.log('\n🏢 Business:');
-  console.log(`   - ${business.name} (ID: ${business.id})`);
+  console.log('\n🏢 Brand:');
+  console.log(`   - ${mainBrand.name} (ID: ${mainBrand.id})`);
+  console.log(`     📍 ${mainBrand.address}`);
+  console.log(`     📞 ${mainBrand.phone}`);
   
-  console.log('\n🏪 Branches disponibles:');
-  branches.forEach(branch => {
-    console.log(`   - ${branch.name} (ID: ${branch.id})`);
-    console.log(`     📍 ${branch.address}`);
-    console.log(`     📞 ${branch.phone}`);
-  });
-
   console.log('\n👥 Users para testing:');
   console.log(`   - ROOT: ${rootUser.username} (${rootUser.email})`);
   clientUsers.forEach(user => {
     console.log(`   - CLIENT: ${user.username} (${user.firstName} ${user.lastName})`);
+  });
+  adminUsers.forEach(user => {
+    console.log(`   - ADMIN: ${user.username} (${user.firstName} ${user.lastName})`);
   });
 
   console.log('\n🧪 Para probar el endpoint de registro:');
@@ -169,12 +168,8 @@ async function main() {
     password: 'password123',
     firstName: 'Nuevo',
     lastName: 'Usuario',
-    branchId: branches[0].id
+    branchId: mainBrand.id // Usamos brandId ahora
   }, null, 2));
-}
-
-function generateApiKey(): string {
-  return require('crypto').randomBytes(32).toString('hex');
 }
 
 main()

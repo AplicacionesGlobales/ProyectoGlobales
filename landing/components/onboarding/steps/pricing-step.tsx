@@ -1,0 +1,205 @@
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { ArrowLeft, ArrowRight, Check, Star } from "lucide-react"
+
+const plans = [
+  {
+    id: "monthly",
+    name: "Plan Mensual",
+    description: "Ideal para empezar",
+    basePrice: 49,
+    discount: 0,
+    period: "mes",
+    features: [
+      "Hasta 100 citas por mes",
+      "1 usuario administrador",
+      "Soporte por email",
+      "Almacenamiento básico (1GB)"
+    ],
+    popular: false
+  },
+  {
+    id: "annual",
+    name: "Plan Anual",
+    description: "Ahorra 20% pagando anual",
+    basePrice: 39,
+    discount: 20,
+    period: "mes",
+    features: [
+      "Citas ilimitadas",
+      "Hasta 3 usuarios",
+      "Soporte prioritario",
+      "Almacenamiento extendido (5GB)",
+      "Reportes avanzados",
+      "Backup automático"
+    ],
+    popular: true
+  }
+]
+
+interface PricingStepProps {
+  plan: {
+    type: "monthly" | "annual"
+    features: string[]
+    price: number
+  }
+  selectedFeatures: string[]
+  onChange: (plan: any) => void
+  onNext: () => void
+  onPrev: () => void
+}
+
+export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }: PricingStepProps) {
+  const handlePlanChange = (planType: "monthly" | "annual") => {
+    const selectedPlan = plans.find(p => p.id === planType)
+    if (selectedPlan) {
+      onChange({
+        type: planType,
+        features: selectedPlan.features,
+        price: selectedPlan.basePrice
+      })
+    }
+  }
+
+  const selectedPlan = plans.find(p => p.id === plan.type)
+  const featuresPrice = selectedFeatures.reduce((total, featureId) => {
+    // Simulated feature pricing
+    const featurePrices: { [key: string]: number } = {
+      'citas': 20,
+      'ubicaciones': 15,
+      'archivos': 18,
+      'pagos': 25,
+      'tipos-citas': 12,
+      'reportes': 15
+    }
+    return total + (featurePrices[featureId] || 0)
+  }, 0)
+
+  const totalPrice = (selectedPlan?.basePrice || 0) + featuresPrice
+  const finalPrice = plan.type === "annual" ? totalPrice * 0.8 : totalPrice
+
+  const isValid = plan.type && (plan.type === "monthly" || plan.type === "annual")
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900">Elige tu plan</h2>
+        <p className="mt-2 text-gray-600">
+          Selecciona el plan que mejor se adapte a tus necesidades
+        </p>
+      </div>
+
+      <RadioGroup
+        value={plan.type}
+        onValueChange={(value) => handlePlanChange(value as "monthly" | "annual")}
+      >
+        <div className="grid gap-6 lg:grid-cols-2">
+          {plans.map((planOption) => (
+            <div key={planOption.id} className="relative">
+              <Card
+                className={`p-6 cursor-pointer transition-all hover:shadow-lg ${
+                  plan.type === planOption.id
+                    ? "ring-2 ring-purple-500 bg-purple-50"
+                    : "hover:bg-gray-50"
+                }`}
+                onClick={() => handlePlanChange(planOption.id as "monthly" | "annual")}
+              >
+                {planOption.popular && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                      <Star className="w-3 h-3 mr-1" />
+                      Más Popular
+                    </Badge>
+                  </div>
+                )}
+                
+                <div className="flex items-center space-x-2 mb-4">
+                  <RadioGroupItem value={planOption.id} id={planOption.id} />
+                  <Label htmlFor={planOption.id} className="text-lg font-semibold cursor-pointer">
+                    {planOption.name}
+                  </Label>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-gray-600">{planOption.description}</p>
+                    <div className="mt-2">
+                      <span className="text-3xl font-bold text-gray-900">
+                        ${planOption.basePrice}
+                      </span>
+                      <span className="text-gray-600">/{planOption.period}</span>
+                      {planOption.discount > 0 && (
+                        <Badge variant="secondary" className="ml-2">
+                          -{planOption.discount}%
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2">
+                    {planOption.features.map((feature, index) => (
+                      <li key={index} className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-gray-600">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Card>
+            </div>
+          ))}
+        </div>
+      </RadioGroup>
+
+      {/* Price Summary */}
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h3 className="font-semibold text-gray-900 mb-4">Resumen de costos</h3>
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span>Plan base:</span>
+            <span>${selectedPlan?.basePrice || 0}/{selectedPlan?.period}</span>
+          </div>
+          {featuresPrice > 0 && (
+            <div className="flex justify-between">
+              <span>Funciones adicionales:</span>
+              <span>${featuresPrice}/mes</span>
+            </div>
+          )}
+          {plan.type === "annual" && (
+            <div className="flex justify-between text-green-600">
+              <span>Descuento anual (20%):</span>
+              <span>-${(totalPrice * 0.2).toFixed(2)}</span>
+            </div>
+          )}
+          <hr className="my-2" />
+          <div className="flex justify-between font-semibold text-lg">
+            <span>Total:</span>
+            <span>${finalPrice.toFixed(2)}/{plan.type === "annual" ? "mes" : selectedPlan?.period}</span>
+          </div>
+          {plan.type === "annual" && (
+            <p className="text-sm text-gray-600">
+              Facturado anualmente: ${(finalPrice * 12).toFixed(2)}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-between">
+        <Button onClick={onPrev} variant="outline" className="flex items-center gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          Anterior
+        </Button>
+        <Button onClick={onNext} disabled={!isValid} className="flex items-center gap-2">
+          Continuar
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  )
+}
