@@ -1,56 +1,58 @@
-import { RegisterFormData, LoginFormData, RegisterResponse } from '../types/auth.types';
+import { 
+  registerUser, 
+  loginUser, 
+  validateEmail as validateEmailEndpoint, 
+  validateUsername as validateUsernameEndpoint, 
+  forgotPassword as forgotPasswordEndpoint 
+} from '../api';
+import { 
+  RegisterRequest, 
+  RegisterResponse, 
+  LoginRequest, 
+  LoginResponse, 
+  ForgotPasswordResponse 
+} from '../api/types';
+import { RegisterFormData, LoginFormData } from '../types/auth.types';
 
 export interface IAuthService {
   register(data: Omit<RegisterFormData, 'confirmPassword'>): Promise<RegisterResponse>;
-  login(data: LoginFormData): Promise<any>;
+  login(data: LoginFormData): Promise<LoginResponse>;
   validateEmail(email: string): Promise<boolean>;
   validateUsername(username: string): Promise<boolean>;
+  forgotPassword(email: string): Promise<ForgotPasswordResponse>;
 }
 
 class AuthService implements IAuthService {
-  private baseURL: string;
-
-  constructor(baseURL: string = process.env.API_URL || 'http://localhost:3000') {
-    this.baseURL = baseURL;
-  }
-
+  
   async register(data: Omit<RegisterFormData, 'confirmPassword'>): Promise<RegisterResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Registration failed');
+      // Validar que firstName y lastName estén presentes
+      if (!data.firstName?.trim() || !data.lastName?.trim()) {
+        throw new Error('First name and last name are required');
       }
 
-      return response.json();
+      const registerData: RegisterRequest = {
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        email: data.email,
+        username: data.username,
+        password: data.password,
+      };
+
+      return await registerUser(registerData);
     } catch (error) {
       throw error;
     }
   }
 
-  async login(data: LoginFormData): Promise<any> {
+  async login(data: LoginFormData): Promise<LoginResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      const loginData: LoginRequest = {
+        email: data.email,
+        password: data.password,
+      };
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Login failed');
-      }
-
-      return response.json();
+      return await loginUser(loginData);
     } catch (error) {
       throw error;
     }
@@ -58,35 +60,29 @@ class AuthService implements IAuthService {
 
   async validateEmail(email: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseURL}/auth/validate-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-      return data.available;
-    } catch {
-      return true;
+      const response = await validateEmailEndpoint(email);
+      return response.available;
+    } catch (error) {
+      console.warn('Email validation failed:', error);
+      return true; // Assume available if validation fails
     }
   }
 
   async validateUsername(username: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseURL}/auth/validate-username`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username }),
-      });
+      const response = await validateUsernameEndpoint(username);
+      return response.available;
+    } catch (error) {
+      console.warn('Username validation failed:', error);
+      return true; // Assume available if validation fails
+    }
+  }
 
-      const data = await response.json();
-      return data.available;
-    } catch {
-      return true;
+  async forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+    try {
+      return await forgotPasswordEndpoint(email);
+    } catch (error) {
+      throw error;
     }
   }
 }

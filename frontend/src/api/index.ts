@@ -3,3 +3,13 @@ export * from './constants';
 export * from './endpoints';
 export * from './types';
 
+// Exportaciones específicas para mayor claridad
+export { 
+  healthCheck,
+  registerUser,
+  loginUser,
+  validateEmail,
+  validateUsername,
+  forgotPassword
+} from './endpoints';
+
