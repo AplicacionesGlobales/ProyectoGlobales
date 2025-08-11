@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, IsOptional, IsNumber } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsOptional, IsNumber } from 'class-validator';
 
 export class ValidateEmailDto {
   @ApiProperty({
@@ -19,11 +19,16 @@ export class ValidateEmailDto {
   brandId?: number;
 }
 
-export class ValidateUsernameDto {
+export class EmailValidationResponseDto {
   @ApiProperty({
-    example: 'pablo123',
-    description: 'Username a validar'
+    example: true,
+    description: 'Indica si el email está disponible para registro'
   })
-  @IsString({ message: 'El username debe ser un texto' })
-  username: string;
+  isAvailable: boolean;
+
+  @ApiProperty({
+    example: 'pablo@gmail.com',
+    description: 'El email que se validó'
+  })
+  email: string;
 }

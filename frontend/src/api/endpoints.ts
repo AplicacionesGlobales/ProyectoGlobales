@@ -74,7 +74,7 @@ export const loginUser = async (data: LoginRequest): Promise<LoginResponse> => {
 
 export const validateEmail = async (email: string, brandId?: number): Promise<ValidateEmailResponse> => {
   return apiRequest<ValidateEmailResponse>(
-    API_ENDPOINTS.AUTH.VALIDATE_EMAIL,
+    API_ENDPOINTS.VALIDATE.EMAIL,
     'POST',
     { email, brandId }
   );
@@ -82,7 +82,7 @@ export const validateEmail = async (email: string, brandId?: number): Promise<Va
 
 export const validateUsername = async (username: string): Promise<ValidateUsernameResponse> => {
   return apiRequest<ValidateUsernameResponse>(
-    API_ENDPOINTS.AUTH.VALIDATE_USERNAME,
+    API_ENDPOINTS.VALIDATE.USERNAME,
     'POST',
     { username }
   );

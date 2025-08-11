@@ -1,17 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
 
-export class EmailValidationResponseDto {
+export class ValidateUsernameDto {
   @ApiProperty({
-    example: true,
-    description: 'Indica si el email está disponible para registro'
+    example: 'pablo123',
+    description: 'Username a validar'
   })
-  isAvailable: boolean;
-
-  @ApiProperty({
-    example: 'pablo@gmail.com',
-    description: 'El email que se validó'
-  })
-  email: string;
+  @IsString({ message: 'El username debe ser un texto' })
+  username: string;
 }
 
 export class UsernameValidationResponseDto {

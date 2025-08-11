@@ -10,10 +10,6 @@ import {
   ValidateCodeResponseDto,
   ValidateResetCodeDto,
   ResetPasswordResponseDto,
-  ValidateEmailDto,
-  ValidateUsernameDto,
-  EmailValidationResponseDto,
-  UsernameValidationResponseDto,
 } from './dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
@@ -46,38 +42,6 @@ export class AuthController {
     @Body(ValidationPipe) createBrandDto: CreateBrandDto
   ): Promise<BaseResponseDto<any>> {
     return this.authService.registerBrand(createBrandDto);
-  }
-
-  // ==================== EMAIL VALIDATION ENDPOINTS ====================
-  
-  @Post('validate-email')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Validar disponibilidad de email' })
-  @ApiBody({ type: ValidateEmailDto })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Email validado exitosamente',
-    type: BaseResponseDto<EmailValidationResponseDto>
-  })
-  async validateEmail(
-    @Body(ValidationPipe) validateEmailDto: ValidateEmailDto
-  ): Promise<BaseResponseDto<EmailValidationResponseDto>> {
-    return this.authService.validateEmail(validateEmailDto.email, validateEmailDto.brandId);
-  }
-
-  @Post('validate-username')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Validar disponibilidad de username' })
-  @ApiBody({ type: ValidateUsernameDto })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Username validado exitosamente',
-    type: BaseResponseDto<UsernameValidationResponseDto>
-  })
-  async validateUsername(
-    @Body(ValidationPipe) validateUsernameDto: ValidateUsernameDto
-  ): Promise<BaseResponseDto<UsernameValidationResponseDto>> {
-    return this.authService.validateUsername(validateUsernameDto.username);
   }
 
   // ==================== LOGIN ENDPOINTS ====================

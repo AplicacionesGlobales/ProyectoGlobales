@@ -5,11 +5,14 @@ export const API_ENDPOINTS = {
   AUTH: {
     REGISTER: '/auth/register/client',
     LOGIN: '/auth/login',
-    VALIDATE_EMAIL: '/auth/validate-email',
-    VALIDATE_USERNAME: '/auth/validate-username',
     FORGOT_PASSWORD: '/auth/forgot-password',
     VALIDATE_RESET_CODE: '/auth/validate-reset-code',
     RESET_PASSWORD: '/auth/reset-password',
+  },
+  // Validation endpoints
+  VALIDATE: {
+    EMAIL: '/validate/email',
+    USERNAME: '/validate/username',
   },
 } as const;
 
