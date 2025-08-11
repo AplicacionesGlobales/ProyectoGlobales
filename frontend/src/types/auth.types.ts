@@ -28,3 +28,12 @@ export interface AuthError {
   field?: string;
   code?: string;
 }
+
+export interface ForgotPasswordData {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+}

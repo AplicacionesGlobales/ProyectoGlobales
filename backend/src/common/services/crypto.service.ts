@@ -4,36 +4,20 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 
-export interface ResetTokenPayload {
-  userId: number;
-  email: string;
-  tokenId: string;
-}
-
 @Injectable()
 export class CryptoService {
   constructor(private readonly jwtService: JwtService) {}
 
+  // Genera un código de 6 dígitos para reset de contraseña
+  generateResetCode(): string {
+    // Genera un número aleatorio de 6 dígitos (100000 - 999999)
+    const code = Math.floor(100000 + Math.random() * 900000);
+    return code.toString();
+  }
+
+  // Método legacy mantenido por compatibilidad si se necesita
   generateResetToken(): string {
     return randomBytes(32).toString('hex');
-  }
-
-  createJWTToken(payload: ResetTokenPayload): string {
-    return this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET_RESET || process.env.JWT_SECRET,
-      expiresIn: '1h',
-    });
-  }
-
-  verifyJWTToken(token: string): ResetTokenPayload | null {
-    try {
-      return this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET_RESET || process.env.JWT_SECRET,
-      }) as ResetTokenPayload;
-    } catch (error) {
-      console.error('Error verificando JWT token:', error);
-      return null;
-    }
   }
 
   async hashPassword(password: string): Promise<string> {
