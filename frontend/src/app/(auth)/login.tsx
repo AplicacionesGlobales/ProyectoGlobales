@@ -1,5 +1,4 @@
 import { healthCheck } from '@/api';
-import { IonIcon } from '@/components/IonIcon';
 import { useApp } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { router } from 'expo-router';
@@ -140,14 +139,7 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      '🔐 Recuperar Contraseña', 
-      'Ingresa tu email y te enviaremos instrucciones para restablecer tu contraseña.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Enviar', onPress: () => console.log('Send recovery email') }
-      ]
-    );
+    router.push('/(auth)/forgot-password/ForgotPassword');
   };
 
   const fillDemoCredentials = (type: 'admin' | 'client') => {
