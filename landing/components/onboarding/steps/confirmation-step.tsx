@@ -91,7 +91,16 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         colorPalette: colorPalettes[data.customization.colorPalette] || colorPalettes.modern
       }
 
-      console.log('Registering brand:', registrationData)
+      console.log('=== DATOS COMPLETOS ENVIADOS A LA API ===')
+      console.log('Datos del formulario completo:', JSON.stringify(data, null, 2))
+      console.log('=== DATOS PROCESADOS PARA LA API ===')
+      console.log('Registration Data enviada:', JSON.stringify(registrationData, null, 2))
+      console.log('=== DETALLES ADICIONALES ===')
+      console.log('Business Type:', data.businessType)
+      console.log('Selected Features:', data.selectedFeatures)
+      console.log('Plan:', data.plan)
+      console.log('Customization:', data.customization)
+      console.log('=========================================')
 
       // Test backend connection first
       const healthCheck = await authService.healthCheck()
