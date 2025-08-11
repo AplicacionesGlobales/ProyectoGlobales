@@ -11,6 +11,12 @@ interface UseLandingDataReturn {
   loading: boolean;
   error: string | null;
   getRecommendedFeatures: (businessTypeKey: string) => Feature[];
+  getBusinessTypeById: (id: number) => BusinessType | undefined;
+  getBusinessTypeByKey: (key: string) => BusinessType | undefined;
+  getFeaturesByCategory: (category: 'ESSENTIAL' | 'BUSINESS' | 'ADVANCED') => Feature[];
+  getPopularFeatures: () => Feature[];
+  getPlanByType: (type: 'web' | 'app' | 'complete') => Plan | undefined;
+  calculateTotalPrice: (selectedFeatures: string[], planType: 'web' | 'app' | 'complete') => number;
   refreshData: () => Promise<void>;
 }
 

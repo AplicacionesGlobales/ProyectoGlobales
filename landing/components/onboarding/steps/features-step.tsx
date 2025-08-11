@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, ArrowRight, Lightbulb, Filter } from "lucide-react"
-import { APP_FEATURES, getRecommendedFeatures, getBusinessType, AppFeature } from "@/lib/business-types"
+import { ArrowLeft, ArrowRight, Lightbulb, Filter, Loader2 } from "lucide-react"
+import { useLandingData } from "@/hooks/use-landing-data"
+import { Feature } from "@/lib/api/types"
 
 interface FeaturesStepProps {
   features: string[]
@@ -19,186 +20,222 @@ interface FeaturesStepProps {
 export function FeaturesStep({ features, businessType, onChange, onNext, onPrev }: FeaturesStepProps) {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(features || [])
   const [showRecommendedOnly, setShowRecommendedOnly] = useState(false)
+  const { 
+    features: allFeatures, 
+    loading, 
+    error, 
+    getRecommendedFeatures,
+    getFeaturesByCategory,
+    getBusinessTypeByKey 
+  } = useLandingData();
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-lg text-gray-600">Cargando funcionalidades...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 text-lg">Error al cargar las funcionalidades. Por favor intenta de nuevo.</p>
+      </div>
+    );
+  }
 
   // Get recommended features based on business type
   const recommendedFeatures = getRecommendedFeatures(businessType)
-  const recommendedIds = recommendedFeatures.map(f => f.id)
-  const businessTypeInfo = getBusinessType(businessType)
+  const recommendedKeys = recommendedFeatures.map(f => f.key)
+  const businessTypeInfo = getBusinessTypeByKey(businessType)
 
   // Pre-select recommended features when business type changes
   useEffect(() => {
-    if (businessType && recommendedIds.length > 0 && selectedFeatures.length === 0) {
-      // Only auto-select if no features are currently selected
-      setSelectedFeatures(recommendedIds)
-      onChange(recommendedIds)
+    if (businessType && recommendedKeys.length > 0 && selectedFeatures.length === 0) {
+      const initialSelection = recommendedKeys.filter(key => 
+        recommendedFeatures.find(f => f.key === key)?.isRecommended
+      );
+      setSelectedFeatures(initialSelection);
+      onChange(initialSelection);
     }
-  }, [businessType]) // Only depend on businessType
+  }, [businessType, recommendedKeys.length, selectedFeatures.length, onChange]);
 
-  const handleFeatureToggle = (featureId: string) => {
-    const newFeatures = selectedFeatures.includes(featureId)
-      ? selectedFeatures.filter(id => id !== featureId)
-      : [...selectedFeatures, featureId]
+  // Organize features by category
+  const essentialFeatures = getFeaturesByCategory('ESSENTIAL')
+  const businessFeatures = getFeaturesByCategory('BUSINESS')  
+  const advancedFeatures = getFeaturesByCategory('ADVANCED')
+
+  // Filter features to show
+  const featuresToShow = showRecommendedOnly
+    ? allFeatures.filter(f => recommendedKeys.includes(f.key))
+    : allFeatures
+
+  const handleFeatureToggle = (featureKey: string, checked: boolean) => {
+    const newSelection = checked
+      ? [...selectedFeatures, featureKey]
+      : selectedFeatures.filter(f => f !== featureKey)
     
-    setSelectedFeatures(newFeatures)
-    onChange(newFeatures)
+    setSelectedFeatures(newSelection)
+    onChange(newSelection)
   }
 
-  // Group features by category
-  const coreFeatures = APP_FEATURES.filter(f => f.category === 'core')
-  const businessFeatures = APP_FEATURES.filter(f => f.category === 'business')  
-  const advancedFeatures = APP_FEATURES.filter(f => f.category === 'advanced')
-
-  const displayFeatures = showRecommendedOnly 
-    ? APP_FEATURES.filter(f => recommendedIds.includes(f.id))
-    : APP_FEATURES
-
-  const isValid = selectedFeatures.length > 0
-
-  const renderFeatureCard = (feature: AppFeature) => {
-    const isSelected = selectedFeatures.includes(feature.id)
-    const isRecommended = recommendedIds.includes(feature.id)
+  const renderFeatureCard = (feature: Feature) => {
+    const isSelected = selectedFeatures.includes(feature.key)
+    const isRecommended = recommendedKeys.includes(feature.key)
     
     return (
-      <Card 
-        key={feature.id} 
-        className={`p-4 cursor-pointer transition-all ${
-          isSelected 
-            ? 'ring-2 ring-blue-500 bg-blue-50' 
-            : 'hover:shadow-md'
-        } ${isRecommended ? 'border-green-200 bg-green-50' : ''}`}
-        onClick={() => handleFeatureToggle(feature.id)}
-      >
-        <div className="flex items-start gap-3">
-          <Checkbox 
+      <Card key={feature.key} className={`p-4 cursor-pointer transition-all ${
+        isSelected ? 'border-purple-500 bg-purple-50' : 'hover:border-gray-300'
+      }`}>
+        <div className="flex items-start space-x-3">
+          <Checkbox
             checked={isSelected}
-            onChange={() => handleFeatureToggle(feature.id)}
+            onCheckedChange={(checked) => handleFeatureToggle(feature.key, checked as boolean)}
+            className="mt-1"
           />
           <div className="flex-1">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{feature.icon}</span>
-                <h3 className="font-semibold">{feature.name}</h3>
-                {isRecommended && (
-                  <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
-                    <Lightbulb className="w-3 h-3 mr-1" />
-                    Recomendado
-                  </Badge>
-                )}
-                {feature.popular && (
-                  <Badge variant="secondary" className="bg-orange-100 text-orange-700 text-xs">
-                    Popular
-                  </Badge>
-                )}
-              </div>
-              <div className="text-right">
-                <span className="font-semibold text-lg text-blue-600">${feature.price}</span>
-                <span className="text-sm text-gray-500">/mes</span>
-              </div>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-semibold text-sm">{feature.title}</h3>
+              {isRecommended && (
+                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                  <Lightbulb className="w-3 h-3 mr-1" />
+                  Recomendado
+                </Badge>
+              )}
+              {feature.isPopular && (
+                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                  Popular
+                </Badge>
+              )}
             </div>
-            <p className="text-sm text-gray-600">{feature.description}</p>
+            <p className="text-xs text-gray-600 mb-2">{feature.description}</p>
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-semibold text-purple-600">
+                +${feature.price}/mes
+              </span>
+              {feature.subtitle && (
+                <span className="text-xs text-gray-500">{feature.subtitle}</span>
+              )}
+            </div>
           </div>
         </div>
       </Card>
     )
   }
 
-  const renderCategorySection = (title: string, features: AppFeature[]) => {
-    if (showRecommendedOnly) return null
+  const renderCategorySection = (title: string, features: Feature[]) => {
+    if (features.length === 0) return null;
     
     return (
-      <div className="space-y-3">
-        <h3 className="font-semibold text-gray-700">{title}</h3>
-        <div className="grid gap-3">
+      <div key={title} className="space-y-4">
+        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">{title}</h3>
+        <div className="grid gap-4 md:grid-cols-2">
           {features.map(renderFeatureCard)}
         </div>
       </div>
     )
   }
 
+  const calculateTotalPrice = () => {
+    return selectedFeatures.reduce((total, featureKey) => {
+      const feature = allFeatures.find(f => f.key === featureKey);
+      return total + (feature?.price || 0);
+    }, 0)
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900">¿Qué funciones necesitas?</h2>
-        <p className="mt-2 text-gray-600">
-          Selecciona las funciones que quieres incluir en tu aplicación
+    <div className="max-w-6xl mx-auto space-y-8">
+      <div className="text-center space-y-4">
+        <h2 className="text-3xl font-bold">Personaliza tu App</h2>
+        <p className="text-lg text-gray-600">
+          {businessTypeInfo ? 
+            `Funcionalidades perfectas para ${businessTypeInfo.title.toLowerCase()}` :
+            'Selecciona las funcionalidades que necesitas'
+          }
         </p>
-        {businessTypeInfo && (
-          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-700">
-              <Lightbulb className="w-4 h-4 inline mr-1" />
-              Para <strong>{businessTypeInfo.name}</strong> recomendamos estas funciones que ya están seleccionadas
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Filter toggle */}
-      <div className="flex justify-center">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowRecommendedOnly(!showRecommendedOnly)}
-          className="gap-2"
-        >
-          <Filter className="w-4 h-4" />
-          {showRecommendedOnly ? 'Ver todas' : 'Solo recomendadas'}
-        </Button>
-      </div>
-
-      {/* Features display */}
-      <div className="space-y-6">
-        {showRecommendedOnly ? (
-          <div className="grid gap-3">
-            {displayFeatures.map(renderFeatureCard)}
-          </div>
-        ) : (
-          <>
-            {renderCategorySection("Funciones Esenciales", coreFeatures)}
-            {renderCategorySection("Funciones de Negocio", businessFeatures)}
-            {renderCategorySection("Funciones Avanzadas", advancedFeatures)}
-          </>
-        )}
-      </div>
-
-      {/* Selection summary */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-gray-600">
-            Has seleccionado <strong>{selectedFeatures.length}</strong> funciones
-            {recommendedIds.length > 0 && (
-              <span className="text-green-600 ml-2">
-                (incluye {selectedFeatures.filter(id => recommendedIds.includes(id)).length} recomendadas)
-              </span>
-            )}
-          </p>
-          {selectedFeatures.length > 0 && (
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Costo adicional mensual:</p>
-              <p className="text-lg font-bold text-blue-600">
-                ${selectedFeatures.reduce((total, featureId) => {
-                  const feature = APP_FEATURES.find(f => f.id === featureId);
-                  return total + (feature?.price || 0);
-                }, 0)}/mes
-              </p>
-            </div>
+      {/* Filters */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant={showRecommendedOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowRecommendedOnly(!showRecommendedOnly)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="w-4 h-4" />
+            {showRecommendedOnly ? 'Ver Todas' : 'Solo Recomendadas'}
+          </Button>
+          {recommendedKeys.length > 0 && (
+            <Badge variant="outline" className="text-blue-600 border-blue-200">
+              {recommendedKeys.length} recomendadas para tu negocio
+            </Badge>
           )}
         </div>
       </div>
 
+      {/* Features by Category */}
+      <div className="space-y-8">
+        {!showRecommendedOnly ? (
+          <>
+            {renderCategorySection('Funcionalidades Esenciales', essentialFeatures)}
+            {renderCategorySection('Funcionalidades de Negocio', businessFeatures)}
+            {renderCategorySection('Funcionalidades Avanzadas', advancedFeatures)}
+          </>
+        ) : (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
+              Recomendadas para {businessTypeInfo?.title}
+            </h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              {featuresToShow.map(renderFeatureCard)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Selected Features Summary */}
+      {selectedFeatures.length > 0 && (
+        <Card className="p-6 bg-purple-50 border-purple-200">
+          <h3 className="text-lg font-semibold mb-4 text-purple-800">
+            Funcionalidades Seleccionadas ({selectedFeatures.length})
+          </h3>
+          <div className="grid gap-3 md:grid-cols-2 mb-4">
+            {selectedFeatures.map((featureKey) => {
+              const feature = allFeatures.find(f => f.key === featureKey);
+              if (!feature) return null;
+              
+              return (
+                <div key={featureKey} className="flex items-center justify-between">
+                  <span className="text-sm">{feature.title}</span>
+                  <span className="text-sm font-medium text-purple-600">
+                    +${feature.price}/mes
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="border-t pt-3 flex justify-between items-center">
+            <span className="font-semibold">Total funcionalidades:</span>
+            <span className="text-lg font-bold text-purple-600">
+              +${calculateTotalPrice()}/mes
+            </span>
+          </div>
+        </Card>
+      )}
+
       {/* Navigation */}
       <div className="flex justify-between pt-6">
-        <Button variant="outline" onClick={onPrev} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
+        <Button variant="outline" onClick={onPrev} className="flex items-center">
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Anterior
         </Button>
-        
-        <Button 
-          onClick={onNext} 
-          disabled={!isValid}
-          className="gap-2"
-        >
+        <Button onClick={onNext} className="flex items-center bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
           Continuar
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </div>

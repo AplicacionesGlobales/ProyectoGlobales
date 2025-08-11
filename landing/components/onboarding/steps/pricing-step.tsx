@@ -1,13 +1,13 @@
 "use client"
 
-import React, { useState } from "react"
+import React from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, ArrowRight, Check, Star } from "lucide-react"
-import { APP_FEATURES } from "@/lib/business-types"
+import { ArrowLeft, ArrowRight, Check, Star, Loader2 } from "lucide-react"
+import { useLandingData } from "@/hooks/use-landing-data"
 
 const plans = [
   {
@@ -84,11 +84,30 @@ interface PricingStepProps {
 
 export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }: PricingStepProps) {
   const [billingPeriod, setBillingPeriod] = React.useState<"monthly" | "annual">(plan.billingPeriod || "monthly")
-  const selectedPlan = plans.find(p => p.id === plan.type)
+  const { plans, features, loading, error, calculateTotalPrice } = useLandingData();
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-lg text-gray-600">Cargando planes...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 text-lg">Error al cargar los planes. Por favor intenta de nuevo.</p>
+      </div>
+    );
+  }
+
+  const selectedPlan = plans.find(p => p.type === plan.type)
   
-  // Calculate features price using the APP_FEATURES data
-  const featuresPrice = selectedFeatures.reduce((total, featureId) => {
-    const feature = APP_FEATURES.find(f => f.id === featureId);
+  // Calculate features price using the API data
+  const featuresPrice = selectedFeatures.reduce((total, featureKey) => {
+    const feature = features.find(f => f.key === featureKey);
     return total + (feature?.price || 0);
   }, 0)
 
@@ -106,18 +125,50 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
   const finalPrice = selectedPlan ? calculateFinalPrice(selectedPlan, billingPeriod) : 0
 
   const handlePlanChange = (planType: "web" | "app" | "complete") => {
-    const selectedPlanOption = plans.find(p => p.id === planType)
+    const selectedPlanOption = plans.find(p => p.type === planType)
     if (selectedPlanOption) {
       const newFinalPrice = calculateFinalPrice(selectedPlanOption, billingPeriod)
       
       onChange({
         type: planType,
-        features: selectedPlanOption.features,
+        features: getPlanFeatures(planType),
         price: newFinalPrice,
         billingPeriod: billingPeriod
       })
     }
   }
+
+  // Get plan features based on type
+  const getPlanFeatures = (planType: string) => {
+    switch (planType) {
+      case 'web':
+        return [
+          "Sitio web responsive",
+          "Gestión básica de citas",
+          "Dominio personalizado",
+          "3.8% + $0.40 por transacción",
+          "Soporte por email",
+        ];
+      case 'app':
+        return [
+          "App en App Store y Google Play",
+          "Notificaciones push",
+          "Funciones avanzadas de citas",
+          "3.8% + $0.40 por transacción",
+          "Soporte prioritario",
+        ];
+      case 'complete':
+        return [
+          "Todo lo anterior incluido",
+          "Sincronización total",
+          "Analytics avanzados",
+          "3.8% + $0.40 por transacción",
+          "Soporte 24/7",
+        ];
+      default:
+        return [];
+    }
+  };
 
   const handleBillingPeriodChange = (newBillingPeriod: "monthly" | "annual") => {
     setBillingPeriod(newBillingPeriod)
