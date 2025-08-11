@@ -123,14 +123,7 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      '🔐 Reset Password', 
-      'Enter your email and we\'ll send you instructions to reset your password.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Send', onPress: () => console.log('Send recovery email') }
-      ]
-    );
+    router.push('/(auth)/forgot-password/ForgotPassword');
   };
 
   const fillDemoCredentials = (type: 'admin' | 'client') => {
