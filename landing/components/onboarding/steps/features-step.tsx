@@ -29,24 +29,7 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
     getBusinessTypeByKey 
   } = useLandingData();
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-        <span className="ml-2 text-lg text-gray-600">Cargando funcionalidades...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-red-600 text-lg">Error al cargar las funcionalidades. Por favor intenta de nuevo.</p>
-      </div>
-    );
-  }
-
-  // Get recommended features based on business type
+  // Get recommended features based on business type (always called)
   const recommendedFeatures = getRecommendedFeatures(businessType)
   const recommendedKeys = recommendedFeatures.map(f => f.key)
   const businessTypeInfo = getBusinessTypeByKey(businessType)
@@ -62,12 +45,12 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
     }
   }, [businessType, recommendedKeys.length, selectedFeatures.length, onChange]);
 
-  // Organize features by category
+  // Organize features by category (always called)
   const essentialFeatures = getFeaturesByCategory('ESSENTIAL')
   const businessFeatures = getFeaturesByCategory('BUSINESS')  
   const advancedFeatures = getFeaturesByCategory('ADVANCED')
 
-  // Filter features to show
+  // Filter features to show (always called)
   const featuresToShow = showRecommendedOnly
     ? allFeatures.filter(f => recommendedKeys.includes(f.key))
     : allFeatures
@@ -143,6 +126,28 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
       const feature = allFeatures.find(f => f.key === featureKey);
       return total + (feature?.price || 0);
     }, 0)
+  }
+
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-lg text-gray-600">Cargando funcionalidades...</span>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 text-lg mb-4">Error al cargar las funcionalidades.</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Reintentar
+        </Button>
+      </div>
+    );
   }
 
   return (
