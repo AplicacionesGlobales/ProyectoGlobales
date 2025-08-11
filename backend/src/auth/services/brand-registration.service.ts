@@ -39,9 +39,9 @@ export class BrandRegistrationService {
 
       if (errors.length > 0) {
         return {
-          successful: false,
+          success: false,
           data: undefined,
-          error: errors
+          errors: errors
         };
       }
 
@@ -65,7 +65,7 @@ export class BrandRegistrationService {
       };
 
       return {
-        successful: true,
+        success: true,
         data: response
       };
 

@@ -6,14 +6,14 @@ export class ErrorDetail {
 }
 
 export class BaseResponseDto<T = any> {
-  successful: boolean;
+  success: boolean;  // Changed from 'successful' to 'success'
   data?: T;
-  error?: ErrorDetail[];
+  errors?: ErrorDetail[];  // Changed from 'error' to 'errors'
 
-  constructor(successful: boolean, data?: T, error?: ErrorDetail[]) {
-    this.successful = successful;
+  constructor(success: boolean, data?: T, errors?: ErrorDetail[]) {
+    this.success = success;
     this.data = data;
-    this.error = error;
+    this.errors = errors;
   }
 
   static success<T>(data?: T): BaseResponseDto<T> {

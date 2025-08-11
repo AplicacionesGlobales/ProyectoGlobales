@@ -7,10 +7,21 @@ export const landingService = {
    * Get complete landing configuration in one optimized request
    */
   async getLandingConfig(): Promise<ApiResponse<LandingConfig>> {
+    console.log('🔗 landingService.getLandingConfig() called');
     try {
-      return await apiClient.get<LandingConfig>(API_ENDPOINTS.LANDING.CONFIG);
+      const endpoint = API_ENDPOINTS.LANDING.CONFIG;
+      console.log('📍 Making request to:', endpoint);
+      
+      const response = await apiClient.get<LandingConfig>(endpoint);
+      console.log('✅ landingService response received:', {
+        success: response.success,
+        hasData: !!response.data,
+        errors: response.errors
+      });
+      
+      return response;
     } catch (error) {
-      console.error('Failed to get landing config:', error);
+      console.error('❌ landingService.getLandingConfig() failed:', error);
       return {
         success: false,
         errors: [{
