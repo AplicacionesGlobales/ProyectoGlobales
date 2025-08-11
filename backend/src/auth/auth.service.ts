@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../common/services/email/email.service';
-import { CryptoService, ResetTokenPayload } from '../common/services/crypto.service';
+import { CryptoService } from '../common/services/crypto.service';
 import * as bcrypt from 'bcryptjs';
-import { RegisterClientDto, AuthResponse, ForgotPasswordDto, ValidateResetTokenDto, ResetPasswordDto, ForgotPasswordResponseDto, ValidateTokenResponseDto, ResetPasswordResponseDto, LoginAdminDto, LoginClientDto, AdminAuthResponse } from './dto';
+import { ValidateResetCodeDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, LoginAdminDto, LoginClientDto, AdminAuthResponse, ValidateCodeResponseDto } from './dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole } from '../../generated/prisma';
@@ -138,171 +138,163 @@ export class AuthService {
 
   // ==================== PASSWORD RESET METHODS ====================
 
-  async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseResponseDto<ForgotPasswordResponseDto>> {
-    try {
-      const { email } = forgotPasswordDto;
-      
-      // Buscar usuario por email principal o en UserBrand
-      const user = await this.prisma.user.findFirst({
-        where: {
-          OR: [
-            { email: email.toLowerCase() },
-            {
-              userBrands: {
-                some: { email: email.toLowerCase() }
-              }
+  // Métodos actualizados del AuthService
+
+async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseResponseDto<ForgotPasswordResponseDto>> {
+  try {
+    const { email } = forgotPasswordDto;
+    
+    // Buscar usuario por email principal o en UserBrand
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email.toLowerCase() },
+          {
+            userBrands: {
+              some: { email: email.toLowerCase() }
             }
-          ]
-        },
-        include: {
-          userBrands: {
-            where: { email: email.toLowerCase() },
-            include: { brand: true }
           }
+        ]
+      },
+      include: {
+        userBrands: {
+          where: { email: email.toLowerCase() },
+          include: { brand: true }
         }
-      });
-
-      // Por seguridad, siempre retornamos éxito, incluso si el usuario no existe
-      if (!user) {
-        return BaseResponseDto.success({
-          success: true,
-          message: 'Si existe una cuenta con este email, recibirás un enlace de restablecimiento.'
-        });
       }
+    });
 
-      // Invalidar tokens existentes del usuario
-      await this.prisma.passwordResetToken.updateMany({
+    // Por seguridad, siempre retornamos éxito, incluso si el usuario no existe
+    if (!user) {
+      return BaseResponseDto.success({
+        success: true,
+        message: 'Si existe una cuenta con este email, recibirás un código de restablecimiento.'
+      });
+    }
+
+    // Invalidar códigos existentes del usuario para este email
+    await this.prisma.passwordResetCode.updateMany({
+      where: {
+        userId: user.id,
+        email: email.toLowerCase(),
+        used: false,
+        expiresAt: { gt: new Date() }
+      },
+      data: { used: true }
+    });
+
+    // Generar nuevo código de 6 dígitos
+    const resetCode = this.cryptoService.generateResetCode();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15); // 15 minutos de expiración
+
+    await this.prisma.passwordResetCode.create({
+      data: {
+        code: resetCode,
+        userId: user.id,
+        email: email.toLowerCase(),
+        expiresAt,
+        used: false,
+        attempts: 0,
+      },
+    });
+
+    // Enviar email con el código
+    const emailSent = await this.emailService.sendEmail({
+      to: email.toLowerCase(),
+      subject: 'Código para restablecer tu contraseña',
+      html: this.emailService.loadTemplate('password-reset', {
+        appName: process.env.APP_NAME || 'WhiteLabel',
+        userName: user.firstName || '',
+        resetCode,
+        supportEmail: process.env.SUPPORT_EMAIL || 'soporte@tuapp.com',
+        currentYear: new Date().getFullYear().toString(),
+      }),
+    });
+
+    if (!emailSent) {
+      throw new Error('Error al enviar el email');
+    }
+
+    return BaseResponseDto.success({
+      success: true,
+      message: 'Si existe una cuenta con este email, recibirás un código de restablecimiento.'
+    });
+
+  } catch (error) {
+    console.error('Error en requestPasswordReset:', error);
+    return BaseResponseDto.singleError(
+      ERROR_CODES.INTERNAL_ERROR,
+      'Error interno del servidor. Inténtalo más tarde.'
+    );
+  }
+}
+
+  async validateResetCode(validateCodeDto: ValidateResetCodeDto): Promise<BaseResponseDto<ValidateCodeResponseDto>> {
+    try {
+      const { code, email } = validateCodeDto;
+
+      // Buscar el código en la base de datos
+      const resetCode = await this.prisma.passwordResetCode.findFirst({
         where: {
-          userId: user.id,
+          code: code,
+          email: email.toLowerCase(),
           used: false,
           expiresAt: { gt: new Date() }
         },
-        data: { used: true }
-      });
-
-      // Generar nuevo token
-      const resetToken = this.cryptoService.generateResetToken();
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 1);
-
-      const passwordResetToken = await this.prisma.passwordResetToken.create({
-        data: {
-          token: resetToken,
-          userId: user.id,
-          expiresAt,
-          used: false,
-        },
-      });
-
-      // Crear JWT token para la URL
-      const jwtPayload: ResetTokenPayload = {
-        userId: user.id,
-        email: email.toLowerCase(),
-        tokenId: passwordResetToken.id,
-      };
-      
-      const jwtToken = this.cryptoService.createJWTToken(jwtPayload);
-      
-      // Crear URL de reset
-      const resetUrl = `${process.env.BASE_URL}/reset-password?token=${jwtToken}`;
-
-      // Enviar email
-      const emailSent = await this.emailService.sendEmail({
-        to: email.toLowerCase(),
-        subject: 'Restablecer tu contraseña',
-        html: this.emailService.loadTemplate('password-reset', {
-          appName: process.env.APP_NAME || 'WhiteLabel',
-          userName: user.firstName || '',
-          resetUrl,
-          supportEmail: process.env.SUPPORT_EMAIL || 'soporte@tuapp.com',
-          currentYear: new Date().getFullYear().toString(),
-        }),
-      });
-
-      if (!emailSent) {
-        throw new Error('Error al enviar el email');
-      }
-
-      return BaseResponseDto.success({
-        success: true,
-        message: 'Si existe una cuenta con este email, recibirás un enlace de restablecimiento.'
-      });
-
-    } catch (error) {
-      console.error('Error en requestPasswordReset:', error);
-      return BaseResponseDto.singleError(
-        ERROR_CODES.INTERNAL_ERROR,
-        'Error interno del servidor. Inténtalo más tarde.'
-      );
-    }
-  }
-
-  async validateResetToken(validateTokenDto: ValidateResetTokenDto): Promise<BaseResponseDto<ValidateTokenResponseDto>> {
-    try {
-      const { token } = validateTokenDto;
-
-      // Verificar JWT
-      const payload = this.cryptoService.verifyJWTToken(token);
-      if (!payload) {
-        return BaseResponseDto.success({
-          valid: false,
-          message: 'Token inválido o expirado'
-        });
-      }
-
-      // Verificar que el token existe en la DB y no ha sido usado
-      const resetToken = await this.prisma.passwordResetToken.findUnique({
-        where: { id: payload.tokenId },
         include: { user: true },
       });
 
-      if (!resetToken) {
+      if (!resetCode) {
+        // Intentar incrementar el contador de intentos si existe el código
+        await this.prisma.passwordResetCode.updateMany({
+          where: {
+            code: code,
+            email: email.toLowerCase(),
+          },
+          data: {
+            attempts: { increment: 1 }
+          }
+        });
+
         return BaseResponseDto.success({
           valid: false,
-          message: 'Token no encontrado'
+          message: 'Código inválido o expirado'
         });
       }
 
-      if (resetToken.used) {
-        return BaseResponseDto.success({
-          valid: false,
-          message: 'Este token ya ha sido utilizado'
+      // Verificar límite de intentos (máximo 5 intentos)
+      if (resetCode.attempts >= 5) {
+        await this.prisma.passwordResetCode.update({
+          where: { id: resetCode.id },
+          data: { used: true }
         });
-      }
 
-      if (resetToken.expiresAt < new Date()) {
         return BaseResponseDto.success({
           valid: false,
-          message: 'El token ha expirado'
-        });
-      }
-
-      if (resetToken.userId !== payload.userId) {
-        return BaseResponseDto.success({
-          valid: false,
-          message: 'Token inválido'
+          message: 'Código bloqueado por exceso de intentos'
         });
       }
 
       return BaseResponseDto.success({
         valid: true,
-        userId: resetToken.userId,
-        email: payload.email,
-        message: 'Token válido',
+        userId: resetCode.userId,
+        email: resetCode.email,
+        message: 'Código válido',
       });
 
     } catch (error) {
-      console.error('Error validando token:', error);
+      console.error('Error validando código:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR,
-        'Error validando el token'
+        'Error validando el código'
       );
     }
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<BaseResponseDto<ResetPasswordResponseDto>> {
     try {
-      const { token, password, confirmPassword } = resetPasswordDto;
+      const { code, email, password, confirmPassword } = resetPasswordDto;
 
       // Validar que las contraseñas coincidan
       if (password !== confirmPassword) {
@@ -313,24 +305,32 @@ export class AuthService {
         });
       }
 
-      // Validar token primero
-      const validation = await this.validateResetToken({ token });
+      // Validar código primero
+      const validation = await this.validateResetCode({ code, email });
       if (!validation.data?.valid || !validation.data?.userId) {
         return BaseResponseDto.success({
           success: false,
-          message: validation.data?.message || 'Token inválido'
+          message: validation.data?.message || 'Código inválido'
         });
       }
 
       // Hash de la nueva contraseña
       const hashedPassword = await this.cryptoService.hashPassword(password);
 
-      // Decodificar JWT para obtener tokenId y email
-      const payload = this.cryptoService.verifyJWTToken(token);
-      if (!payload) {
+      // Buscar el código específico para marcarlo como usado
+      const resetCodeRecord = await this.prisma.passwordResetCode.findFirst({
+        where: {
+          code: code,
+          email: email.toLowerCase(),
+          used: false,
+          expiresAt: { gt: new Date() }
+        }
+      });
+
+      if (!resetCodeRecord) {
         return BaseResponseDto.success({
           success: false,
-          message: 'Token inválido'
+          message: 'Código inválido o expirado'
         });
       }
 
@@ -339,7 +339,7 @@ export class AuthService {
         where: { id: validation.data.userId },
         include: {
           userBrands: {
-            where: { email: payload.email }
+            where: { email: email.toLowerCase() }
           }
         }
       });
@@ -354,7 +354,7 @@ export class AuthService {
       // Actualizar contraseña en transacción
       await this.prisma.$transaction([
         // Si el email coincide con el email principal del usuario, actualizar la tabla User
-        ...(user.email === payload.email ? [
+        ...(user.email === email.toLowerCase() ? [
           this.prisma.user.update({
             where: { id: validation.data.userId },
             data: { /* No actualizamos password en User porque no tiene campo password */ },
@@ -366,31 +366,32 @@ export class AuthService {
           this.prisma.userBrand.updateMany({
             where: {
               userId: validation.data.userId,
-              email: payload.email
+              email: email.toLowerCase()
             },
             data: { passwordHash: hashedPassword },
           })
         ] : []),
         
-        // Marcar token como usado
-        this.prisma.passwordResetToken.update({
-          where: { id: payload.tokenId },
+        // Marcar código como usado
+        this.prisma.passwordResetCode.update({
+          where: { id: resetCodeRecord.id },
           data: { used: true },
         }),
         
-        // Invalidar todos los otros tokens del usuario
-        this.prisma.passwordResetToken.updateMany({
+        // Invalidar todos los otros códigos del usuario para este email
+        this.prisma.passwordResetCode.updateMany({
           where: {
             userId: validation.data.userId,
+            email: email.toLowerCase(),
             used: false,
-            id: { not: payload.tokenId },
+            id: { not: resetCodeRecord.id },
           },
           data: { used: true },
         }),
       ]);
 
-      // 🆕 ENVIAR EMAIL DE CONFIRMACIÓN CON ENLACE DE EMERGENCIA
-      await this.sendPasswordUpdatedNotification(user, payload.email);
+      // Enviar email de confirmación con código de emergencia
+      await this.sendPasswordUpdatedNotification(user, email.toLowerCase());
 
       return BaseResponseDto.success({
         success: true,
@@ -406,34 +407,24 @@ export class AuthService {
     }
   }
 
-  // Enviar notificación de contraseña actualizada
+  // Enviar notificación de contraseña actualizada con código de emergencia
   private async sendPasswordUpdatedNotification(user: any, email: string): Promise<void> {
     try {
-      // Generar token de emergencia (válido por 24 horas)
-      const emergencyToken = this.cryptoService.generateResetToken();
+      // Generar código de emergencia (válido por 24 horas)
+      const emergencyCode = this.cryptoService.generateResetCode();
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24); // 24 horas para emergencia
 
-      const emergencyResetToken = await this.prisma.passwordResetToken.create({
+      await this.prisma.passwordResetCode.create({
         data: {
-          token: emergencyToken,
+          code: emergencyCode,
           userId: user.id,
+          email: email.toLowerCase(),
           expiresAt,
           used: false,
+          attempts: 0,
         },
       });
-
-      // Crear JWT token para la URL de emergencia
-      const emergencyJwtPayload: ResetTokenPayload = {
-        userId: user.id,
-        email: email.toLowerCase(),
-        tokenId: emergencyResetToken.id,
-      };
-      
-      const emergencyJwtToken = this.cryptoService.createJWTToken(emergencyJwtPayload);
-      
-      // Crear URL de reset de emergencia
-      const emergencyResetUrl = `${process.env.BASE_URL}/reset-password?token=${emergencyJwtToken}&emergency=true`;
 
       // Formatear fecha y hora actual
       const updateTime = new Date().toLocaleString('es-ES', {
@@ -453,7 +444,7 @@ export class AuthService {
           appName: process.env.APP_NAME || 'WhiteLabel',
           userName: user.firstName || 'Usuario',
           updateTime,
-          emergencyResetUrl,
+          emergencyCode,
           supportEmail: process.env.SUPPORT_EMAIL || 'soporte@tuapp.com',
           currentYear: new Date().getFullYear().toString(),
         }),
@@ -466,9 +457,9 @@ export class AuthService {
     }
   }
 
-  async cleanupExpiredTokens(): Promise<number> {
+  async cleanupExpiredCodes(): Promise<number> {
     try {
-      const result = await this.prisma.passwordResetToken.deleteMany({
+      const result = await this.prisma.passwordResetCode.deleteMany({
         where: {
           OR: [
             { expiresAt: { lt: new Date() } },
@@ -477,10 +468,10 @@ export class AuthService {
         },
       });
 
-      console.log(`Eliminados ${result.count} tokens expirados/usados`);
+      console.log(`Eliminados ${result.count} códigos expirados/usados`);
       return result.count;
     } catch (error) {
-      console.error('Error limpiando tokens:', error);
+      console.error('Error limpiando códigos:', error);
       return 0;
     }
   }

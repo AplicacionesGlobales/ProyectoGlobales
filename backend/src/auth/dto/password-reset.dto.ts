@@ -1,53 +1,14 @@
-// auth/dto/password-reset.dto.ts
-import { IsEmail, IsString, MinLength, Matches } from 'class-validator';
+// dtos/forgot-password.dto.ts
+import { IsEmail, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ForgotPasswordDto {
-  @ApiProperty({ 
-    example: 'user@example.com',
-    description: 'Email del usuario que quiere resetear su contraseña'
-  })
+  @ApiProperty({ example: 'usuario@ejemplo.com' })
   @IsEmail({}, { message: 'Debe ser un email válido' })
+  @IsNotEmpty({ message: 'El email es requerido' })
   email: string;
 }
 
-export class ValidateResetTokenDto {
-  @ApiProperty({ 
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    description: 'Token JWT de reset de contraseña'
-  })
-  @IsString({ message: 'Token es requerido' })
-  token: string;
-}
-
-export class ResetPasswordDto {
-  @ApiProperty({ 
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    description: 'Token JWT de reset de contraseña'
-  })
-  @IsString({ message: 'Token es requerido' })
-  token: string;
-
-  @ApiProperty({ 
-    example: 'NuevaPassword123',
-    description: 'Nueva contraseña del usuario'
-  })
-  @IsString({ message: 'Contraseña es requerida' })
-  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
-    message: 'La contraseña debe contener al menos una minúscula, una mayúscula y un número'
-  })
-  password: string;
-
-  @ApiProperty({ 
-    example: 'NuevaPassword123',
-    description: 'Confirmación de la nueva contraseña'
-  })
-  @IsString({ message: 'Confirmación de contraseña es requerida' })
-  confirmPassword: string;
-}
-
-// Response DTOs
 export class ForgotPasswordResponseDto {
   @ApiProperty()
   success: boolean;
@@ -56,18 +17,50 @@ export class ForgotPasswordResponseDto {
   message: string;
 }
 
-export class ValidateTokenResponseDto {
+// Nuevo DTO para validar código
+export class ValidateResetCodeDto {
+  @ApiProperty({ example: '123456' })
+  @IsNotEmpty({ message: 'El código es requerido' })
+  code: string;
+
+  @ApiProperty({ example: 'usuario@ejemplo.com' })
+  @IsEmail({}, { message: 'Debe ser un email válido' })
+  @IsNotEmpty({ message: 'El email es requerido' })
+  email: string;
+}
+
+export class ValidateCodeResponseDto {
   @ApiProperty()
   valid: boolean;
+
+  @ApiProperty()
+  message: string;
 
   @ApiProperty({ required: false })
   userId?: number;
 
   @ApiProperty({ required: false })
   email?: string;
+}
 
-  @ApiProperty()
-  message: string;
+// DTO actualizado para reset de contraseña
+export class ResetPasswordDto {
+  @ApiProperty({ example: '123456' })
+  @IsNotEmpty({ message: 'El código es requerido' })
+  code: string;
+
+  @ApiProperty({ example: 'usuario@ejemplo.com' })
+  @IsEmail({}, { message: 'Debe ser un email válido' })
+  @IsNotEmpty({ message: 'El email es requerido' })
+  email: string;
+
+  @ApiProperty({ example: 'nuevaContraseña123' })
+  @IsNotEmpty({ message: 'La contraseña es requerida' })
+  password: string;
+
+  @ApiProperty({ example: 'nuevaContraseña123' })
+  @IsNotEmpty({ message: 'La confirmación de contraseña es requerida' })
+  confirmPassword: string;
 }
 
 export class ResetPasswordResponseDto {
