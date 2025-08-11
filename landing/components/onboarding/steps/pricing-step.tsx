@@ -86,26 +86,9 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
   const [billingPeriod, setBillingPeriod] = React.useState<"monthly" | "annual">(plan.billingPeriod || "monthly")
   const { plans, features, loading, error, calculateTotalPrice } = useLandingData();
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-        <span className="ml-2 text-lg text-gray-600">Cargando planes...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-red-600 text-lg">Error al cargar los planes. Por favor intenta de nuevo.</p>
-      </div>
-    );
-  }
-
   const selectedPlan = plans.find(p => p.type === plan.type)
   
-  // Calculate features price using the API data
+  // Calculate features price using the API data (always called)
   const featuresPrice = selectedFeatures.reduce((total, featureKey) => {
     const feature = features.find(f => f.key === featureKey);
     return total + (feature?.price || 0);
@@ -124,21 +107,7 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
 
   const finalPrice = selectedPlan ? calculateFinalPrice(selectedPlan, billingPeriod) : 0
 
-  const handlePlanChange = (planType: "web" | "app" | "complete") => {
-    const selectedPlanOption = plans.find(p => p.type === planType)
-    if (selectedPlanOption) {
-      const newFinalPrice = calculateFinalPrice(selectedPlanOption, billingPeriod)
-      
-      onChange({
-        type: planType,
-        features: getPlanFeatures(planType),
-        price: newFinalPrice,
-        billingPeriod: billingPeriod
-      })
-    }
-  }
-
-  // Get plan features based on type
+  // Get plan features based on type (always called)
   const getPlanFeatures = (planType: string) => {
     switch (planType) {
       case 'web':
@@ -165,10 +134,40 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
           "3.8% + $0.40 por transacción",
           "Soporte 24/7",
         ];
+      case 'app':
+        return [
+          "App en App Store y Google Play",
+          "Notificaciones push",
+          "Funciones avanzadas de citas",
+          "3.8% + $0.40 por transacción",
+          "Soporte prioritario"
+        ];
+      case 'complete':
+        return [
+          "Todo de los planes anteriores",
+          "App y sitio web",
+          "Integraciones avanzadas",
+          "3.8% + $0.40 por transacción",
+          "Soporte 24/7 prioritario"
+        ];
       default:
         return [];
     }
   };
+
+  const handlePlanChange = (planType: "web" | "app" | "complete") => {
+    const selectedPlanOption = plans.find(p => p.type === planType)
+    if (selectedPlanOption) {
+      const newFinalPrice = calculateFinalPrice(selectedPlanOption, billingPeriod)
+      
+      onChange({
+        type: planType,
+        features: getPlanFeatures(planType),
+        price: newFinalPrice,
+        billingPeriod: billingPeriod
+      })
+    }
+  }
 
   const handleBillingPeriodChange = (newBillingPeriod: "monthly" | "annual") => {
     setBillingPeriod(newBillingPeriod)
@@ -176,7 +175,7 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
       const newFinalPrice = calculateFinalPrice(selectedPlan, newBillingPeriod)
       onChange({
         type: plan.type,
-        features: selectedPlan.features,
+        features: getPlanFeatures(plan.type),
         price: newFinalPrice,
         billingPeriod: newBillingPeriod
       })
@@ -188,14 +187,36 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
     if (selectedPlan) {
       onChange({
         type: plan.type,
-        features: selectedPlan.features,
+        features: getPlanFeatures(plan.type),
         price: finalPrice,
         billingPeriod: billingPeriod
       })
     }
-  }, [selectedFeatures])
+  }, [selectedFeatures, finalPrice, plan.type, billingPeriod])
 
   const isValid = plan.type && ["web", "app", "complete"].includes(plan.type)
+
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-lg text-gray-600">Cargando planes...</span>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 text-lg mb-4">Error al cargar los planes.</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -233,27 +254,27 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
       >
         <div className="grid gap-6 lg:grid-cols-3">
           {plans.map((planOption) => (
-            <div key={planOption.id} className="relative">
+            <div key={planOption.type} className="relative">
               <Card
                 className={`p-6 cursor-pointer transition-all hover:shadow-lg ${
-                  plan.type === planOption.id
+                  plan.type === planOption.type
                     ? "ring-2 ring-purple-500 bg-purple-50"
                     : "hover:bg-gray-50"
                 }`}
-                onClick={() => handlePlanChange(planOption.id as "web" | "app" | "complete")}
+                onClick={() => handlePlanChange(planOption.type as "web" | "app" | "complete")}
               >
-                {planOption.popular && (
+                {planOption.type === 'app' && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <Badge className={planOption.badgeColor}>
+                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
                       <Star className="w-3 h-3 mr-1" />
-                      {planOption.badge}
+                      Más Popular
                     </Badge>
                   </div>
                 )}
                 
                 <div className="flex items-center space-x-2 mb-4">
-                  <RadioGroupItem value={planOption.id} id={planOption.id} />
-                  <Label htmlFor={planOption.id} className="text-lg font-semibold cursor-pointer">
+                  <RadioGroupItem value={planOption.type} id={planOption.type} />
+                  <Label htmlFor={planOption.type} className="text-lg font-semibold cursor-pointer">
                     {planOption.name}
                   </Label>
                 </div>
@@ -262,36 +283,22 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
                   <div>
                     <p className="text-gray-600">{planOption.description}</p>
                     <div className="mt-2">
-                      {billingPeriod === "annual" && planOption.yearlyPrice !== undefined ? (
-                        <div>
-                          <span className="text-3xl font-bold text-gray-900">
-                            ${planOption.yearlyPrice}
-                          </span>
-                          <span className="text-gray-600">/año</span>
-                          {planOption.monthlyEquivalent && (
-                            <div className="text-sm text-gray-500 mt-1">
-                              (${planOption.monthlyEquivalent}/mes)
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div>
-                          <span className="text-3xl font-bold text-gray-900">
-                            ${planOption.basePrice}
-                          </span>
-                          <span className="text-gray-600">/{planOption.period}</span>
-                        </div>
-                      )}
-                      {planOption.discount > 0 && (
-                        <Badge variant="secondary" className="ml-2">
-                          -{planOption.discount}%
+                      <div>
+                        <span className="text-3xl font-bold text-gray-900">
+                          ${planOption.basePrice}
+                        </span>
+                        <span className="text-gray-600">/mes</span>
+                      </div>
+                      {planOption.type === 'web' && (
+                        <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+                          Sin Mensualidad
                         </Badge>
                       )}
                     </div>
                   </div>
 
                   <ul className="space-y-2">
-                    {planOption.features.map((feature, index) => (
+                    {getPlanFeatures(planOption.type).map((feature, index) => (
                       <li key={index} className="flex items-center space-x-2">
                         <Check className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-gray-600">{feature}</span>
@@ -312,10 +319,7 @@ export function PricingStep({ plan, selectedFeatures, onChange, onNext, onPrev }
           <div className="flex justify-between">
             <span>Plan base:</span>
             <span>
-              {billingPeriod === "annual" && selectedPlan?.yearlyPrice !== undefined
-                ? `$${selectedPlan.yearlyPrice}/${billingPeriod === "annual" ? "año" : selectedPlan.period}`
-                : `$${selectedPlan?.basePrice || 0}/${selectedPlan?.period || "mes"}`
-              }
+              ${selectedPlan?.basePrice || 0}/mes
             </span>
           </div>
           {featuresPrice > 0 && (
