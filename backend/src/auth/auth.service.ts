@@ -5,6 +5,7 @@ import { EmailService } from '../common/services/email/email.service';
 import { CryptoService, ResetTokenPayload } from '../common/services/crypto.service';
 import * as bcrypt from 'bcryptjs';
 import { RegisterClientDto, AuthResponse, ForgotPasswordDto, ValidateResetTokenDto, ResetPasswordDto, ForgotPasswordResponseDto, ValidateTokenResponseDto, ResetPasswordResponseDto, LoginAdminDto, LoginClientDto, AdminAuthResponse } from './dto';
+import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole } from '../../generated/prisma';
 import { randomBytes } from 'crypto';
@@ -698,6 +699,118 @@ export class AuthService {
 
     } catch (error) {
       console.error('Error en loginClient:', error);
+      errors.push({ 
+        code: ERROR_CODES.INTERNAL_ERROR, 
+        description: ERROR_MESSAGES.INTERNAL_ERROR 
+      });
+      return BaseResponseDto.error(errors);
+    }
+  }
+
+  async registerBrand(createBrandDto: CreateBrandDto): Promise<BaseResponseDto<any>> {
+    const errors: ErrorDetail[] = [];
+
+    try {
+      // Verificar que el email no exista como usuario
+      const existingUser = await this.prisma.user.findFirst({
+        where: { email: createBrandDto.email }
+      });
+
+      if (existingUser) {
+        errors.push({ 
+          code: ERROR_CODES.EMAIL_EXISTS, 
+          description: ERROR_MESSAGES.EMAIL_EXISTS 
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Crear la marca y el usuario en una transacción
+      const result = await this.prisma.$transaction(async (prisma) => {
+        // Crear el usuario ROOT/propietario
+        const user = await prisma.user.create({
+          data: {
+            email: createBrandDto.email,
+            username: createBrandDto.email, // Usar email como username por defecto
+            firstName: createBrandDto.ownerName.split(' ')[0],
+            lastName: createBrandDto.ownerName.split(' ').slice(1).join(' ') || '',
+            role: UserRole.ROOT, // Usuario ROOT es el propietario de la marca
+          }
+        });
+
+        // Crear la marca
+        const brand = await prisma.brand.create({
+          data: {
+            name: createBrandDto.name,
+            description: createBrandDto.description,
+            phone: createBrandDto.phone,
+            ownerId: user.id, // Relación con el usuario ROOT
+            logoUrl: createBrandDto.logoUrl,
+            isotopoUrl: createBrandDto.isotopoUrl,
+            imagotipoUrl: createBrandDto.imagotipoUrl,
+          }
+        });
+
+        // Crear paleta de colores si se proporcionó
+        if (createBrandDto.customColors && createBrandDto.customColors.length >= 5) {
+          await prisma.colorPalette.create({
+            data: {
+              brandId: brand.id,
+              primary: createBrandDto.customColors[0],
+              secondary: createBrandDto.customColors[1],
+              accent: createBrandDto.customColors[2],
+              neutral: createBrandDto.customColors[3],
+              success: createBrandDto.customColors[4],
+            }
+          });
+        }
+
+        // Crear UserBrand para el acceso del propietario
+        const salt = randomBytes(32).toString('hex') + Date.now().toString();
+        const hashedPassword = await bcrypt.hash(createBrandDto.password, 12);
+
+        await prisma.userBrand.create({
+          data: {
+            userId: user.id,
+            brandId: brand.id,
+            email: createBrandDto.email,
+            passwordHash: hashedPassword,
+            salt: salt,
+          }
+        });
+
+        return { brand, user };
+      });
+
+      // Generar JWT token
+      const payload = { 
+        userId: result.user.id, 
+        email: result.user.email,
+        brandId: result.brand.id,
+        role: result.user.role 
+      };
+      const token = this.jwtService.sign(payload);
+
+      const response = {
+        message: 'Marca y usuario creados exitosamente',
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          username: result.user.username,
+          firstName: result.user.firstName,
+          lastName: result.user.lastName,
+          role: result.user.role,
+        },
+        brand: {
+          id: result.brand.id,
+          name: result.brand.name,
+        },
+        token,
+      };
+
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('Error en registerBrand:', error);
       errors.push({ 
         code: ERROR_CODES.INTERNAL_ERROR, 
         description: ERROR_MESSAGES.INTERNAL_ERROR 

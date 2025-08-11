@@ -110,15 +110,15 @@ export default function RegistroPage() {
 
     // Paso 5: Plan
     tipoPlan: "" as "app" | "completo" | "web" | "",
+    billingCycle: "monthly" as "monthly" | "annual",
 
     // Paso 6: Datos de pago
     numeroCuenta: "",
   })
 
-  const calculatePrice = (servicios: string[], tipoPlan: "app" | "completo" | "web" | "") => {
+  const calculatePrice = (servicios: string[], tipoPlan: "app" | "completo" | "web" | "", billingCycle: "monthly" | "annual" = "monthly") => {
     if (tipoPlan === "web" || tipoPlan === "") {
-      // Para web, no hay costo base ni servicios adicionales, solo comisiones por transacción
-      return 0
+      return 0;
     }
 
     const basePrice: Record<"app" | "completo", number> = { app: 59, completo: 60 }
@@ -126,7 +126,9 @@ export default function RegistroPage() {
       const service = services.find((s) => s.id === serviceId)
       return total + (service?.price || 0)
     }, 0)
-    return basePrice[tipoPlan] + serviceCost
+    
+    const monthlyTotal = basePrice[tipoPlan] + serviceCost;
+    return billingCycle === "annual" ? monthlyTotal * 12 : monthlyTotal;
   }
 
   const nextStep = () => {
@@ -372,6 +374,34 @@ export default function RegistroPage() {
               <p className="text-gray-600">El precio se ajusta según las funciones que seleccionaste</p>
             </div>
 
+            {/* Selector de ciclo de facturación */}
+            {formData.tipoPlan && formData.tipoPlan !== "web" && (
+              <Card className="mb-6">
+                <CardContent className="p-4">
+                  <h3 className="font-semibold mb-3">Ciclo de Facturación</h3>
+                  <RadioGroup 
+                    value={formData.billingCycle} 
+                    onValueChange={(value) => handleInputChange("billingCycle", value)}
+                    className="flex space-x-8"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="monthly" id="monthly" />
+                      <Label htmlFor="monthly">Mensual</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="annual" id="annual" />
+                      <Label htmlFor="annual" className="flex items-center">
+                        Anual 
+                        <Badge className="ml-2 bg-green-100 text-green-800 text-xs">
+                          Ahorra 2 meses
+                        </Badge>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </CardContent>
+              </Card>
+            )}
+
             <RadioGroup value={formData.tipoPlan} onValueChange={(value) => handleInputChange("tipoPlan", value)}>
               <div className="grid gap-4">
                 <Card
@@ -410,15 +440,29 @@ export default function RegistroPage() {
                           <h3 className="text-lg font-semibold">Solo App Móvil</h3>
                           <div className="text-right">
                             <div className="text-2xl font-bold">
-                              ${calculatePrice(formData.serviciosSeleccionados, "app")}
-                              <span className="text-sm font-normal text-gray-600">/mes</span>
+                              ${calculatePrice(formData.serviciosSeleccionados, "app", formData.billingCycle)}
+                              <span className="text-sm font-normal text-gray-600">
+                                {formData.billingCycle === "annual" ? "/año" : "/mes"}
+                              </span>
                             </div>
                             <div className="text-xs text-gray-500">
-                              Base: $59 + Funciones: $
-                              {formData.serviciosSeleccionados.reduce((total, serviceId) => {
-                                const service = services.find((s) => s.id === serviceId)
-                                return total + (service?.price || 0)
-                              }, 0)}
+                              {formData.billingCycle === "annual" ? (
+                                <>
+                                  Mensual: ${calculatePrice(formData.serviciosSeleccionados, "app", "monthly")}/mes
+                                  <br />
+                                  <span className="text-green-600 font-medium">
+                                    Ahorras ${calculatePrice(formData.serviciosSeleccionados, "app", "monthly") * 2}/año
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  Base: $59 + Funciones: $
+                                  {formData.serviciosSeleccionados.reduce((total, serviceId) => {
+                                    const service = services.find((s) => s.id === serviceId)
+                                    return total + (service?.price || 0)
+                                  }, 0)}
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -444,15 +488,29 @@ export default function RegistroPage() {
                           <h3 className="text-lg font-semibold">Web + App Completa</h3>
                           <div className="text-right">
                             <div className="text-2xl font-bold">
-                              ${calculatePrice(formData.serviciosSeleccionados, "completo")}
-                              <span className="text-sm font-normal text-gray-600">/mes</span>
+                              ${calculatePrice(formData.serviciosSeleccionados, "completo", formData.billingCycle)}
+                              <span className="text-sm font-normal text-gray-600">
+                                {formData.billingCycle === "annual" ? "/año" : "/mes"}
+                              </span>
                             </div>
                             <div className="text-xs text-gray-500">
-                              Base: $60 + Funciones: $
-                              {formData.serviciosSeleccionados.reduce((total, serviceId) => {
-                                const service = services.find((s) => s.id === serviceId)
-                                return total + (service?.price || 0)
-                              }, 0)}
+                              {formData.billingCycle === "annual" ? (
+                                <>
+                                  Mensual: ${calculatePrice(formData.serviciosSeleccionados, "completo", "monthly")}/mes
+                                  <br />
+                                  <span className="text-green-600 font-medium">
+                                    Ahorras ${calculatePrice(formData.serviciosSeleccionados, "completo", "monthly") * 2}/año
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  Base: $60 + Funciones: $
+                                  {formData.serviciosSeleccionados.reduce((total, serviceId) => {
+                                    const service = services.find((s) => s.id === serviceId)
+                                    return total + (service?.price || 0)
+                                  }, 0)}
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>

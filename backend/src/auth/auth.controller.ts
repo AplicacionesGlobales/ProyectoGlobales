@@ -13,6 +13,7 @@ import {
   RegisterBrandDto,
   BrandRegistrationResponse
 } from './dto';
+import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
 import { AUTH_SUCCESS_RESPONSE } from '../common/templates';
 import { AdminAuthResponse, LoginAdminDto, LoginClientDto } from './dto/login-admin.dto';
@@ -86,6 +87,27 @@ export class AuthController {
     @Body(ValidationPipe) loginDto: LoginClientDto
   ): Promise<BaseResponseDto<AuthResponse>> {
     return this.authService.loginClient(loginDto);
+  }
+
+  @Post('register/brand')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ 
+    summary: 'Registrar nueva marca con usuario administrador',
+    description: 'Crea una nueva marca y el usuario root/administrador asociado'
+  })
+  @ApiBody({ type: CreateBrandDto })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Marca y usuario administrador creados exitosamente'
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Email ya existe o datos inválidos'
+  })
+  async registerBrand(
+    @Body(ValidationPipe) createBrandDto: CreateBrandDto
+  ): Promise<BaseResponseDto<any>> {
+    return this.authService.registerBrand(createBrandDto);
   }
 
   // ==================== PASSWORD RESET ENDPOINTS ====================
