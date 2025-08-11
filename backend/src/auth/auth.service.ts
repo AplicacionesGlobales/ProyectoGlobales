@@ -9,7 +9,7 @@ import { PlanService } from '../common/services/plan.service';
 import { PaymentService } from '../common/services/payment.service';
 import { ColorPaletteService } from './services/color-palette.service';
 import * as bcrypt from 'bcryptjs';
-import { ValidateResetCodeDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto } from './dto';
+import { ValidateResetCodeDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto, EmailValidationResponseDto, UsernameValidationResponseDto } from './dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BrandRegistrationResponseDto } from './dto/brand-registration-response.dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
@@ -36,41 +36,65 @@ export class AuthService {
   }
 
   async registerClient(registerDto: RegisterClientDto): Promise<BaseResponseDto<AuthResponse>> {
+    console.log('\n🔍 === REGISTRO CLIENT INICIADO ===');
+    console.log('📧 Email:', registerDto.email);
+    console.log('👤 Username:', registerDto.username);
+    console.log('🏢 BrandId:', registerDto.branchId);
+    console.log('📅 Timestamp:', new Date().toISOString());
+
     const errors: ErrorDetail[] = [];
 
     try {
       // Validar contraseña
+      console.log('\n🔐 Validando contraseña...');
       const passwordValidation = this.validatePassword(registerDto.password);
       if (!passwordValidation.isValid) {
+        console.log('❌ Contraseña inválida:', passwordValidation.errors);
         errors.push(...passwordValidation.errors);
+      } else {
+        console.log('✅ Contraseña válida');
       }
 
       // Verificar username único
+      console.log('\n🔎 Verificando username único globalmente...');
       const existingUsername = await this.prisma.user.findUnique({
         where: { username: registerDto.username }
       });
 
       if (existingUsername) {
+        console.log('❌ USERNAME YA EXISTE:', {
+          id: existingUsername.id,
+          email: existingUsername.email,
+          username: existingUsername.username,
+          createdAt: existingUsername.createdAt
+        });
         errors.push({ 
           code: ERROR_CODES.USERNAME_EXISTS, 
           description: ERROR_MESSAGES.USERNAME_EXISTS 
         });
+      } else {
+        console.log('✅ Username disponible');
       }
 
       // Verificar marca existe
+      console.log('\n🏢 Verificando marca existe...');
       const brand = await this.prisma.brand.findUnique({
         where: { id: registerDto.branchId },
         select: { id: true, name: true }
       });
 
       if (!brand) {
+        console.log('❌ Marca no encontrada:', registerDto.branchId);
         errors.push({ 
           code: ERROR_CODES.BRANCH_NOT_EXISTS, 
           description: ERROR_MESSAGES.BRANCH_NOT_EXISTS 
         });
+      } else {
+        console.log('✅ Marca encontrada:', brand);
       }
 
       // Verificar email único - debe ser único globalmente pero permitir registro en diferentes marcas
+      console.log('\n📧 Verificando email único en marca...');
       let existingUserWithEmail = await this.prisma.user.findFirst({
         where: { email: registerDto.email },
         include: {
@@ -80,22 +104,39 @@ export class AuthService {
         }
       });
 
+      if (existingUserWithEmail) {
+        console.log('👤 Usuario con ese email existe:', {
+          id: existingUserWithEmail.id,
+          username: existingUserWithEmail.username,
+          email: existingUserWithEmail.email,
+          userBrandsInThisBrand: existingUserWithEmail.userBrands.length
+        });
+      } else {
+        console.log('✅ Email no existe en el sistema');
+      }
+
       // Si existe el usuario y ya está registrado en esta marca
       if (existingUserWithEmail && existingUserWithEmail.userBrands.length > 0) {
+        console.log('❌ EMAIL YA REGISTRADO EN ESTA MARCA');
         errors.push({ 
           code: ERROR_CODES.EMAIL_EXISTS_IN_BRANCH, 
           description: ERROR_MESSAGES.EMAIL_EXISTS_IN_BRANCH 
         });
+      } else if (existingUserWithEmail) {
+        console.log('✅ Usuario existe pero no en esta marca - permitir registro');
       }
 
       if (errors.length > 0) {
+        console.log('\n❌ ERRORES ENCONTRADOS:', errors);
         return BaseResponseDto.error(errors);
       }
 
       // Crear/obtener usuario
+      console.log('\n👤 Creando/obteniendo usuario...');
       let user;
 
       if (!existingUserWithEmail) {
+        console.log('🆕 Creando nuevo usuario...');
         user = await this.prisma.user.create({
           data: {
             email: registerDto.email,
@@ -108,11 +149,22 @@ export class AuthService {
             userBrands: true
           }
         });
+        console.log('✅ Usuario creado:', {
+          id: user.id,
+          email: user.email,
+          username: user.username
+        });
       } else {
+        console.log('🔄 Usando usuario existente:', {
+          id: existingUserWithEmail.id,
+          email: existingUserWithEmail.email,
+          username: existingUserWithEmail.username
+        });
         user = existingUserWithEmail;
       }
 
       // Crear UserBrand (sin email, solo la relación)
+      console.log('\n🔗 Creando relación UserBrand...');
       const passwordHash = await bcrypt.hash(registerDto.password, 12);
       const salt = randomBytes(32).toString('hex');
 
@@ -125,7 +177,14 @@ export class AuthService {
         }
       });
 
+      console.log('✅ UserBrand creado:', {
+        id: userBrand.id,
+        userId: userBrand.userId,
+        brandId: userBrand.brandId
+      });
+
       // Generar JWT
+      console.log('\n🔑 Generando token JWT...');
       const token = this.jwtService.sign({
         userId: user.id,
         userBrandId: userBrand.id,
@@ -149,9 +208,16 @@ export class AuthService {
         token,
       };
 
+      console.log('\n🎉 === REGISTRO EXITOSO ===');
+      console.log('✅ Usuario registrado:', user.email);
+      console.log('✅ Username:', user.username);
+      console.log('✅ En marca:', brand!.name);
+      console.log('✅ Token generado');
+
       return BaseResponseDto.success(response);
 
     } catch (error) {
+      console.error('\n💥 === ERROR EN REGISTRO ===');
       console.error('Error en registerClient:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR, 
@@ -728,38 +794,86 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
 
   // ==================== EMAIL VALIDATION ====================
   
-  async validateEmail(email: string, brandId?: number): Promise<BaseResponseDto<{ isAvailable: boolean }>> {
+  async validateEmail(email: string, brandId?: number): Promise<BaseResponseDto<EmailValidationResponseDto>> {
     try {
+      console.log('\n🔍 === VALIDACIÓN EMAIL ===');
+      console.log('📧 Email solicitado:', email);
+      console.log('🏢 BrandId:', brandId);
+      
       const normalizedEmail = email.toLowerCase().trim();
+      console.log('📧 Email normalizado:', normalizedEmail);
 
       // Para ROOT/ADMIN: email debe ser único globalmente
       if (!brandId) {
+        console.log('🔑 Validación para ROOT/ADMIN (sin brandId)');
         const existingUser = await this.prisma.user.findFirst({
           where: { email: normalizedEmail }
         });
-        return BaseResponseDto.success({ isAvailable: !existingUser });
+        
+        if (existingUser) {
+          console.log('❌ EMAIL OCUPADO (ROOT/ADMIN):', existingUser);
+          return BaseResponseDto.success({
+            isAvailable: false,
+            email: normalizedEmail
+          });
+        } else {
+          console.log('✅ EMAIL DISPONIBLE (ROOT/ADMIN)');
+          return BaseResponseDto.success({
+            isAvailable: true,
+            email: normalizedEmail
+          });
+        }
       }
 
       // Para CLIENT: verificar si el email ya existe y si ya está registrado en esa marca
+      console.log('👤 Validación para CLIENT (con brandId)');
       const existingUser = await this.prisma.user.findFirst({
         where: { email: normalizedEmail },
         include: {
           userBrands: {
-            where: { brandId: brandId }
+            where: { brandId: brandId },
+            include: {
+              brand: {
+                select: { name: true }
+              }
+            }
           }
         }
       });
 
       // Si el usuario no existe, está disponible
       if (!existingUser) {
-        return BaseResponseDto.success({ isAvailable: true });
+        console.log('✅ EMAIL DISPONIBLE (no existe usuario)');
+        return BaseResponseDto.success({
+          isAvailable: true,
+          email: normalizedEmail
+        });
       }
+
+      console.log('👤 Usuario con este email existe:', {
+        id: existingUser.id,
+        username: existingUser.username,
+        userBrandsInThisBrand: existingUser.userBrands.length
+      });
 
       // Si el usuario existe pero no está en esta marca, está disponible para esta marca
       const isAlreadyInBrand = existingUser.userBrands.length > 0;
-      return BaseResponseDto.success({ isAvailable: !isAlreadyInBrand });
+      if (isAlreadyInBrand) {
+        console.log('❌ EMAIL YA REGISTRADO EN ESTA MARCA');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          email: normalizedEmail
+        });
+      } else {
+        console.log('✅ EMAIL DISPONIBLE EN ESTA MARCA (usuario existe en otras marcas)');
+        return BaseResponseDto.success({
+          isAvailable: true,
+          email: normalizedEmail
+        });
+      }
 
     } catch (error) {
+      console.error('💥 Error validating email:', error);
       return BaseResponseDto.error([{ 
         code: ERROR_CODES.INTERNAL_ERROR, 
         description: 'Error validating email' 
@@ -769,18 +883,40 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
 
   // ==================== USERNAME VALIDATION ====================
   
-  async validateUsername(username: string): Promise<BaseResponseDto<{ isAvailable: boolean }>> {
+  async validateUsername(username: string): Promise<BaseResponseDto<UsernameValidationResponseDto>> {
     try {
+      console.log('\n🔍 === VALIDACIÓN USERNAME ===');
+      console.log('👤 Username solicitado:', username);
+      
       const normalizedUsername = username.toLowerCase().trim();
+      console.log('👤 Username normalizado:', normalizedUsername);
 
       // Username debe ser único globalmente
       const existingUser = await this.prisma.user.findFirst({
         where: { username: normalizedUsername }
       });
 
-      return BaseResponseDto.success({ isAvailable: !existingUser });
+      if (existingUser) {
+        console.log('❌ USERNAME OCUPADO:', {
+          id: existingUser.id,
+          email: existingUser.email,
+          username: existingUser.username,
+          createdAt: existingUser.createdAt
+        });
+        return BaseResponseDto.success({
+          isAvailable: false,
+          username: normalizedUsername
+        });
+      } else {
+        console.log('✅ USERNAME DISPONIBLE');
+        return BaseResponseDto.success({
+          isAvailable: true,
+          username: normalizedUsername
+        });
+      }
 
     } catch (error) {
+      console.error('💥 Error validating username:', error);
       return BaseResponseDto.error([{ 
         code: ERROR_CODES.INTERNAL_ERROR, 
         description: 'Error validating username' 

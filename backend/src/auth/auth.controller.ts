@@ -10,9 +10,12 @@ import {
   ValidateCodeResponseDto,
   ValidateResetCodeDto,
   ResetPasswordResponseDto,
+  ValidateEmailDto,
+  ValidateUsernameDto,
+  EmailValidationResponseDto,
+  UsernameValidationResponseDto,
 } from './dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
-import { ValidateEmailDto, EmailValidationResponseDto } from './dto/validate-email.dto';
 import { BaseResponseDto } from '../common/dto';
 import { AUTH_SUCCESS_RESPONSE } from '../common/templates';
 
@@ -65,9 +68,16 @@ export class AuthController {
   @Post('validate-username')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Validar disponibilidad de username' })
-  @ApiResponse({ status: 200, description: 'Username validado', type: BaseResponseDto })
-  async validateUsername(@Body() { username }: { username: string }) {
-    return this.authService.validateUsername(username);
+  @ApiBody({ type: ValidateUsernameDto })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Username validado exitosamente',
+    type: BaseResponseDto<UsernameValidationResponseDto>
+  })
+  async validateUsername(
+    @Body(ValidationPipe) validateUsernameDto: ValidateUsernameDto
+  ): Promise<BaseResponseDto<UsernameValidationResponseDto>> {
+    return this.authService.validateUsername(validateUsernameDto.username);
   }
 
   // ==================== LOGIN ENDPOINTS ====================
