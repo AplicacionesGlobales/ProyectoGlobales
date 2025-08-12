@@ -6,19 +6,29 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ForgotPasswordHeader } from '../../../components/Auth/ForgotPassword/ForgotPasswordHeader';
 import { ForgotPasswordForm } from '../../../components/Auth/ForgotPassword/ForgotPasswordForm';
+import { useNavigationLoading } from '@/hooks/useNavigationLoading';
+import { NavigationLoadingOverlay } from '@/components/navigation/NavigationLoadingOverlay';
 
 const StyledView = styled(View);
 const StyledScrollView = styled(ScrollView);
 const StyledKeyboardAvoidingView = styled(KeyboardAvoidingView);
 
 export default function ForgotPasswordScreen() {
-  const handleBackToLogin = () => {
-    router.back();
+  const { isNavigating, navigateWithLoading, navigatingTo, currentMessage } = useNavigationLoading();
+
+  const handleBackToLogin = async () => {
+    await navigateWithLoading('/(auth)/login', {
+      delay: 600,
+      message: 'Returning to Sign In...'
+    });
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = async () => {
     console.log('Password reset completed successfully');
-    router.push('/(auth)/login');
+    await navigateWithLoading('/(auth)/login', {
+      delay: 600,
+      message: 'Returning to Sign In...'
+    });
   };
 
   return (
@@ -125,6 +135,12 @@ export default function ForgotPasswordScreen() {
           </View>
         </StyledScrollView>
       </StyledKeyboardAvoidingView>
+      
+      {/* Navigation Loading Overlay */}
+      <NavigationLoadingOverlay
+        visible={isNavigating}
+        message={currentMessage}
+      />
     </View>
   );
 }

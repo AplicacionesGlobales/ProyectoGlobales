@@ -16,6 +16,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useError, ErrorUtils, InlineError } from '@/components/ui/errors';
+import { useNavigationLoading } from '@/hooks/useNavigationLoading';
+import { NavigationLoadingOverlay } from '@/components/navigation/NavigationLoadingOverlay';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -46,6 +48,7 @@ export default function RegisterScreen() {
   const confirmPasswordInputRef = useRef<TextInput>(null);
 
   const { showToast, showModal, showSuccess, showValidationErrors } = useError();
+  const { isNavigating, navigateWithLoading, navigatingTo, currentMessage } = useNavigationLoading();
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -224,8 +227,11 @@ export default function RegisterScreen() {
     }
   };
 
-  const navigateToLogin = () => {
-    router.navigate('./login');
+  const navigateToLogin = async () => {
+    await navigateWithLoading('./login', {
+      delay: 600,
+      message: 'Opening Sign In...'
+    });
   };
 
   const getPasswordStrengthColor = () => {
@@ -775,6 +781,12 @@ export default function RegisterScreen() {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+      
+      {/* Navigation Loading Overlay */}
+      <NavigationLoadingOverlay
+        visible={isNavigating}
+        message={currentMessage}
+      />
     </View>
   );
 }
