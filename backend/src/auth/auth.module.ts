@@ -15,20 +15,20 @@ import { ColorPaletteService } from './services/color-palette.service';
 
 @Module({
   imports: [
-    ConfigModule, 
+    ConfigModule,
     PrismaModule,
     CommonModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'your-secret-key',
-      signOptions: { 
-        expiresIn: '7d'
+      signOptions: {
+        expiresIn: '8h' // Access tokens: 8 horas
       },
     }),
   ],
   controllers: [AuthController, BrandRegistrationController],
   providers: [
-    AuthService, 
-    EmailService, 
+    AuthService,
+    EmailService,
     CryptoService,
     BrandRegistrationService,
     UserCreationService,
@@ -36,8 +36,8 @@ import { ColorPaletteService } from './services/color-palette.service';
     ColorPaletteService
   ],
   exports: [
-    AuthService, 
-    EmailService, 
+    AuthService,
+    EmailService,
     CryptoService,
     BrandRegistrationService,
     UserCreationService,
@@ -45,4 +45,4 @@ import { ColorPaletteService } from './services/color-palette.service';
     ColorPaletteService
   ],
 })
-export class AuthModule {}
+export class AuthModule { }

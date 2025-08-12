@@ -10,6 +10,9 @@ import {
   ValidateCodeResponseDto,
   ValidateResetCodeDto,
   ResetPasswordResponseDto,
+  LoginRequestDto,
+  RefreshRequestDto,
+  RefreshResponseDto,
 } from './dto';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
@@ -46,7 +49,44 @@ export class AuthController {
 
   // ==================== LOGIN ENDPOINTS ====================
 
-  
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Iniciar sesión con email y contraseña' })
+  @ApiBody({ type: LoginRequestDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Login exitoso',
+    type: BaseResponseDto<AuthResponse>
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Credenciales inválidas'
+  })
+  async login(
+    @Body(ValidationPipe) loginDto: LoginRequestDto
+  ): Promise<BaseResponseDto<AuthResponse>> {
+    return this.authService.login(loginDto);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Renovar access token usando refresh token' })
+  @ApiBody({ type: RefreshRequestDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Token renovado exitosamente',
+    type: BaseResponseDto<RefreshResponseDto>
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token inválido o expirado'
+  })
+  async refreshToken(
+    @Body(ValidationPipe) refreshDto: RefreshRequestDto
+  ): Promise<BaseResponseDto<RefreshResponseDto>> {
+    return this.authService.refreshToken(refreshDto);
+  }
+
   /**
    * Login para usuarios ADMIN/ROOT
    */
