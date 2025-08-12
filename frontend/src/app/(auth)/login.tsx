@@ -18,6 +18,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useError, ErrorUtils, InlineError } from '@/components/ui/errors';
+import { useNavigationLoading } from '@/hooks/useNavigationLoading';
+import { NavigationLoadingOverlay } from '@/components/navigation/NavigationLoadingOverlay';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -37,6 +39,7 @@ export default function LoginScreen() {
   
   const { login } = useApp();
   const { showToast, showModal, showApiError, showSuccess } = useError();
+  const { isNavigating, navigateWithLoading, navigatingTo, currentMessage } = useNavigationLoading();
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -122,18 +125,27 @@ export default function LoginScreen() {
         const isAdmin = email === 'admin@test.com';
         showSuccess('Login successful! Redirecting...', 2000);
         
-        setTimeout(() => {
+        // Use navigation loading for smooth transition
+        setTimeout(async () => {
           try {
             if (isAdmin) {
-              router.replace('/(admin-tabs)/appointments');
+              await navigateWithLoading('/(admin-tabs)/appointments', {
+                delay: 1500,
+                message: 'Accessing Admin Dashboard...',
+                replace: true
+              });
             } else {
-              router.replace('/(client-tabs)');
+              await navigateWithLoading('/(client-tabs)', {
+                delay: 1500,
+                message: 'Accessing Your Dashboard...',
+                replace: true
+              });
             }
           } catch (error) {
             console.log('Navigation error:', error);
             router.replace('/');
           }
-        }, 100);
+        }, 500);
       } else {
         showToast('Invalid email or password', 'error', 'high');
       }
@@ -151,12 +163,18 @@ export default function LoginScreen() {
     }
   };
 
-  const handleRegister = () => {
-    router.push('/register');
+  const handleRegister = async () => {
+    await navigateWithLoading('/register', {
+      delay: 600,
+      message: 'Opening Sign Up...'
+    });
   };
 
-  const handleForgotPassword = () => {
-    router.push('/(auth)/forgot-password/ForgotPassword');
+  const handleForgotPassword = async () => {
+    await navigateWithLoading('/(auth)/forgot-password/ForgotPassword', {
+      delay: 600,
+      message: 'Opening Forgot Password...'
+    });
   };
 
   const fillDemoCredentials = (type: 'admin' | 'client') => {
@@ -648,6 +666,12 @@ export default function LoginScreen() {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+      
+      {/* Navigation Loading Overlay */}
+      <NavigationLoadingOverlay
+        visible={isNavigating}
+        message={currentMessage}
+      />
     </View>
   );
 }
