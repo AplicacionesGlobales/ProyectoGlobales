@@ -142,7 +142,7 @@ export default function LoginScreen() {
         if (rememberMe) {
           showSuccess('Login successful! Session will be remembered.', 3000);
         } else {
-          showSuccess('Login successful! Redirecting...', 2000);
+          showSuccess('Login successful!', 2000);
         }
 
         setTimeout(() => {

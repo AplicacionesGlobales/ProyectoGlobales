@@ -242,14 +242,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       // Usar el authService para logout completo
       await authService.logout();
 
-      // Limpiar estado local
-      setUser(null);
+      // Usar startTransition para evitar warnings de React
+      React.startTransition(() => {
+        setUser(null);
+      });
 
       console.log('✅ Logout completado desde contexto');
     } catch (error) {
       console.error('❌ Error en logout:', error);
-      // Limpiar estado local aunque falle
-      setUser(null);
+      // Limpiar estado local aunque falle, usando startTransition
+      React.startTransition(() => {
+        setUser(null);
+      });
     }
   };
 
