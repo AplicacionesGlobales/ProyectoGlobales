@@ -1,17 +1,13 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { styled } from 'nativewind';
 import { LoadingSpinner } from './LoadingSpinner';
 import { LoadingStateProps } from '../../../types/loading.types';
-
-const StyledView = styled(View);
-const StyledText = styled(Text);
 
 export const LoadingState: React.FC<LoadingStateProps> = ({
   loading,
   children,
   fallback,
-  message = 'Cargando...',
+  message = 'Loading...',
   variant = 'spinner',
   size = 'small',
   color = '#3B82F6',
@@ -29,38 +25,71 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
     switch (variant) {
       case 'inline':
         return (
-          <StyledView className={`flex-row items-center justify-center py-4 ${className}`}>
-            <LoadingSpinner size={size} color={color} className="mr-2" />
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 16,
+          }}>
+            <LoadingSpinner size={size} color={color} />
             {message && (
-              <StyledText className="text-sm text-gray-600 ml-2">
+              <Text style={{
+                fontSize: 14,
+                color: '#6b7280',
+                marginLeft: 8,
+              }}>
                 {message}
-              </StyledText>
+              </Text>
             )}
-          </StyledView>
+          </View>
         );
       
       case 'overlay':
         return (
-          <StyledView className={`absolute inset-0 bg-white/80 justify-center items-center z-50 ${className}`}>
-            <LoadingSpinner size={size} color={color} className="mb-2" />
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 50,
+          }}>
+            <LoadingSpinner size={size} color={color} />
             {message && (
-              <StyledText className="text-sm text-gray-600 text-center">
+              <Text style={{
+                fontSize: 14,
+                color: '#6b7280',
+                textAlign: 'center',
+                marginTop: 8,
+              }}>
                 {message}
-              </StyledText>
+              </Text>
             )}
-          </StyledView>
+          </View>
         );
       
       default: // spinner
         return (
-          <StyledView className={`justify-center items-center py-8 ${className}`}>
-            <LoadingSpinner size={size} color={color} className="mb-2" />
+          <View style={{
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingVertical: 32,
+          }}>
+            <LoadingSpinner size={size} color={color} />
             {message && (
-              <StyledText className="text-sm text-gray-600 text-center">
+              <Text style={{
+                fontSize: 14,
+                color: '#6b7280',
+                textAlign: 'center',
+                marginTop: 8,
+              }}>
                 {message}
-              </StyledText>
+              </Text>
             )}
-          </StyledView>
+          </View>
         );
     }
   };

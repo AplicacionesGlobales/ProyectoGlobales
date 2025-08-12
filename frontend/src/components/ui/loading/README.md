@@ -48,7 +48,7 @@ import { Button } from '../Button';
 
 ## Dependencias
 
-- Todos los componentes usan `styled` de `nativewind`
+- Todos los componentes usan estilos nativos de React Native
 - Los tipos están centralizados en `../../../types/loading.types.ts`
 - Para botones con loading, usa el componente `Button` en `../Button.tsx`
 - Hook relacionado: `../../../hooks/useLoading.ts`
@@ -60,8 +60,3 @@ LoadingSpinner (base)
 ├── LoadingScreen
 ├── LoadingOverlay  
 └── LoadingState
-
-Button (external) - ya incluye loading
-```
-
-Para documentación completa, ver: `/docs/LOADING_COMPONENTS.md`
