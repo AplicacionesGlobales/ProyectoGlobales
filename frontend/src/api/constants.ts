@@ -17,4 +17,5 @@ export const API_ENDPOINTS = {
 } as const;
 
 // Base URL (ajusta según tu servidor)
-export const BASE_URL = 'https://vqfc77zd-3000.use2.devtunnels.ms';
+//export const BASE_URL = 'http://127.0.0.1:3000';
+export const BASE_URL = 'https://vqfc77zd-3000.use2.devtunnels.ms'; // Tunel para probar desde el telefono
