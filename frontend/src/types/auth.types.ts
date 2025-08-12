@@ -37,3 +37,13 @@ export interface ForgotPasswordResponse {
   success: boolean;
   message: string;
 }
+
+export interface EmailValidationResponse {
+  isAvailable: boolean;
+  email: string;
+}
+
+export interface UsernameValidationResponse {
+  isAvailable: boolean;
+  username: string;
+}

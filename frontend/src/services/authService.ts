@@ -19,6 +19,12 @@ import {
   ResetPasswordResponse
 } from '../api/types';
 import { RegisterFormData, LoginFormData } from '../types/auth.types';
+import Constants from 'expo-constants';
+
+// Obtener brandId del app.json
+const getBrandId = (): number => {
+  return parseInt(Constants.expoConfig?.extra?.brand_id || '1');
+};
 
 export interface IAuthService {
   register(data: Omit<RegisterFormData, 'confirmPassword'>): Promise<RegisterResponse>;
@@ -50,6 +56,7 @@ class AuthService implements IAuthService {
         email: data.email,
         username: data.username,
         password: data.password,
+        branchId: getBrandId(), // Agregar brandId automáticamente
       };
 
       return await registerUser(registerData);
@@ -73,8 +80,8 @@ class AuthService implements IAuthService {
 
   async validateEmail(email: string): Promise<boolean> {
     try {
-      const response = await validateEmailEndpoint(email);
-      return response.available;
+      const response = await validateEmailEndpoint(email, getBrandId());
+      return response.success && response.data ? response.data.isAvailable : true;
     } catch (error) {
       console.warn('Email validation failed:', error);
       return true; // Assume available if validation fails
@@ -84,7 +91,7 @@ class AuthService implements IAuthService {
   async validateUsername(username: string): Promise<boolean> {
     try {
       const response = await validateUsernameEndpoint(username);
-      return response.available;
+      return response.success && response.data ? response.data.isAvailable : true;
     } catch (error) {
       console.warn('Username validation failed:', error);
       return true; // Assume available if validation fails

@@ -111,7 +111,6 @@ async function main() {
       data: {
         userId: clientUsers[0].id,
         brandId: mainBrand.id,
-        email: 'juan.barbershop@gmail.com',
         passwordHash,
         salt: salt1,
       }
@@ -121,7 +120,6 @@ async function main() {
       data: {
         userId: clientUsers[1].id,
         brandId: mainBrand.id,
-        email: 'maria.barbershop@gmail.com', 
         passwordHash,
         salt: salt2,
       }
@@ -131,7 +129,6 @@ async function main() {
       data: {
         userId: adminUsers[0].id,
         brandId: mainBrand.id,
-        email: 'admin.barbershop@gmail.com',
         passwordHash,
         salt: salt3,
       }
@@ -140,7 +137,7 @@ async function main() {
 
   console.log('✅ Created user-brand relationships:');
   userBrands.forEach((ub, index) => {
-    console.log(`   - User ${ub.userId} → Brand ${ub.brandId} (${ub.email})`);
+    console.log(`   - User ${ub.userId} → Brand ${ub.brandId}`);
   });
 
   console.log('\n🎉 Seed completed successfully!');

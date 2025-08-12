@@ -8,10 +8,204 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                 Int                 @id @default(autoincrement())
+  email              String              @unique
+  username           String              @unique
+  firstName          String?
+  lastName           String?
+  role               UserRole            @default(CLIENT)
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  brands             Brand[]
+  passwordResetCodes PasswordResetCode[]
+  userBrands         UserBrand[]
+
+  @@map("users")
+}
+
+model Brand {
+  id               Int            @id @default(autoincrement())
+  name             String
+  description      String?
+  address          String?
+  phone            String?
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  ownerId          Int
+  businessType     String?
+  selectedFeatures String[]
+  imagotipoUrl     String?
+  isotopoUrl       String?
+  logoUrl          String?
+  brandFeatures    BrandFeature[]
+  brandPlans       BrandPlan[]
+  owner            User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  colorPalette     ColorPalette?
+  payments         Payment[]
+  userBrands       UserBrand[]
+
+  @@map("brands")
+}
+
+model UserBrand {
+  id           Int      @id @default(autoincrement())
+  passwordHash String
+  salt         String   @unique
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       Int
+  brandId      Int
+  brand        Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, brandId])
+  @@map("user_brands")
+}
+
+model ColorPalette {
+  id        Int      @id @default(autoincrement())
+  primary   String
+  secondary String
+  accent    String
+  neutral   String
+  success   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  brandId   Int      @unique
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@map("color_palettes")
+}
+
+model PasswordResetCode {
+  id        String   @id @default(cuid())
+  code      String
+  userId    Int
+  email     String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([userId])
+  @@index([email])
+  @@map("password_reset_codes")
+}
+
+model Plan {
+  id          Int         @id @default(autoincrement())
+  type        PlanType    @unique
+  name        String
+  description String?
+  basePrice   Decimal     @default(0) @db.Decimal(10, 2)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  brandPlans  BrandPlan[]
+
+  @@map("plans")
+}
+
+model Feature {
+  id            Int             @id @default(autoincrement())
+  key           String          @unique
+  description   String
+  price         Decimal         @default(0) @db.Decimal(10, 2)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  businessTypes String[]
+  category      FeatureCategory
+  isPopular     Boolean         @default(false)
+  isRecommended Boolean         @default(false)
+  order         Int             @default(0)
+  subtitle      String?
+  title         String
+  brandFeatures BrandFeature[]
+
+  @@map("features")
+}
+
+model BrandPlan {
+  id            Int           @id @default(autoincrement())
+  brandId       Int
+  planId        Int
+  billingPeriod BillingPeriod @default(monthly)
+  price         Decimal       @db.Decimal(10, 2)
+  startDate     DateTime      @default(now())
+  endDate       DateTime?
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  brand         Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  plan          Plan          @relation(fields: [planId], references: [id])
+  payments      Payment[]
+
+  @@map("brand_plans")
+}
+
+model BusinessType {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  title       String
+  subtitle    String?
+  description String
+  icon        String
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("business_types")
+}
+
+model BrandFeature {
+  id        Int      @id @default(autoincrement())
+  brandId   Int
+  featureId Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  feature   Feature  @relation(fields: [featureId], references: [id])
+
+  @@unique([brandId, featureId])
+  @@map("brand_features")
+}
+
+model Payment {
+  id                   Int           @id @default(autoincrement())
+  brandId              Int
+  brandPlanId          Int
+  amount               Decimal       @db.Decimal(10, 2)
+  currency             String        @default("CRC")
+  status               PaymentStatus @default(pending)
+  paymentMethod        String?
+  tilopayTransactionId String?       @unique
+  tilopayReference     String?
+  metadata             Json?
+  processedAt          DateTime?
+  failureReason        String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  brand                Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandPlan            BrandPlan     @relation(fields: [brandPlanId], references: [id])
+
+  @@index([brandId])
+  @@index([status])
+  @@map("payments")
+}
+
 enum UserRole {
-  ADMIN
   ROOT
   CLIENT
+  ADMIN
 }
 
 enum PlanType {
@@ -33,236 +227,8 @@ enum PaymentStatus {
   cancelled
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   // Email principal del usuario (único para ROOT, puede repetirse para CLIENT)
-  username  String   @unique
-  firstName String?
-  lastName  String?
-  role      UserRole @default(CLIENT)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  passwordResetCodes PasswordResetCode[] // Cambio de tokens a codes
-
-  // Relaciones
-  brands     Brand[]     // Solo para usuarios ROOT - sus marcas white label
-  userBrands UserBrand[] // Para usuarios CLIENT, sus asignaciones a marcas
-
-  @@map("users")
-}
-
-model Brand {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  address     String?
-  phone       String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // URLs de logotipos
-  logoUrl      String? // Logotipo: nombre de la marca en texto
-  isotopoUrl   String? // Isotipo: solo símbolo/ícono sin texto
-  imagotipoUrl String? // Imagotipo: símbolo + nombre juntos
-
-  // Información del negocio
-  businessType     String?
-  selectedFeatures String[]
-
-  // Relación con el usuario ROOT que es dueño de la marca
-  ownerId Int
-  owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-
-  // Relaciones
-  userBrands   UserBrand[]
-  colorPalette ColorPalette?
-  brandPlans   BrandPlan[]
-  brandFeatures BrandFeature[]
-  payments     Payment[]
-
-  @@map("brands")
-}
-
-model UserBrand {
-  id           Int      @id @default(autoincrement())
-  email        String   // Email específico para esta marca (puede repetirse entre marcas)
-  passwordHash String   // Hash de la contraseña específica para esta marca
-  salt         String   @unique // Salt único para fortalecer la autenticación (incluye timestamp)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relaciones
-  userId  Int
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  brandId Int
-  brand   Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
-
-  // Un usuario puede tener solo una cuenta por marca
-  @@unique([userId, brandId])
-  @@map("user_brands")
-}
-
-model ColorPalette {
-  id        Int      @id @default(autoincrement())
-  primary   String   // Color primario (hex)
-  secondary String   // Color secundario (hex)
-  accent    String   // Color de acento (hex)
-  neutral   String   // Color neutral (hex)
-  success   String   // Color de éxito (hex)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relación uno a uno con Brand
-  brandId Int   @unique
-  brand   Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
-
-  @@map("color_palettes")
-}
-
-// Nuevo modelo para códigos de restablecimiento
-model PasswordResetCode {
-  id        String   @id @default(cuid())
-  code      String   // Código de 6 dígitos
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  email     String   // Email asociado al código
-  expiresAt DateTime
-  used      Boolean  @default(false)
-  attempts  Int      @default(0) // Contador de intentos de validación
-  createdAt DateTime @default(now())
-
-  @@index([code])
-  @@index([userId])
-  @@index([email])
-  @@map("password_reset_codes")
-}
-
-// Modelo para planes de suscripción
-model Plan {
-  id          Int      @id @default(autoincrement())
-  type        PlanType @unique
-  name        String
-  description String?
-  basePrice   Decimal  @default(0) @db.Decimal(10, 2)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relaciones
-  brandPlans BrandPlan[]
-
-  @@map("plans")
-}
-
-// Enum para categorías de features
 enum FeatureCategory {
   ESSENTIAL
   BUSINESS
   ADVANCED
-}
-
-// Modelo para características/features
-model Feature {
-  id          Int             @id @default(autoincrement())
-  key         String          @unique // ID único como "appointments", "payments", etc.
-  title       String          // Título principal (ej: "Sistema de Citas")
-  subtitle    String?         // Subtítulo opcional (ej: "Sistema de Citas")
-  description String          // Descripción detallada
-  price       Decimal         @default(0) @db.Decimal(10, 2)
-  category    FeatureCategory // ESSENTIAL, BUSINESS, ADVANCED
-  isRecommended Boolean       @default(false) // Si es recomendada para ciertos tipos de negocio
-  isPopular   Boolean         @default(false) // Si es popular
-  isActive    Boolean         @default(true)
-  order       Int             @default(0) // Para ordenamiento
-  businessTypes String[]      // Tipos de negocio para los que es recomendada ["photographer", "masseur", etc.]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  // Relaciones
-  brandFeatures BrandFeature[]
-
-  @@map("features")
-}
-
-// Relación many-to-many entre Brand y Plan (subscripción activa)
-model BrandPlan {
-  id            Int           @id @default(autoincrement())
-  brandId       Int
-  planId        Int
-  billingPeriod BillingPeriod @default(monthly)
-  price         Decimal       @db.Decimal(10, 2)
-  startDate     DateTime      @default(now())
-  endDate       DateTime?
-  isActive      Boolean       @default(true)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  // Relaciones
-  brand    Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  plan     Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
-  payments Payment[]
-
-  @@map("brand_plans")
-}
-
-// Modelo para tipos de negocio
-model BusinessType {
-  id          Int      @id @default(autoincrement())
-  key         String   @unique // ID único como "photographer", "masseur", etc.
-  title       String   // Título principal (ej: "Fotógrafo")
-  subtitle    String?  // Subtítulo opcional
-  description String   // Descripción detallada
-  icon        String   // Nombre del ícono de Lucide React
-  isActive    Boolean  @default(true)
-  order       Int      @default(0) // Para ordenamiento
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("business_types")
-}
-
-// Relación many-to-many entre Brand y Feature
-model BrandFeature {
-  id        Int      @id @default(autoincrement())
-  brandId   Int
-  featureId Int
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relaciones
-  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  feature Feature @relation(fields: [featureId], references: [id], onDelete: Restrict)
-
-  @@unique([brandId, featureId])
-  @@map("brand_features")
-}
-
-// Modelo para pagos y procesamiento con TiloPay
-model Payment {
-  id                   Int           @id @default(autoincrement())
-  brandId              Int
-  brandPlanId          Int
-  amount               Decimal       @db.Decimal(10, 2)
-  currency             String        @default("CRC")
-  status               PaymentStatus @default(pending)
-  paymentMethod        String?
-  tilopayTransactionId String?       @unique
-  tilopayReference     String?
-  metadata             Json?
-  processedAt          DateTime?
-  failureReason        String?
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
-
-  // Relaciones
-  brand     Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  brandPlan BrandPlan @relation(fields: [brandPlanId], references: [id], onDelete: Restrict)
-
-  @@index([brandId])
-  @@index([status])
-  @@map("payments")
 }

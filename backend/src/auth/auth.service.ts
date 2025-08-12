@@ -36,61 +36,107 @@ export class AuthService {
   }
 
   async registerClient(registerDto: RegisterClientDto): Promise<BaseResponseDto<AuthResponse>> {
+    console.log('\n🔍 === REGISTRO CLIENT INICIADO ===');
+    console.log('📧 Email:', registerDto.email);
+    console.log('👤 Username:', registerDto.username);
+    console.log('🏢 BrandId:', registerDto.branchId);
+    console.log('📅 Timestamp:', new Date().toISOString());
+
     const errors: ErrorDetail[] = [];
 
     try {
+      // Validar contraseña
+      console.log('\n🔐 Validando contraseña...');
+      const passwordValidation = this.validatePassword(registerDto.password);
+      if (!passwordValidation.isValid) {
+        console.log('❌ Contraseña inválida:', passwordValidation.errors);
+        errors.push(...passwordValidation.errors);
+      } else {
+        console.log('✅ Contraseña válida');
+      }
+
       // Verificar username único
+      console.log('\n🔎 Verificando username único globalmente...');
       const existingUsername = await this.prisma.user.findUnique({
         where: { username: registerDto.username }
       });
 
       if (existingUsername) {
+        console.log('❌ USERNAME YA EXISTE:', {
+          id: existingUsername.id,
+          email: existingUsername.email,
+          username: existingUsername.username,
+          createdAt: existingUsername.createdAt
+        });
         errors.push({ 
           code: ERROR_CODES.USERNAME_EXISTS, 
           description: ERROR_MESSAGES.USERNAME_EXISTS 
         });
+      } else {
+        console.log('✅ Username disponible');
       }
 
       // Verificar marca existe
+      console.log('\n🏢 Verificando marca existe...');
       const brand = await this.prisma.brand.findUnique({
         where: { id: registerDto.branchId },
         select: { id: true, name: true }
       });
 
       if (!brand) {
+        console.log('❌ Marca no encontrada:', registerDto.branchId);
         errors.push({ 
           code: ERROR_CODES.BRANCH_NOT_EXISTS, 
           description: ERROR_MESSAGES.BRANCH_NOT_EXISTS 
         });
+      } else {
+        console.log('✅ Marca encontrada:', brand);
       }
 
-      // Verificar email único en marca
-      if (brand) {
-        const existingUserBrand = await this.prisma.userBrand.findFirst({
-          where: {
-            email: registerDto.email,
-            brandId: registerDto.branchId
+      // Verificar email único - debe ser único globalmente pero permitir registro en diferentes marcas
+      console.log('\n📧 Verificando email único en marca...');
+      let existingUserWithEmail = await this.prisma.user.findFirst({
+        where: { email: registerDto.email },
+        include: {
+          userBrands: {
+            where: { brandId: registerDto.branchId }
           }
-        });
-
-        if (existingUserBrand) {
-          errors.push({ 
-            code: ERROR_CODES.EMAIL_EXISTS_IN_BRANCH, 
-            description: ERROR_MESSAGES.EMAIL_EXISTS_IN_BRANCH 
-          });
         }
+      });
+
+      if (existingUserWithEmail) {
+        console.log('👤 Usuario con ese email existe:', {
+          id: existingUserWithEmail.id,
+          username: existingUserWithEmail.username,
+          email: existingUserWithEmail.email,
+          userBrandsInThisBrand: existingUserWithEmail.userBrands.length
+        });
+      } else {
+        console.log('✅ Email no existe en el sistema');
+      }
+
+      // Si existe el usuario y ya está registrado en esta marca
+      if (existingUserWithEmail && existingUserWithEmail.userBrands.length > 0) {
+        console.log('❌ EMAIL YA REGISTRADO EN ESTA MARCA');
+        errors.push({ 
+          code: ERROR_CODES.EMAIL_EXISTS_IN_BRANCH, 
+          description: ERROR_MESSAGES.EMAIL_EXISTS_IN_BRANCH 
+        });
+      } else if (existingUserWithEmail) {
+        console.log('✅ Usuario existe pero no en esta marca - permitir registro');
       }
 
       if (errors.length > 0) {
+        console.log('\n❌ ERRORES ENCONTRADOS:', errors);
         return BaseResponseDto.error(errors);
       }
 
       // Crear/obtener usuario
-      let user = await this.prisma.user.findFirst({
-        where: { username: registerDto.username }
-      });
+      console.log('\n👤 Creando/obteniendo usuario...');
+      let user;
 
-      if (!user) {
+      if (!existingUserWithEmail) {
+        console.log('🆕 Creando nuevo usuario...');
         user = await this.prisma.user.create({
           data: {
             email: registerDto.email,
@@ -98,11 +144,27 @@ export class AuthService {
             firstName: registerDto.firstName,
             lastName: registerDto.lastName,
             role: UserRole.CLIENT,
+          },
+          include: {
+            userBrands: true
           }
         });
+        console.log('✅ Usuario creado:', {
+          id: user.id,
+          email: user.email,
+          username: user.username
+        });
+      } else {
+        console.log('🔄 Usando usuario existente:', {
+          id: existingUserWithEmail.id,
+          email: existingUserWithEmail.email,
+          username: existingUserWithEmail.username
+        });
+        user = existingUserWithEmail;
       }
 
-      // Crear UserBrand
+      // Crear UserBrand (sin email, solo la relación)
+      console.log('\n🔗 Creando relación UserBrand...');
       const passwordHash = await bcrypt.hash(registerDto.password, 12);
       const salt = randomBytes(32).toString('hex');
 
@@ -110,13 +172,19 @@ export class AuthService {
         data: {
           userId: user.id,
           brandId: registerDto.branchId,
-          email: registerDto.email,
           passwordHash,
           salt,
         }
       });
 
+      console.log('✅ UserBrand creado:', {
+        id: userBrand.id,
+        userId: userBrand.userId,
+        brandId: userBrand.brandId
+      });
+
       // Generar JWT
+      console.log('\n🔑 Generando token JWT...');
       const token = this.jwtService.sign({
         userId: user.id,
         userBrandId: userBrand.id,
@@ -140,9 +208,16 @@ export class AuthService {
         token,
       };
 
+      console.log('\n🎉 === REGISTRO EXITOSO ===');
+      console.log('✅ Usuario registrado:', user.email);
+      console.log('✅ Username:', user.username);
+      console.log('✅ En marca:', brand!.name);
+      console.log('✅ Token generado');
+
       return BaseResponseDto.success(response);
 
     } catch (error) {
+      console.error('\n💥 === ERROR EN REGISTRO ===');
       console.error('Error en registerClient:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR, 
@@ -159,21 +234,11 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
   try {
     const { email } = forgotPasswordDto;
     
-    // Buscar usuario por email principal o en UserBrand
+    // Buscar usuario por email principal
     const user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: email.toLowerCase() },
-          {
-            userBrands: {
-              some: { email: email.toLowerCase() }
-            }
-          }
-        ]
-      },
+      where: { email: email.toLowerCase() },
       include: {
         userBrands: {
-          where: { email: email.toLowerCase() },
           include: { brand: true }
         }
       }
@@ -353,9 +418,7 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
       const user = await this.prisma.user.findUnique({
         where: { id: validation.data.userId },
         include: {
-          userBrands: {
-            where: { email: email.toLowerCase() }
-          }
+          userBrands: true
         }
       });
 
@@ -368,20 +431,11 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
 
       // Actualizar contraseña en transacción
       await this.prisma.$transaction([
-        // Si el email coincide con el email principal del usuario, actualizar la tabla User
-        ...(user.email === email.toLowerCase() ? [
-          this.prisma.user.update({
-            where: { id: validation.data.userId },
-            data: { /* No actualizamos password en User porque no tiene campo password */ },
-          })
-        ] : []),
-        
-        // Si hay UserBrand con ese email, actualizar ahí
+        // Actualizar contraseña en todas las UserBrand del usuario
         ...(user.userBrands.length > 0 ? [
           this.prisma.userBrand.updateMany({
             where: {
               userId: validation.data.userId,
-              email: email.toLowerCase()
             },
             data: { passwordHash: hashedPassword },
           })
@@ -508,6 +562,12 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
     const errors: ErrorDetail[] = [];
 
     try {
+      // Validar contraseña
+      const passwordValidation = this.validatePassword(createBrandDto.password);
+      if (!passwordValidation.isValid) {
+        errors.push(...passwordValidation.errors);
+      }
+
       // Verificar que el email no exista
       const existingUserByEmail = await this.prisma.user.findFirst({
         where: { email: createBrandDto.email }
@@ -518,7 +578,6 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
           code: ERROR_CODES.EMAIL_EXISTS, 
           description: ERROR_MESSAGES.EMAIL_EXISTS 
         });
-        return BaseResponseDto.error(errors);
       }
 
       // Verificar que el username no exista
@@ -531,6 +590,9 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
           code: ERROR_CODES.USERNAME_EXISTS, 
           description: ERROR_MESSAGES.USERNAME_EXISTS 
         });
+      }
+
+      if (errors.length > 0) {
         return BaseResponseDto.error(errors);
       }
 
@@ -642,7 +704,6 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
           data: {
             userId: user.id,
             brandId: brand.id,
-            email: createBrandDto.email,
             passwordHash: hashedPassword,
             salt: salt
           }
@@ -729,6 +790,42 @@ async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseRe
       });
       return BaseResponseDto.error(errors);
     }
+  }
+
+  // ==================== PASSWORD VALIDATION ====================
+  
+  private validatePassword(password: string): { isValid: boolean; errors: ErrorDetail[] } {
+    const errors: ErrorDetail[] = [];
+    
+    if (password.length < 6) {
+      errors.push({ 
+        code: ERROR_CODES.WEAK_PASSWORD, 
+        description: 'La contraseña debe tener al menos 6 caracteres' 
+      });
+    }
+
+    if (!/[a-z]/.test(password)) {
+      errors.push({ 
+        code: ERROR_CODES.WEAK_PASSWORD, 
+        description: 'La contraseña debe contener al menos una letra minúscula' 
+      });
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      errors.push({ 
+        code: ERROR_CODES.WEAK_PASSWORD, 
+        description: 'La contraseña debe contener al menos una letra mayúscula' 
+      });
+    }
+
+    if (!/\d/.test(password)) {
+      errors.push({ 
+        code: ERROR_CODES.WEAK_PASSWORD, 
+        description: 'La contraseña debe contener al menos un número' 
+      });
+    }
+
+    return { isValid: errors.length === 0, errors };
   }
 
 }
