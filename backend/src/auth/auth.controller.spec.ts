@@ -47,11 +47,12 @@ describe('AuthController', () => {
       };
 
       const mockResponse = {
-        successful: true,
+        success: true,
         data: {
           user: { id: 1, email: 'test@gmail.com', username: 'testuser', role: 'CLIENT' },
-          branch: { id: 1, name: 'Test Branch', businessName: 'Test Business' },
+          brand: { id: 1, name: 'Test Branch' },
           token: 'mock-jwt-token',
+          rememberMe: false,
         },
       };
 

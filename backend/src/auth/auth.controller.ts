@@ -17,6 +17,7 @@ import {
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
 import { AUTH_SUCCESS_RESPONSE } from '../common/templates';
+import { Public } from '../common/decorators';
 
 @ApiTags('Autenticación')
 @Controller('auth')
@@ -24,6 +25,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
   // ==================== REGISTRATION ENDPOINTS ====================
+  @Public()
   @Post('register/client')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Registrar cliente en sucursal' })
@@ -36,6 +38,7 @@ export class AuthController {
   }
 
 
+  @Public()
   @Post('register/brand')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Registrar nueva marca con usuario administrador' })
@@ -49,6 +52,7 @@ export class AuthController {
 
   // ==================== LOGIN ENDPOINTS ====================
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Iniciar sesión con email y contraseña' })
@@ -68,6 +72,7 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Renovar access token usando refresh token' })
@@ -94,6 +99,7 @@ export class AuthController {
 
   // ==================== PASSWORD RESET ENDPOINTS ====================
 
+  @Public()
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Solicitar código de reset de contraseña' })
@@ -109,6 +115,7 @@ export class AuthController {
     return this.authService.requestPasswordReset(forgotPasswordDto);
   }
 
+  @Public()
   @Post('validate-reset-code')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Validar código de reset de contraseña' })
@@ -124,6 +131,7 @@ export class AuthController {
     return this.authService.validateResetCode(validateCodeDto);
   }
 
+  @Public()
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resetear contraseña con código válido' })

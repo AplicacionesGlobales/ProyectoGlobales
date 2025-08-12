@@ -186,12 +186,15 @@ export class AuthService {
 
       // Generar JWT
       console.log('\n🔑 Generando token JWT...');
-      const token = this.jwtService.sign({
+      const tokenPayload = {
         userId: user.id,
         userBrandId: userBrand.id,
         brandId: registerDto.branchId,
+        email: user.email,
+        username: user.username,
         role: user.role,
-      });
+      };
+      const token = createAccessToken(tokenPayload);
 
       const response: AuthResponse = {
         user: {
@@ -729,10 +732,11 @@ export class AuthService {
       const payload = {
         userId: result.user.id,
         email: result.user.email,
+        username: result.user.username,
         brandId: result.brand.id,
         role: result.user.role
       };
-      const token = this.jwtService.sign(payload);
+      const token = createAccessToken(payload);
 
       // Construir respuesta completa
       const response: BrandRegistrationResponseDto = {

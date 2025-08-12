@@ -3,12 +3,14 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TilopayService } from './payment-tilopay/tilopay.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { BaseResponseDto } from '../common/dto';
+import { Public } from '../common/decorators';
 
 @ApiTags('Pagos')
 @Controller('payment')
 export class PaymentController {
-  constructor(private readonly tilopayService: TilopayService) {}
+  constructor(private readonly tilopayService: TilopayService) { }
 
+  @Public()
   @Post('create')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Crear pago con Tilopay' })
