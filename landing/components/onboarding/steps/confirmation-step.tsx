@@ -282,7 +282,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
               const feature = features.find(f => f.key === featureId)
               return (
                 <Badge key={featureId} variant="secondary" className="px-3 py-1">
-                  <span className="mr-1">📱</span>
+                  <Icon name="app" size={16} className="mr-1" />
                   {feature?.title || featureId}
                 </Badge>
               )

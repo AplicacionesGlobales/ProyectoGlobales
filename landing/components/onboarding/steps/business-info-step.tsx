@@ -91,7 +91,8 @@ export function BusinessInfoStep({ businessType, onChange, onNext, onPrev }: Bus
                 <div className="flex flex-wrap gap-1 justify-center">
                   {recommendedFeatures.slice(0, 3).map((feature) => (
                     <Badge key={feature.id} variant="secondary" className="text-xs">
-                      📱 {feature.title}
+                      <Icon name="app" size={12} className="mr-1" />
+                      {feature.title}
                     </Badge>
                   ))}
                   {recommendedFeatures.length > 3 && (

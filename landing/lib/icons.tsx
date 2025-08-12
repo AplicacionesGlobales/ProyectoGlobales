@@ -15,7 +15,8 @@ import {
   Briefcase,
   Heart,
   Dumbbell,
-  Building
+  Building,
+  Smartphone
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
@@ -41,6 +42,8 @@ export const iconMap: Record<string, LucideIcon> = {
   'recordatorios': Mail,
   'reportes': BarChart3,
   'seguimiento': TrendingUp,
+  'app': Smartphone,
+  'mobile': Smartphone,
 };
 
 // Componente helper para renderizar iconos
