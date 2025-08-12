@@ -1,3 +1,4 @@
+import React from 'react';
 import { IonIcon } from '@/components/IonIcon';
 import { useApp } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -13,28 +14,33 @@ export default function HomeScreen() {
     return null;
   }
 
-  const handleLogout = () => {
+  const handleLogout = React.useCallback(() => {
     Alert.alert(
       'Cerrar Sesión',
       '¿Estás seguro que deseas cerrar sesión?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Cerrar Sesión', 
-          style: 'destructive', 
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
           onPress: () => {
-            logout();
-            // Forzar navegación a auth después del logout
-            setTimeout(() => {
-              router.replace('/(auth)');
-            }, 100);
+            // Usar startTransition para evitar warnings
+            React.startTransition(async () => {
+              try {
+                await logout();
+                // Navegar después del logout
+                router.replace('/(auth)');
+              } catch (error) {
+                console.error('Error en logout:', error);
+                // Navegar aunque haya error
+                router.replace('/(auth)');
+              }
+            });
           }
         }
       ]
     );
-  };
-
-  const todayAppointments = appointments.filter(apt => {
+  }, [logout]); const todayAppointments = appointments.filter(apt => {
     const today = new Date().toISOString().split('T')[0];
     return apt.date === today;
   });
@@ -222,7 +228,7 @@ export default function HomeScreen() {
                 <Text style={styles.appointmentService}>
                   {services.find(s => s.id === appointment.serviceId)?.name}
                 </Text>
-                <Text style={[styles.appointmentStatus, { 
+                <Text style={[styles.appointmentStatus, {
                   backgroundColor: getStatusColor(appointment.status) + '20',
                   color: getStatusColor(appointment.status)
                 }]}>
@@ -289,7 +295,7 @@ export default function HomeScreen() {
             <Text style={styles.appointmentService}>
               {services.find(s => s.id === appointment.serviceId)?.name}
             </Text>
-            <Text style={[styles.appointmentStatus, { 
+            <Text style={[styles.appointmentStatus, {
               backgroundColor: getStatusColor(appointment.status) + '20',
               color: getStatusColor(appointment.status)
             }]}>

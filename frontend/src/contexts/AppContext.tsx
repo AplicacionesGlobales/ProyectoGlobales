@@ -1,4 +1,6 @@
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useState, useEffect } from 'react';
+import { authService } from '../services/authService';
+import { SessionState } from '../types/auth.types';
 
 export type UserRole = 'admin' | 'client';
 
@@ -45,8 +47,14 @@ interface AppContextType {
   services: Service[];
   appointments: Appointment[];
   clients: User[];
+  // Métodos actualizados
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  // Nuevos métodos para sesiones perpetuas
+  isAuthenticated: () => Promise<boolean>;
+  isLoading: boolean;
+  checkAuthStatus: () => Promise<void>;
+  // Métodos de servicios (mantenidos)
   addService: (service: Omit<Service, 'id'>) => void;
   updateService: (id: string, service: Partial<Service>) => void;
   deleteService: (id: string) => void;
@@ -149,34 +157,104 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [services, setServices] = useState<Service[]>(mockServices);
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
   const [clients] = useState<User[]>(mockClients);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Nuevo estado de carga
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulación de login
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (email === 'admin@test.com' && password === 'admin123') {
-      setUser({
-        id: 'admin1',
-        name: 'Administrador',
-        email: 'admin@test.com',
-        role: 'admin',
-        businessName: 'Mi Negocio Pro',
-      });
-      return true;
-    } else if (email === 'client@test.com' && password === 'client123') {
-      setUser({
-        id: 'client1',
-        name: 'María García',
-        email: 'client@test.com',
-        role: 'client',
-      });
-      return true;
+  // Auto-verificación de autenticación al iniciar la app
+  useEffect(() => {
+    console.log('🚀 AppProvider iniciado - verificando autenticación...');
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      console.log('🔍 Verificando estado de autenticación...');
+
+      const isAuth = await authService.isAuthenticated();
+
+      if (isAuth) {
+        const userData = await authService.getCurrentUser();
+
+        if (userData && userData.user) {
+          console.log('✅ Usuario autenticado encontrado:', userData.user.email);
+
+          // Mapear los datos del authService al formato del contexto
+          setUser({
+            id: userData.user.id.toString(),
+            name: `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim() || userData.user.username,
+            email: userData.user.email,
+            role: userData.user.role === 'ADMIN' || userData.user.role === 'ROOT' ? 'admin' : 'client',
+            businessName: userData.brand?.name,
+          });
+
+          console.log('🎉 Auto-login exitoso');
+        } else {
+          console.log('❌ No se encontraron datos de usuario válidos');
+          setUser(null);
+        }
+      } else {
+        console.log('❌ Usuario no autenticado');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('❌ Error verificando autenticación:', error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+      console.log('✅ Verificación de autenticación completada');
     }
-    return false;
   };
 
-  const logout = () => {
-    setUser(null);
+  const isAuthenticated = async (): Promise<boolean> => {
+    try {
+      return await authService.isAuthenticated();
+    } catch (error) {
+      console.error('❌ Error verificando autenticación:', error);
+      return false;
+    }
+  };
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      // Este método ahora es principalmente para compatibilidad con el código existente
+      // El login real se maneja en login.tsx con authService.login()
+
+      // Verificar si ya está autenticado después del login
+      const isAuth = await authService.isAuthenticated();
+
+      if (isAuth) {
+        // Actualizar el estado del contexto
+        await checkAuthStatus();
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('❌ Error en login del contexto:', error);
+      return false;
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      console.log('🚪 Logout iniciado desde contexto...');
+
+      // Usar el authService para logout completo
+      await authService.logout();
+
+      // Usar startTransition para evitar warnings de React
+      React.startTransition(() => {
+        setUser(null);
+      });
+
+      console.log('✅ Logout completado desde contexto');
+    } catch (error) {
+      console.error('❌ Error en logout:', error);
+      // Limpiar estado local aunque falle, usando startTransition
+      React.startTransition(() => {
+        setUser(null);
+      });
+    }
   };
 
   const addService = (service: Omit<Service, 'id'>) => {
@@ -188,7 +266,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateService = (id: string, updatedService: Partial<Service>) => {
-    setServices(prev => prev.map(service => 
+    setServices(prev => prev.map(service =>
       service.id === id ? { ...service, ...updatedService } : service
     ));
   };
@@ -206,13 +284,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateAppointment = (id: string, updatedAppointment: Partial<Appointment>) => {
-    setAppointments(prev => prev.map(appointment => 
+    setAppointments(prev => prev.map(appointment =>
       appointment.id === id ? { ...appointment, ...updatedAppointment } : appointment
     ));
   };
 
   const cancelAppointment = (id: string) => {
-    setAppointments(prev => prev.map(appointment => 
+    setAppointments(prev => prev.map(appointment =>
       appointment.id === id ? { ...appointment, status: 'cancelled' as const } : appointment
     ));
   };
@@ -225,6 +303,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       clients,
       login,
       logout,
+      // Nuevos métodos para sesiones perpetuas
+      isAuthenticated,
+      isLoading,
+      checkAuthStatus,
+      // Métodos de servicios (mantenidos)
       addService,
       updateService,
       deleteService,

@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config/api';
+
 // API Constants - Rutas de los endpoints
 export const API_ENDPOINTS = {
   HEALTH: '/health',
@@ -17,5 +19,4 @@ export const API_ENDPOINTS = {
 } as const;
 
 // Base URL (ajusta según tu servidor)
-//export const BASE_URL = 'http://127.0.0.1:3000';
-export const BASE_URL = 'https://vqfc77zd-3000.use2.devtunnels.ms'; // Tunel para probar desde el telefono
+export const BASE_URL = API_BASE_URL;

@@ -8,7 +8,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowLeft, ArrowRight, Lightbulb, Filter, Loader2 } from "lucide-react"
 import { useLandingData } from "@/hooks/use-landing-data"
 import { Feature } from "@/lib/api/types"
-import { Icon } from "@/lib/icons"
 
 interface FeaturesStepProps {
   features: string[]
@@ -108,7 +107,7 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
           />
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Icon name="app" size={20} />
+              <span className="text-2xl">📱</span>
               <h3 className="font-semibold">{feature.title}</h3>
               {isRecommended && (
                 <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">

@@ -10,6 +10,7 @@ export interface RegisterFormData {
 export interface LoginFormData {
   email: string;
   password: string;
+  rememberMe?: boolean; // Nuevo campo para "recordar sesión"
 }
 
 export interface RegisterResponse {
@@ -21,6 +22,36 @@ export interface RegisterResponse {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AuthResponse {
+  user: {
+    id: number;
+    email: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+    role: string;
+  };
+  brand?: {
+    id: number;
+    name: string;
+  };
+  token: string;
+  refreshToken?: string; // Nuevo: token de renovación indefinido
+  rememberMe: boolean;   // Nuevo: indica si la sesión es persistente
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: number;
+    email: string;
+    username: string;
+    role: string;
+  };
+  renewedAt: string;
 }
 
 export interface AuthError {
@@ -46,4 +77,21 @@ export interface EmailValidationResponse {
 export interface UsernameValidationResponse {
   isAvailable: boolean;
   username: string;
+}
+
+// Nuevos tipos para el sistema de sesiones
+export interface SessionState {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  user: AuthResponse['user'] | null;
+  brand: AuthResponse['brand'] | null;
+  rememberMe: boolean;
+  lastActivity: number;
+}
+
+export interface TokenRefreshResult {
+  success: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  error?: string;
 }

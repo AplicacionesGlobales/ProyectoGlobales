@@ -16,8 +16,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useError, ErrorUtils, InlineError } from '@/components/ui/errors';
-import { useNavigationLoading } from '@/hooks/useNavigationLoading';
-import { NavigationLoadingOverlay } from '@/components/navigation/NavigationLoadingOverlay';
 import { authService } from '../../services/authService';
 import { useEmailValidation } from '../../hooks/useEmailValidation';
 import { useUsernameValidation } from '../../hooks/useUsernameValidation';
@@ -54,7 +52,6 @@ export default function RegisterScreen() {
   const confirmPasswordInputRef = useRef<TextInput>(null);
 
   const { showToast, showModal, showSuccess, showValidationErrors } = useError();
-  const { isNavigating, navigateWithLoading, navigatingTo, currentMessage } = useNavigationLoading();
 
   // Email validation hook
   const { 
@@ -250,11 +247,8 @@ export default function RegisterScreen() {
     }
   };
 
-  const navigateToLogin = async () => {
-    await navigateWithLoading('./login', {
-      delay: 600,
-      message: 'Opening Sign In...'
-    });
+  const navigateToLogin = () => {
+    router.navigate('./login');
   };
 
   const getFieldRef = (field: string) => {
@@ -777,12 +771,6 @@ export default function RegisterScreen() {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-      
-      {/* Navigation Loading Overlay */}
-      <NavigationLoadingOverlay
-        visible={isNavigating}
-        message={currentMessage}
-      />
     </View>
   );
 }

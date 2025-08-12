@@ -31,35 +31,35 @@ export interface RegisterRequest {
   branchId: number; // ID de la marca para clientes
 }
 
-export interface RegisterResponse {
-  success: boolean;
-  message: string;
-  user?: {
-    id: string;
-    email: string;
-    username: string;
-    firstName: string;
-    lastName: string;
-  };
+export interface RegisterResponse extends BaseResponseDto<LoginData> {
+  // RegisterResponse usa la misma estructura que LoginData
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
-export interface LoginResponse {
-  success: boolean;
-  message: string;
-  token?: string;
-  user?: {
-    id: string;
+export interface LoginData {
+  token: string;
+  user: {
+    id: number;  // Cambiar de string a number para coincidir con backend
     email: string;
     username: string;
-    firstName: string;
-    lastName: string;
+    firstName?: string;  // Optional para coincidir con backend
+    lastName?: string;   // Optional para coincidir con backend
     role: string;
   };
+  brand?: {  // Agregar brand que viene del backend
+    id: number;
+    name: string;
+  };
+  refreshToken?: string;
+  rememberMe?: boolean;
+}
+
+export interface LoginResponse extends BaseResponseDto<LoginData> {
 }
 
 export interface ValidateEmailRequest {
@@ -92,7 +92,7 @@ export interface ForgotPasswordResponse {
 }
 
 // Wrapped response from backend
-export interface ForgotPasswordApiResponse extends BaseResponseDto<ForgotPasswordResponse> {}
+export interface ForgotPasswordApiResponse extends BaseResponseDto<ForgotPasswordResponse> { }
 
 // Validate Reset Code Types
 export interface ValidateResetCodeRequest {
@@ -108,7 +108,7 @@ export interface ValidateResetCodeResponse {
 }
 
 // Wrapped response from backend
-export interface ValidateResetCodeApiResponse extends BaseResponseDto<ValidateResetCodeResponse> {}
+export interface ValidateResetCodeApiResponse extends BaseResponseDto<ValidateResetCodeResponse> { }
 
 // Reset Password Types
 export interface ResetPasswordRequest {
@@ -125,4 +125,4 @@ export interface ResetPasswordResponse {
 }
 
 // Wrapped response from backend
-export interface ResetPasswordApiResponse extends BaseResponseDto<ResetPasswordResponse> {}
+export interface ResetPasswordApiResponse extends BaseResponseDto<ResetPasswordResponse> { }

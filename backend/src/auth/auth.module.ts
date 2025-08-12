@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { BrandRegistrationController } from './brand-registration.controller';
 import { AuthService } from './auth.service';
@@ -12,32 +13,35 @@ import { BrandRegistrationService } from './services/brand-registration.service'
 import { UserCreationService } from './services/user-creation.service';
 import { BrandCreationService } from './services/brand-creation.service';
 import { ColorPaletteService } from './services/color-palette.service';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
-    ConfigModule, 
+    ConfigModule,
     PrismaModule,
     CommonModule,
+    PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key',
-      signOptions: { 
-        expiresIn: '7d'
+      secret: process.env.JWT_SECRET || 'default-secret-key',
+      signOptions: {
+        expiresIn: '8h' // Access tokens: 8 horas
       },
     }),
   ],
   controllers: [AuthController, BrandRegistrationController],
   providers: [
-    AuthService, 
-    EmailService, 
+    AuthService,
+    EmailService,
     CryptoService,
     BrandRegistrationService,
     UserCreationService,
     BrandCreationService,
-    ColorPaletteService
+    ColorPaletteService,
+    JwtStrategy
   ],
   exports: [
-    AuthService, 
-    EmailService, 
+    AuthService,
+    EmailService,
     CryptoService,
     BrandRegistrationService,
     UserCreationService,
@@ -45,4 +49,4 @@ import { ColorPaletteService } from './services/color-palette.service';
     ColorPaletteService
   ],
 })
-export class AuthModule {}
+export class AuthModule { }
