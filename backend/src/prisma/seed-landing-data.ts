@@ -209,12 +209,12 @@ const plans = [
   }
 ];
 
-async function seedDatabase() {
+export async function seedLandingData() {
   try {
-    console.log('🌱 Starting seed process...');
+    console.log('🌱 Starting landing data seed process...');
 
     // Clear existing data
-    console.log('🗑️  Clearing existing data...');
+    console.log('🗑️  Clearing existing landing data...');
     await prisma.brandFeature.deleteMany();
     await prisma.feature.deleteMany();
     await prisma.businessType.deleteMany();
@@ -254,18 +254,21 @@ async function seedDatabase() {
     }
     console.log(`✅ Created ${plans.length} plans`);
 
-    console.log('🎉 Seed process completed successfully!');
+    console.log('🎉 Landing data seed process completed successfully!');
   } catch (error) {
-    console.error('❌ Seed process failed:', error);
+    console.error('❌ Landing data seed process failed:', error);
     throw error;
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
-// Run the seed
-seedDatabase()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+// Solo ejecutar si se llama directamente
+if (require.main === module) {
+  seedLandingData()
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

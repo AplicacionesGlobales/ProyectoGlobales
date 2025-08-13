@@ -17,7 +17,7 @@ npx prisma generate
 # Ejecutar migraciones
 npx prisma migrate dev
 
-# Poblar con datos de prueba
+# Poblar con datos de prueba (landing data + usuarios)
 npm run prisma:seed
 ```
 

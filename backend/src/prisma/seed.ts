@@ -1,18 +1,22 @@
 import { PrismaClient, UserRole } from '../../generated/prisma';
 import * as bcrypt from 'bcryptjs';
+import { seedLandingData } from './seeds/landing-data';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Limpiar datos existentes
+  // Seed landing data first (business types, features, plans)
+  await seedLandingData();
+
+  // Limpiar datos existentes de usuarios y marcas
   await prisma.userBrand.deleteMany();
   await prisma.colorPalette.deleteMany();
   await prisma.brand.deleteMany();
   await prisma.user.deleteMany();
 
-  console.log('🧹 Cleaned existing data');
+  console.log('🧹 Cleaned existing user and brand data');
 
   // Crear usuario ROOT (dueño de marca)
   const rootUser = await prisma.user.create({
