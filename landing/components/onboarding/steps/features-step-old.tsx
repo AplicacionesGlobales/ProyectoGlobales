@@ -9,6 +9,31 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import { APP_FEATURES, getRecommendedFeatures, getBusinessType, AppFeature } from "@/lib/business-types"
 import { Icon } from "@/lib/icons"
 
+// Define services array properly
+const services = [
+  {
+    id: "auth",
+    name: "Autenticación",
+    description: "Sistema de login y registro de usuarios",
+    icon: "user",
+    price: 10,
+  },
+  {
+    id: "payment",
+    name: "Pagos",
+    description: "Procesamiento de pagos y suscripciones",
+    icon: "credit-card",
+    price: 20,
+  },
+  {
+    id: "analytics",
+    name: "Analytics",
+    description: "Seguimiento y análisis de datos",
+    icon: "bar-chart",
+    price: 15,
+  },
+]
+
 interface FeaturesStepProps {
   features: string[]
   businessType: string
@@ -94,18 +119,7 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
       </Card>
     )
   }
-    price: 15,
-  },
-]
 
-interface FeaturesStepProps {
-  selectedFeatures: string[]
-  onChange: (features: string[]) => void
-  onNext: () => void
-  onPrev: () => void
-}
-
-export function FeaturesStep({ selectedFeatures, onChange, onNext, onPrev }: FeaturesStepProps) {
   const toggleFeature = (featureId: string) => {
     if (selectedFeatures.includes(featureId)) {
       onChange(selectedFeatures.filter(id => id !== featureId))
@@ -118,8 +132,6 @@ export function FeaturesStep({ selectedFeatures, onChange, onNext, onPrev }: Fea
     const feature = services.find(s => s.id === featureId)
     return total + (feature?.price || 0)
   }, 0)
-
-  const isValid = selectedFeatures.length > 0
 
   return (
     <div className="space-y-6">
