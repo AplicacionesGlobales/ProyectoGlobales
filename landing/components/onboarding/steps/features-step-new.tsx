@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, ArrowRight, Lightbulb, Filter, Loader2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, Lightbulb, Filter, Loader2, Sparkles } from "lucide-react"
 import { useLandingData } from "@/hooks/use-landing-data"
 import { Feature } from "@/lib/api/types"
 
@@ -107,7 +107,7 @@ export function FeaturesStep({ features, businessType, onChange, onNext, onPrev 
           />
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">📱</span>
+              <Sparkles className="w-3 h-3" />
               <h3 className="font-semibold">{feature.title}</h3>
               {isRecommended && (
                 <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
