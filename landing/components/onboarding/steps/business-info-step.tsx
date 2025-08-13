@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react"
 import { useLandingData } from "@/hooks/use-landing-data"
 import { Icon } from "@/lib/icons"
 
@@ -90,8 +90,9 @@ export function BusinessInfoStep({ businessType, onChange, onNext, onPrev }: Bus
                 )}
                 <div className="flex flex-wrap gap-1 justify-center">
                   {recommendedFeatures.slice(0, 3).map((feature) => (
-                    <Badge key={feature.id} variant="secondary" className="text-xs">
-                      📱 {feature.title}
+                    <Badge key={feature.id} variant="secondary" className="text-xs flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      {feature.title}
                     </Badge>
                   ))}
                   {recommendedFeatures.length > 3 && (

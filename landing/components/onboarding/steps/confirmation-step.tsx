@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle, Sparkles } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { authService, BrandRegistrationData } from "@/lib/api/auth"
 import { useLandingData } from "@/hooks/use-landing-data"
@@ -282,7 +282,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
               const feature = features.find(f => f.key === featureId)
               return (
                 <Badge key={featureId} variant="secondary" className="px-3 py-1">
-                  <span className="mr-1">📱</span>
+                  <Sparkles className="w-3 h-3" />
                   {feature?.title || featureId}
                 </Badge>
               )

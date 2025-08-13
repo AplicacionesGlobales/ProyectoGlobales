@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { authService, BrandRegistrationData } from "@/lib/api"
+import { authService } from "@/lib/api"
 import { getBusinessType, getAppFeature } from "@/lib/business-types"
 
 interface ConfirmationStepProps {
@@ -86,66 +86,6 @@ const colorPalettes: { [key: string]: any } = {
   }
 }
 
-export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps) {
-  const [isRegistering, setIsRegistering] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const businessTypeInfo = getBusinessType(data.businessType)
-  
-  const handleRegister = async () => {
-    setIsRegistering(true)
-    setError(null)
-
-    try {
-      // Prepare registration data
-      const registrationData: BrandRegistrationData = {
-        // User info
-        email: data.personalInfo.email,
-        username: data.personalInfo.email.split('@')[0] + '_' + Date.now(), // Generate unique username
-        password: 'temp_password_' + Date.now(), // Generate temporary password
-        firstName: data.personalInfo.firstName,
-        lastName: data.personalInfo.lastName,
-
-        // Brand info
-        brandName: data.personalInfo.businessName,
-        brandDescription: data.personalInfo.description || undefined,
-        brandAddress: undefined, // Could be added to personal info form
-        brandPhone: data.personalInfo.phone || undefined,
-
-        // Color palette
-        colorPalette: colorPalettes[data.customization.colorPalette] || colorPalettes.modern
-      }
-
-      console.log('Registering brand:', registrationData)
-
-      // Test backend connection first
-      const healthCheck = await authService.healthCheck()
-      console.log('Backend health:', healthCheck)
-
-      // Register brand
-      const result = await authService.registerBrand(registrationData)
-      
-      if (result.success && result.data) {
-        console.log('Registration successful:', result.data)
-        // Store auth token and user data
-        localStorage.setItem('auth_token', result.data.token)
-        localStorage.setItem('user_data', JSON.stringify(result.data.user))
-        localStorage.setItem('brand_data', JSON.stringify(result.data.brand))
-        
-        // Proceed to next step (success/dashboard)
-        onNext()
-      } else {
-        setError(result.errors?.map(e => e.description).join(', ') || 'Error en el registro')
-      }
-    } catch (error) {
-      console.error('Registration failed:', error)
-      setError('No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.')
-    } finally {
-      setIsRegistering(false)
-    }
-  }
-  "reportes": "Reportes y Analytics"
-}
 
 const colorPaletteNames: { [key: string]: string } = {
   "purple": "Púrpura Elegante",
@@ -207,7 +147,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <Building className="w-5 h-5 text-gray-600" />
             <h3 className="text-lg font-semibold">Tipo de Servicio</h3>
           </div>
-          <p className="font-medium">{businessTypeNames[businessType] || businessType}</p>
+          <p className="font-medium">{businessType[businessType] || businessType}</p>
         </Card>
 
         {/* Selected Features */}
