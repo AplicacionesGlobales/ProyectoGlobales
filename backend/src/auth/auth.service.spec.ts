@@ -12,6 +12,14 @@ import { ColorPaletteService } from './services/color-palette.service';
 import { UserRole } from '../../generated/prisma';
 import * as bcrypt from 'bcryptjs';
 
+// Mock crypto functions
+jest.mock('../lib/crypto', () => ({
+  createAccessToken: jest.fn(() => 'mock-access-token'),
+  createRefreshToken: jest.fn(() => 'mock-refresh-token'),
+  verifyRefreshToken: jest.fn(() => ({ userId: 1, userBrandId: 1, brandId: 1, email: 'test@example.com', username: 'testuser', role: 'CLIENT', type: 'refresh_token', tokenId: 'mock-token-id' })),
+  comparePassword: jest.fn(() => Promise.resolve(true)),
+}));
+
 // Mock data
 const mockUser = {
   id: 1,
@@ -63,7 +71,7 @@ const mockServices = {
     $transaction: jest.fn(),
   },
   jwt: {
-    sign: jest.fn(),
+    sign: jest.fn(() => 'mock-jwt-token'),
   },
   email: {
     sendEmail: jest.fn(),
@@ -149,6 +157,7 @@ describe('AuthService', () => {
       expect(result.data?.user.email).toBe(registerDto.email);
       expect(result.data?.brand?.id).toBe(mockBrand.id);
       expect(result.data?.token).toBeDefined();
+      expect(result.data?.token).toBe('mock-access-token');
     });
 
     it('should reject duplicate username', async () => {
@@ -201,6 +210,7 @@ describe('AuthService', () => {
       expect(result.success).toBe(true);
       expect(result.data?.user.email).toBe(loginDto.email);
       expect(result.data?.token).toBeDefined();
+      expect(result.data?.token).toBe('mock-access-token');
       expect(result.data?.refreshToken).toBeUndefined();
     });
 
@@ -222,6 +232,7 @@ describe('AuthService', () => {
       // Assert
       expect(result.success).toBe(true);
       expect(result.data?.refreshToken).toBeDefined();
+      expect(result.data?.refreshToken).toBe('mock-refresh-token');
       expect(result.data?.rememberMe).toBe(true);
     });
 
