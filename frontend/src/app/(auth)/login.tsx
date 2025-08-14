@@ -182,16 +182,6 @@ export default function LoginScreen() {
     router.push('/(auth)/forgot-password/ForgotPassword');
   };
 
-  const fillDemoCredentials = (type: 'admin' | 'client') => {
-    if (type === 'admin') {
-      setEmail('admin@test.com');
-      setPassword('admin123');
-    } else {
-      setEmail('client@test.com');
-      setPassword('client123');
-    }
-  };
-
   const testHealthAPI = async () => {
     try {
       await healthCheck();
@@ -607,67 +597,6 @@ export default function LoginScreen() {
               borderRadius: 16,
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
             }}>
-              <StyledView style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 16,
-              }}>
-                <Ionicons name="rocket" size={20} color="#3b82f6" style={{ marginRight: 8 }} />
-                <StyledText style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: '#1f2937',
-                }}>
-                  Demo Accounts
-                </StyledText>
-              </StyledView>
-
-              <StyledTouchableOpacity
-                onPress={() => fillDemoCredentials('admin')}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#dbeafe',
-                  borderWidth: 1,
-                  borderColor: '#3b82f6',
-                  borderRadius: 8,
-                  paddingVertical: 12,
-                  marginBottom: 10,
-                }}
-              >
-                <Ionicons name="briefcase" size={18} color="#3b82f6" style={{ marginRight: 8 }} />
-                <StyledText style={{
-                  fontWeight: '600',
-                  color: '#3b82f6',
-                }}>
-                  Administrator
-                </StyledText>
-              </StyledTouchableOpacity>
-
-              <StyledTouchableOpacity
-                onPress={() => fillDemoCredentials('client')}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#d1fae5',
-                  borderWidth: 1,
-                  borderColor: '#10b981',
-                  borderRadius: 8,
-                  paddingVertical: 12,
-                  marginBottom: 10,
-                }}
-              >
-                <Ionicons name="person" size={18} color="#10b981" style={{ marginRight: 8 }} />
-                <StyledText style={{
-                  fontWeight: '600',
-                  color: '#10b981',
-                }}>
-                  Client
-                </StyledText>
-              </StyledTouchableOpacity>
 
               <StyledTouchableOpacity
                 onPress={testHealthAPI}
@@ -691,16 +620,6 @@ export default function LoginScreen() {
                 </StyledText>
               </StyledTouchableOpacity>
 
-              <StyledText style={{
-                marginTop: 12,
-                fontSize: 12,
-                lineHeight: 20,
-                textAlign: 'center',
-                color: '#6b7280',
-              }}>
-                Admin: admin@test.com / admin123{'\n'}
-                Client: client@test.com / client123
-              </StyledText>
             </StyledView>
           </Animated.View>
         </StyledScrollView>
