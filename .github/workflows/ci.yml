@@ -1,0 +1,58 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'backend/') || contains(github.event.pull_request.changed_files, 'backend/') || github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    - run: npm ci
+    - run: npx tsc --noEmit
+    - run: npm run test
+
+  frontend:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'frontend/') || contains(github.event.pull_request.changed_files, 'frontend/') || github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    - run: npm ci
+    - run: npm install -g @expo/cli
+    - run: npx tsc --noEmit
+
+  landing:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'landing/') || contains(github.event.pull_request.changed_files, 'landing/') || github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: landing
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+        cache-dependency-path: landing/package-lock.json
+    - run: npm ci
+    - run: npx tsc --noEmit
