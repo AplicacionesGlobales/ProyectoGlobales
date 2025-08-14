@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { RegisterFormData, RegisterResponse, AuthError } from '../types/auth.types';
+import { RegisterFormData, AuthError } from '../types/auth.types';
+import { RegisterResponse } from '../api/types';
 import { authService } from '../services/authService';
 import { AuthValidators } from '../utils/validators';
 
@@ -34,31 +35,31 @@ export const useRegister = (
       case 'email':
         fieldError = AuthValidators.email(value);
         break;
-        
+
       case 'username':
         fieldError = AuthValidators.username(value);
         break;
-        
+
       case 'password':
         fieldError = AuthValidators.password(value);
         break;
-        
+
       case 'confirmPassword':
         fieldError = AuthValidators.confirmPassword(compareValue || '', value);
         break;
-        
+
       case 'firstName':
         if (value) {
           fieldError = AuthValidators.validateName(value, 'First name');
         }
         break;
-        
+
       case 'lastName':
         if (value) {
           fieldError = AuthValidators.validateName(value, 'Last name');
         }
         break;
-        
+
       default:
         break;
     }
@@ -90,29 +91,29 @@ export const useRegister = (
     try {
       // Validate all required fields
       const validationErrors: Partial<Record<keyof RegisterFormData, string>> = {};
-      
+
       // Validate email
       const emailError = AuthValidators.email(data.email);
       if (emailError) validationErrors.email = emailError;
-      
+
       // Validate username
       const usernameError = AuthValidators.username(data.username);
       if (usernameError) validationErrors.username = usernameError;
-      
+
       // Validate password
       const passwordError = AuthValidators.password(data.password);
       if (passwordError) validationErrors.password = passwordError;
-      
+
       // Validate confirm password
       const confirmPasswordError = AuthValidators.confirmPassword(data.password, data.confirmPassword);
       if (confirmPasswordError) validationErrors.confirmPassword = confirmPasswordError;
-      
+
       // Validate optional fields
       if (data.firstName) {
         const firstNameError = AuthValidators.validateName(data.firstName, 'First name');
         if (firstNameError) validationErrors.firstName = firstNameError;
       }
-      
+
       if (data.lastName) {
         const lastNameError = AuthValidators.validateName(data.lastName, 'Last name');
         if (lastNameError) validationErrors.lastName = lastNameError;
@@ -152,22 +153,22 @@ export const useRegister = (
 
       // Prepare data for registration (remove confirmPassword)
       const { confirmPassword, ...registerData } = data;
-      
+
       // Call register service
       const response = await authService.register(registerData);
-      
+
       // Set success state
       setSuccess(true);
-      
+
       // Call success callback
       if (onSuccess) {
         onSuccess(response);
       }
-      
+
     } catch (err) {
       // Handle error
       let authError: AuthError;
-      
+
       if (err instanceof Error) {
         authError = {
           message: err.message,
@@ -184,9 +185,9 @@ export const useRegister = (
           code: 'UNKNOWN_ERROR',
         };
       }
-      
+
       setError(authError);
-      
+
       // Call error callback
       if (onError) {
         onError(authError);
