@@ -134,10 +134,10 @@ export const authService = {
       if (data.imagotipoFile) formData.append('imagotipoFile', data.imagotipoFile);
 
       // Use apiClient.postFormData for file uploads
-      return apiClient.postFormData(API_ENDPOINTS.REGISTER_BRAND, formData);
+      return apiClient.postFormData(API_ENDPOINTS.AUTH.REGISTER_BRAND, formData);
     } else {
       // Use regular JSON post when no files
-      return apiClient.post(API_ENDPOINTS.REGISTER_BRAND, data);
+      return apiClient.post(API_ENDPOINTS.AUTH.REGISTER_BRAND, data);
     }
   },
 
@@ -145,14 +145,14 @@ export const authService = {
    * Login as admin/root user
    */
   async loginAdmin(data: LoginData): Promise<ApiResponse<AuthResponse>> {
-    return apiClient.post(API_ENDPOINTS.LOGIN_ADMIN, data);
+    return apiClient.post(API_ENDPOINTS.AUTH.LOGIN_ADMIN, data);
   },
 
   /**
    * Login as client user
    */
   async loginClient(data: LoginData): Promise<ApiResponse<AuthResponse>> {
-    return apiClient.post(API_ENDPOINTS.LOGIN_CLIENT, data);
+    return apiClient.post(API_ENDPOINTS.AUTH.LOGIN_CLIENT, data);
   },
 
   /**
