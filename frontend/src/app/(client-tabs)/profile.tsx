@@ -1,8 +1,22 @@
-import { IonIcon } from '@/components/IonIcon';
 import { useApp } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { router } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { 
+  Alert, 
+  ScrollView, 
+  StyleSheet, 
+  Text, 
+  TouchableOpacity, 
+  View 
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { styled } from 'nativewind';
+
+const StyledView = styled(View);
+const StyledText = styled(Text);
+const StyledTouchableOpacity = styled(TouchableOpacity);
+const StyledScrollView = styled(ScrollView);
 
 export default function ProfileScreen() {
   const { user, logout, appointments } = useApp();
@@ -161,86 +175,86 @@ export default function ProfileScreen() {
   });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Mi Perfil</Text>
-        <Text style={styles.headerSubtext}>Información de tu cuenta</Text>
-      </View>
+    <StyledView style={styles.container}>
+      <StyledView style={styles.header}>
+        <StyledText style={styles.headerText}>Mi Perfil</StyledText>
+        <StyledText style={styles.headerSubtext}>Información de tu cuenta</StyledText>
+      </StyledView>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <StyledScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Información del perfil */}
-        <View style={styles.profileCard}>
-          <View style={styles.sectionTitleContainer}>
-            <IonIcon name="person" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Información Personal</Text>
-          </View>
+        <StyledView style={styles.profileCard}>
+          <StyledView style={styles.sectionTitleContainer}>
+            <Ionicons name="person" size={20} color={colors.primary} />
+            <StyledText style={styles.sectionTitle}>Información Personal</StyledText>
+          </StyledView>
           
-          <View style={styles.profileInfo}>
-            <Text style={styles.label}>Nombre completo</Text>
-            <Text style={styles.value}>{user.name}</Text>
-          </View>
+          <StyledView style={styles.profileInfo}>
+            <StyledText style={styles.label}>Nombre completo</StyledText>
+            <StyledText style={styles.value}>{user.name}</StyledText>
+          </StyledView>
 
-          <View style={styles.profileInfo}>
-            <Text style={styles.label}>Correo electrónico</Text>
-            <Text style={styles.value}>{user.email}</Text>
-          </View>
+          <StyledView style={styles.profileInfo}>
+            <StyledText style={styles.label}>Correo electrónico</StyledText>
+            <StyledText style={styles.value}>{user.email}</StyledText>
+          </StyledView>
 
-          <View style={styles.profileInfo}>
-            <Text style={styles.label}>Tipo de cuenta</Text>
-            <Text style={styles.value}>Cliente</Text>
-          </View>
-        </View>
+          <StyledView style={styles.profileInfo}>
+            <StyledText style={styles.label}>Tipo de cuenta</StyledText>
+            <StyledText style={styles.value}>Cliente</StyledText>
+          </StyledView>
+        </StyledView>
 
         {/* Estadísticas */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{myAppointments.length}</Text>
-            <Text style={styles.statLabel}>Citas Totales</Text>
-          </View>
+        <StyledView style={styles.statsContainer}>
+          <StyledView style={styles.statCard}>
+            <StyledText style={styles.statNumber}>{myAppointments.length}</StyledText>
+            <StyledText style={styles.statLabel}>Citas Totales</StyledText>
+          </StyledView>
           
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{completedAppointments.length}</Text>
-            <Text style={styles.statLabel}>Completadas</Text>
-          </View>
+          <StyledView style={styles.statCard}>
+            <StyledText style={styles.statNumber}>{completedAppointments.length}</StyledText>
+            <StyledText style={styles.statLabel}>Completadas</StyledText>
+          </StyledView>
           
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>${totalSpent.toFixed(2)}</Text>
-            <Text style={styles.statLabel}>Total Gastado</Text>
-          </View>
-        </View>
+          <StyledView style={styles.statCard}>
+            <StyledText style={styles.statNumber}>${totalSpent.toFixed(2)}</StyledText>
+            <StyledText style={styles.statLabel}>Total Gastado</StyledText>
+          </StyledView>
+        </StyledView>
 
         {/* Opciones */}
-        <View style={styles.sectionTitleContainer}>
-          <IonIcon name="settings" size={20} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Configuración</Text>
-        </View>
+        <StyledView style={styles.sectionTitleContainer}>
+          <Ionicons name="settings" size={20} color={colors.primary} />
+          <StyledText style={styles.sectionTitle}>Configuración</StyledText>
+        </StyledView>
         
-        <TouchableOpacity style={styles.optionCard}>
-          <Text style={styles.optionText}>Mis Citas</Text>
-          <IonIcon name="finger-print" size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <StyledTouchableOpacity style={styles.optionCard}>
+          <StyledText style={styles.optionText}>Mis Citas</StyledText>
+          <Ionicons name="finger-print" size={18} color={colors.textSecondary} />
+        </StyledTouchableOpacity>
 
-        <TouchableOpacity style={styles.optionCard}>
-          <Text style={styles.optionText}>Historial de Pagos</Text>
-          <IonIcon name="card" size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <StyledTouchableOpacity style={styles.optionCard}>
+          <StyledText style={styles.optionText}>Historial de Pagos</StyledText>
+          <Ionicons name="card" size={18} color={colors.textSecondary} />
+        </StyledTouchableOpacity>
 
-        <TouchableOpacity style={styles.optionCard}>
-          <Text style={styles.optionText}>Notificaciones</Text>
-          <IonIcon name="notifications" size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <StyledTouchableOpacity style={styles.optionCard}>
+          <StyledText style={styles.optionText}>Notificaciones</StyledText>
+          <Ionicons name="notifications" size={18} color={colors.textSecondary} />
+        </StyledTouchableOpacity>
 
-        <TouchableOpacity style={styles.optionCard}>
-          <Text style={styles.optionText}>Ayuda y Soporte</Text>
-          <IonIcon name="help-circle" size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <StyledTouchableOpacity style={styles.optionCard}>
+          <StyledText style={styles.optionText}>Ayuda y Soporte</StyledText>
+          <Ionicons name="help-circle" size={18} color={colors.textSecondary} />
+        </StyledTouchableOpacity>
 
         {/* Botón de logout */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <IonIcon name="log-out" size={18} color="white" />
-          <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+        <StyledTouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out" size={18} color="white" />
+          <StyledText style={styles.logoutButtonText}>Cerrar Sesión</StyledText>
+        </StyledTouchableOpacity>
+      </StyledScrollView>
+    </StyledView>
   );
 }
