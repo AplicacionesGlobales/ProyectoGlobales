@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ArrowLeft, ArrowRight, Upload, Check, Smartphone, Monitor, FileImage, Clock, Palette } from "lucide-react"
 import Link from "next/link"
-import { CustomizationStepNew } from "@/components/customization-step-new"
+import { CustomizationStepNew } from "@/components/customization-step"
 import { Icon } from "@/lib/icons"
 import { useLandingData } from "@/hooks/use-landing-data"
 
