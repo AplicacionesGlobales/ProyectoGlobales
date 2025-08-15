@@ -104,12 +104,10 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
   }
 
   const getSelectedFeatureIds = () => {
-    return data.selectedFeatures
-      .map(featureKey => {
-        const feature = features.find(f => f.key === featureKey)
-        return feature?.id !== undefined ? String(feature.id) : undefined
-      })
-      .filter((id): id is string => typeof id === "string") // Remove any undefined values and ensure string[]
+    return data.selectedFeatures.map(featureKey => {
+      const feature = features.find(f => f.key === featureKey)
+      return feature?.id
+    }).filter(Boolean) // Remove any undefined values
   }
 
   const getPlanId = () => {
@@ -125,11 +123,21 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
     })
   }
 
-  const calculateFeaturesPrice = () => {
-    return data.selectedFeatures.reduce((total, featureKey) => {
+  const calculateTotalPrice = () => {
+    const planBasePrice = plans.find(p => p.type === data.plan.type)?.basePrice || 0
+    const featuresPrice = data.selectedFeatures.reduce((total, featureKey) => {
       const feature = features.find(f => f.key === featureKey)
       return total + (feature?.price || 0)
     }, 0)
+    
+    const monthlyTotal = planBasePrice + featuresPrice
+    
+    // If annual billing, apply 20% discount
+    if (data.plan.billingPeriod === 'annual') {
+      return monthlyTotal * 12 * 0.8
+    }
+    
+    return monthlyTotal
   }
 
   const getPlanName = () => {
@@ -141,17 +149,73 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
     return planNames[data.plan.type] || data.plan.type
   }
 
+  // Helper function to calculate features price for UI
+  const calculateFeaturesPrice = () => {
+    return data.selectedFeatures.reduce((total, featureKey) => {
+      const feature = features.find(f => f.key === featureKey)
+      return total + (feature?.price || 0)
+    }, 0)
+  }
+
   const handleRegister = async () => {
     setIsRegistering(true)
     setError(null)
     
     try {
-      // Convert images to base64
-      const imageFiles = await convertFilesForRegistration({
-        logoUrl: data.customization.logoUrl,
-        isotopoUrl: data.customization.isotopoUrl,
-        imagotipoUrl: data.customization.imagotipoUrl
+      // Debug: Verificar que los archivos existen
+      console.log('🔍 Files before conversion:', {
+        logoUrl: !!data.customization.logoUrl,
+        isotopoUrl: !!data.customization.isotopoUrl,
+        imagotipoUrl: !!data.customization.imagotipoUrl
       });
+      
+      console.log('🔍 Detailed file info:', {
+        logoFile: data.customization.logoUrl ? {
+          name: data.customization.logoUrl.name,
+          size: data.customization.logoUrl.size,
+          type: data.customization.logoUrl.type
+        } : null,
+        isotopoFile: data.customization.isotopoUrl ? {
+          name: data.customization.isotopoUrl.name,
+          size: data.customization.isotopoUrl.size,
+          type: data.customization.isotopoUrl.type
+        } : null,
+        imagotipoFile: data.customization.imagotipoUrl ? {
+          name: data.customization.imagotipoUrl.name,
+          size: data.customization.imagotipoUrl.size,
+          type: data.customization.imagotipoUrl.type
+        } : null
+      });
+
+      // Convert images to base64 with detailed error handling
+      let imageFiles;
+      try {
+        imageFiles = await convertFilesForRegistration({
+          logoUrl: data.customization.logoUrl,
+          isotopoUrl: data.customization.isotopoUrl,
+          imagotipoUrl: data.customization.imagotipoUrl
+        });
+        
+        console.log('🖼️ Images converted:', {
+          logoImage: !!imageFiles.logoImage,
+          isotopoImage: !!imageFiles.isotopoImage, 
+          imagotipoImage: !!imageFiles.imagotipoImage
+        });
+
+        // Debug: Show actual base64 lengths
+        console.log('📏 Image sizes:', {
+          logoImageLength: imageFiles.logoImage?.length || 0,
+          isotopoImageLength: imageFiles.isotopoImage?.length || 0,
+          imagotipoImageLength: imageFiles.imagotipoImage?.length || 0
+        });
+      } catch (conversionError) {
+        console.error('❌ Image conversion failed:', conversionError);
+        let errorMessage = 'Error desconocido';
+        if (conversionError && typeof conversionError === 'object' && 'message' in conversionError) {
+          errorMessage = (conversionError as { message: string }).message;
+        }
+        throw new Error(`Error al procesar las imágenes: ${errorMessage}`);
+      }
 
       // Prepare color palette
       let finalColorPalette;
@@ -190,19 +254,22 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         brandDescription: data.personalInfo.description || undefined,
         brandPhone: data.personalInfo.phone || undefined,
         
-        selectedFeatureIds: selectedFeatureIds, // Array of string IDs instead of keys
-        businessTypeId: String(businessTypeId), // ID as string instead of number
+        // Business details - ONLY IDs (converted to strings)
+        businessTypeId: businessTypeId?.toString() || '', // ID as string
+        selectedFeatureIds: selectedFeatureIds.filter(id => id !== undefined).map(id => id!.toString()), // Array of string IDs
         
         // Customization
         colorPalette: finalColorPalette,
         
-        // Images as base64
-        ...imageFiles,
+        // Images as base64 strings
+        logoImage: imageFiles?.logoImage || undefined,
+        isotopoImage: imageFiles?.isotopoImage || undefined, 
+        imagotipoImage: imageFiles?.imagotipoImage || undefined,
         
-        // Plan information - ONLY NUMERIC ID
-        planId: String(planId), // Numeric ID as string (101, 102, 103)
+        // Plan information - ID as string
+        planId: planId?.toString() || '', // String ID
         planBillingPeriod: data.plan.billingPeriod || 'monthly',
-        finalPrice: data.plan.price,
+        finalPrice: calculateTotalPrice(), // Required field for final price
         
         // Metadata
         registrationDate: new Date().toISOString(),
@@ -213,8 +280,9 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
       console.log('Business Type ID:', businessTypeId)
       console.log('Selected Feature IDs:', selectedFeatureIds)
       console.log('Plan ID (numeric):', planId)
-
-      console.log('++++++++++++++++++++++++:', registrationData)
+      console.log('Total Price (calculated):', calculateTotalPrice())
+      console.log('Plan Billing Period:', data.plan.billingPeriod)
+      console.log('Full Registration Data:', registrationData)
 
       const result = await authService.registerBrand(registrationData)
       
@@ -410,7 +478,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             
             <div className="flex justify-between font-semibold text-lg pt-2 border-t">
               <span>Total:</span>
-              <span>${data.plan.price.toFixed(2)}{data.plan.billingPeriod === 'monthly' ? '/mes' : '/año'}</span>
+              <span>${calculateTotalPrice().toFixed(2)}{data.plan.billingPeriod === 'monthly' ? '/mes' : '/año'}</span>
             </div>
           </div>
         </Card>
