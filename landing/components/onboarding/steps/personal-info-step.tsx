@@ -16,8 +16,13 @@ import {
   Check,
   ChevronDown,
   Search,
-  X
+  X,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AtSign
 } from "lucide-react"
+import { useValidation } from "@/hooks/use-validation"
 
 // Lista de países con códigos
 const countries = [
@@ -201,6 +206,7 @@ interface PersonalInfoStepProps {
     firstName: string
     lastName: string
     email: string
+    username: string
     phone: string
     businessName: string
     description: string
@@ -219,6 +225,18 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
   const [selectedCountry, setSelectedCountry] = useState(countries[0]) // Costa Rica por defecto
   const [phoneNumber, setPhoneNumber] = useState("")
   
+  // Validation hooks
+  const emailValidation = useValidation('email', data.email, { 
+    required: true, 
+    debounceMs: 500 
+  });
+  
+  const usernameValidation = useValidation('username', data.username, { 
+    required: true, 
+    minLength: 3, 
+    debounceMs: 500 
+  });
+  
   const passwordStrength = calculatePasswordStrength(data.password)
 
   // Validación de campos
@@ -235,9 +253,12 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
         else if (value.length < 2) error = "Debe tener al menos 2 caracteres"
         break
       case "email":
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (!value.trim()) error = "El correo es requerido"
-        else if (!emailRegex.test(value)) error = "Formato de correo inválido"
+        // La validación de email se maneja con el hook
+        if (emailValidation.hasError) error = emailValidation.error || ""
+        break
+      case "username":
+        // La validación de username se maneja con el hook
+        if (usernameValidation.hasError) error = usernameValidation.error || ""
         break
       case "phone":
         if (phoneNumber && phoneNumber.length < 8) error = "El teléfono debe tener al menos 8 dígitos"
@@ -263,6 +284,15 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
 
   const handleFieldChange = (field: string, value: string) => {
     onChange({ ...data, [field]: value })
+    
+    // Mark validation hooks as touched when field changes
+    if (field === 'email' && !emailValidation.touched) {
+      emailValidation.markAsTouched()
+    }
+    if (field === 'username' && !usernameValidation.touched) {
+      usernameValidation.markAsTouched()
+    }
+    
     if (touched[field]) {
       validateField(field, value)
     }
@@ -270,6 +300,15 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
 
   const handleFieldBlur = (field: string) => {
     setTouched(prev => ({ ...prev, [field]: true }))
+    
+    // Mark validation hooks as touched on blur
+    if (field === 'email') {
+      emailValidation.markAsTouched()
+    }
+    if (field === 'username') {
+      usernameValidation.markAsTouched()
+    }
+    
     validateField(field, data[field as keyof typeof data])
   }
 
@@ -283,13 +322,27 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
   }
 
   const handleNext = () => {
-    const fields = ["firstName", "lastName", "email", "businessName", "password", "confirmPassword"]
+    const fields = ["firstName", "lastName", "email", "username", "businessName", "password", "confirmPassword"]
     const newErrors: Record<string, string> = {}
+    
+    // Mark validation hooks as touched
+    emailValidation.markAsTouched()
+    usernameValidation.markAsTouched()
     
     fields.forEach(field => {
       const error = validateField(field, data[field as keyof typeof data])
       if (error) newErrors[field] = error
     })
+    
+    // Check email validation
+    if (emailValidation.hasError || emailValidation.isValidating || emailValidation.isValid !== true) {
+      newErrors.email = emailValidation.error || "Email requerido"
+    }
+    
+    // Check username validation
+    if (usernameValidation.hasError || usernameValidation.isValidating || usernameValidation.isValid !== true) {
+      newErrors.username = usernameValidation.error || "Username requerido"
+    }
     
     // Validar teléfono si se ha ingresado
     if (phoneNumber) {
@@ -314,8 +367,36 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
     required: boolean = false,
     options: any = {}
   ) => {
-    const hasError = touched[field] && errors[field]
-    const isValid = touched[field] && !errors[field] && data[field as keyof typeof data]
+    let hasError: boolean | string = touched[field] && errors[field]
+    let isValid: boolean = Boolean(touched[field] && !errors[field] && data[field as keyof typeof data])
+    let validationIcon = null
+    
+    // Special handling for email and username with real-time validation
+    if (field === 'email') {
+      hasError = emailValidation.hasError
+      isValid = emailValidation.isValidAndTouched
+      if (emailValidation.isValidating) {
+        validationIcon = <Loader2 className="text-blue-500 ml-2 animate-spin" size={20} />
+      } else if (emailValidation.isValidAndTouched) {
+        validationIcon = <CheckCircle className="text-green-500 ml-2" size={20} />
+      } else if (emailValidation.hasError) {
+        validationIcon = <XCircle className="text-red-500 ml-2" size={20} />
+      }
+    } else if (field === 'username') {
+      hasError = usernameValidation.hasError
+      isValid = usernameValidation.isValidAndTouched
+      if (usernameValidation.isValidating) {
+        validationIcon = <Loader2 className="text-blue-500 ml-2 animate-spin" size={20} />
+      } else if (usernameValidation.isValidAndTouched) {
+        validationIcon = <CheckCircle className="text-green-500 ml-2" size={20} />
+      } else if (usernameValidation.hasError) {
+        validationIcon = <XCircle className="text-red-500 ml-2" size={20} />
+      }
+    }
+    
+    const displayError = field === 'email' ? emailValidation.error : 
+                        field === 'username' ? usernameValidation.error : 
+                        errors[field]
     
     return (
       <motion.div
@@ -368,21 +449,43 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
                 {options.showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             )}
-            {isValid && !options.isPassword && !options.isTextarea && (
+            {/* Show validation icon for email/username or regular check for others */}
+            {validationIcon || (isValid && !options.isPassword && !options.isTextarea && (
               <Check className="text-green-500 ml-2" size={20} />
-            )}
+            ))}
             {isValid && options.isTextarea && (
               <Check className="text-green-500 ml-2 mt-3" size={20} />
             )}
           </div>
-          {hasError && (
+          {hasError && displayError && (
             <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-red-500 text-xs mt-1 ml-1 flex items-center gap-1"
             >
               <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
-              {errors[field]}
+              {displayError}
+            </motion.p>
+          )}
+          {/* Success message for email/username */}
+          {field === 'email' && emailValidation.isValidAndTouched && (
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-green-600 text-xs mt-1 ml-1 flex items-center gap-1"
+            >
+              <CheckCircle className="w-3 h-3" />
+              Email disponible
+            </motion.p>
+          )}
+          {field === 'username' && usernameValidation.isValidAndTouched && (
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-green-600 text-xs mt-1 ml-1 flex items-center gap-1"
+            >
+              <CheckCircle className="w-3 h-3" />
+              Username disponible
             </motion.p>
           )}
         </div>
@@ -417,6 +520,8 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
       </div>
 
       {renderInput("email", <Mail size={20} />, "tu@ejemplo.com", "Correo Electrónico", "email", true)}
+      
+      {renderInput("username", <AtSign size={20} />, "mi_usuario", "Nombre de Usuario", "text", true)}
       
       {/* Phone with Country Selector */}
       <motion.div
