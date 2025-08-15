@@ -11,6 +11,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { BrandRegistrationService } from './brand-registration.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
+import { Public } from '../common/decorators/public-auth.decorator';
 
 @ApiTags('Registro de Marca')
 @Controller('auth')
@@ -18,6 +19,7 @@ export class BrandRegistrationController {
   constructor(private readonly brandRegistrationService: BrandRegistrationService) {}
 
   @Post('register/brand')
+  @Public()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ 
     summary: 'Registrar nueva marca completa',
