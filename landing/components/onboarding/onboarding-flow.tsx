@@ -21,6 +21,7 @@ export interface OnboardingData {
     firstName: string
     lastName: string
     email: string
+    username: string
     phone: string
     businessName: string
     description: string
@@ -61,6 +62,7 @@ export function OnboardingFlow() {
       firstName: "",
       lastName: "",
       email: "",
+      username: "",
       phone: "",
       businessName: "",
       description: "",

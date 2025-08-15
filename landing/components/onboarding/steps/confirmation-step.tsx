@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle, Sparkles, CheckCircle, XCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { authService, BrandRegistrationData } from "@/lib/services/auth.service"
+import { authService, BrandRegistrationData } from "@/services/auth.service"
 import { useLandingData } from "@/hooks/use-landing-data"
 import { useValidation } from "@/hooks/use-validation"
-import { convertFilesForRegistration } from "@/lib/utils/file-utils"
+import { convertFilesForRegistration } from "@/utils/file-utils"
 import { Icon } from "@/lib/icons"
 
 interface ConfirmationStepProps {

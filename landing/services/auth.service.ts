@@ -4,7 +4,7 @@
  * Follows Single Responsibility Principle
  */
 
-import { apiClient } from '../api/client';
+import { apiClient } from '../app/api/client';
 import { API_ROUTES } from '../constants/api-routes';
 
 // Types
