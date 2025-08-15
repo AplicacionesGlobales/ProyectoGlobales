@@ -1,16 +1,12 @@
 "use client"
-
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle, Sparkles, CheckCircle, XCircle } from "lucide-react"
+import { ArrowLeft, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle, Sparkles } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { authService, BrandRegistrationData } from "@/services/auth.service"
 import { useLandingData } from "@/hooks/use-landing-data"
-import { useValidation } from "@/hooks/use-validation"
 import { convertFilesForRegistration } from "@/utils/file-utils"
 import { Icon } from "@/lib/icons"
 
@@ -50,85 +46,116 @@ interface ConfirmationStepProps {
 // Color palettes mapping
 const colorPalettes: { [key: string]: any } = {
   "modern": {
-    primary: "#1a73e8",
-    secondary: "#34a853", 
-    accent: "#fbbc04",
-    neutral: "#9aa0a6",
-    success: "#137333"
+    primary: "#8B5CF6",
+    secondary: "#EC4899", 
+    accent: "#5c4343",
+    neutral: "#10B981",
+    success: "#3B82F6"
   },
-  "warm": {
-    primary: "#f57c00",
-    secondary: "#ff7043",
-    accent: "#ffc107",
-    neutral: "#8d6e63",
-    success: "#689f38"
+  "professional": {
+    primary: "#1F2937",
+    secondary: "#374151",
+    accent: "#6B7280",
+    neutral: "#9CA3AF",
+    success: "#E5E7EB"
   },
-  "cool": {
-    primary: "#00acc1",
-    secondary: "#26a69a",
-    accent: "#42a5f5",
-    neutral: "#78909c",
-    success: "#66bb6a"
+  "nature": {
+    primary: "#065F46",
+    secondary: "#047857",
+    accent: "#059669",
+    neutral: "#10B981",
+    success: "#34D399"
+  },
+  "sunset": {
+    primary: "#92400E",
+    secondary: "#D97706",
+    accent: "#F59E0B",
+    neutral: "#FCD34D",
+    success: "#FEF3C7"
+  },
+  "ocean": {
+    primary: "#1E3A8A",
+    secondary: "#3B82F6",
+    accent: "#60A5FA",
+    neutral: "#93C5FD",
+    success: "#DBEAFE"
   }
 }
 
 export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps) {
   const [isRegistering, setIsRegistering] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
+  
   const { 
     businessTypes, 
     features, 
+    plans,
     loading, 
     error: apiError,
     getBusinessTypeByKey 
   } = useLandingData();
 
   const businessTypeInfo = getBusinessTypeByKey(data.businessType)
-
-  // Helper function to generate plan ID
-  const generatePlanId = (type: string, billingPeriod: string) => {
-    return `${type}_${billingPeriod}`;
-  };
   
-  // Handle loading state
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-        <span className="ml-2 text-lg text-gray-600">Cargando datos...</span>
-      </div>
-    );
+  // Get business type ID and plan ID
+  const getBusinessTypeId = () => {
+    const businessType = businessTypes.find(bt => bt.key === data.businessType)
+    return businessType?.id || null
   }
 
-  // Handle error state
-  if (apiError) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-red-600 text-lg mb-4">Error al cargar los datos.</p>
-        <Button onClick={() => window.location.reload()} variant="outline">
-          Reintentar
-        </Button>
-      </div>
-    );
+  const getSelectedFeatureIds = () => {
+    return data.selectedFeatures
+      .map(featureKey => {
+        const feature = features.find(f => f.key === featureKey)
+        return feature?.id !== undefined ? String(feature.id) : undefined
+      })
+      .filter((id): id is string => typeof id === "string") // Remove any undefined values and ensure string[]
   }
-  
+
+  const getPlanId = () => {
+    const plan = plans.find(p => p.type === data.plan.type)
+    return plan?.id || null
+  }
+
+  // Helper functions for UI display
+  const getFeatureNames = () => {
+    return data.selectedFeatures.map(featureKey => {
+      const feature = features.find(f => f.key === featureKey)
+      return feature?.title || featureKey
+    })
+  }
+
+  const calculateFeaturesPrice = () => {
+    return data.selectedFeatures.reduce((total, featureKey) => {
+      const feature = features.find(f => f.key === featureKey)
+      return total + (feature?.price || 0)
+    }, 0)
+  }
+
+  const getPlanName = () => {
+    const planNames = {
+      'web': 'Solo Web',
+      'app': 'Solo App Móvil', 
+      'complete': 'Web + App Completa'
+    }
+    return planNames[data.plan.type] || data.plan.type
+  }
+
   const handleRegister = async () => {
     setIsRegistering(true)
     setError(null)
-
+    
     try {
-      // Convert images to base64 if they exist
+      // Convert images to base64
       const imageFiles = await convertFilesForRegistration({
         logoUrl: data.customization.logoUrl,
         isotopoUrl: data.customization.isotopoUrl,
         imagotipoUrl: data.customization.imagotipoUrl
       });
 
-      // Preparar paleta de colores
+      // Prepare color palette
       let finalColorPalette;
-      if (data.customization.colorPalette === 'custom' && data.customization.customColors && data.customization.customColors.length >= 5) {
-        // Si es custom y tiene al menos 5 colores, usar esos colores
+      if (data.customization.colorPalette === 'custom' && data.customization.customColors?.length >= 5) {
         finalColorPalette = {
           primary: data.customization.customColors[0],
           secondary: data.customization.customColors[1], 
@@ -137,79 +164,66 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
           success: data.customization.customColors[4]
         };
       } else {
-        // Si es una paleta predeterminada, usar esa paleta
         finalColorPalette = colorPalettes[data.customization.colorPalette] || colorPalettes.modern;
       }
 
-      // Get planId - generate based on type and billing period
-      const planId = generatePlanId(data.plan.type, data.plan.billingPeriod || 'monthly');
+      // Get IDs for backend
+      const businessTypeId = getBusinessTypeId()
+      const selectedFeatureIds = getSelectedFeatureIds()
+      const planId = getPlanId()
 
-      // Prepare registration data with ONLY IDs and processed data for backend
+      if (!businessTypeId || !planId) {
+        throw new Error('Error obteniendo IDs de negocio o plan')
+      }
+
+      // Prepare registration data with ONLY IDs
       const registrationData: BrandRegistrationData = {
-        // User authentication info
+        // User info
         email: data.personalInfo.email,
-        username: data.personalInfo.username, // Ya validado en personal-info-step
+        username: data.personalInfo.username,
         password: data.personalInfo.password,
         firstName: data.personalInfo.firstName,
         lastName: data.personalInfo.lastName,
-
+        
         // Brand info
         brandName: data.personalInfo.businessName,
         brandDescription: data.personalInfo.description || undefined,
         brandPhone: data.personalInfo.phone || undefined,
-
-        // Business details - SOLO IDs
-        businessTypeId: data.businessType, // Solo el ID del tipo de negocio
-        selectedFeatureIds: data.selectedFeatures, // Solo los IDs de las features
-
-        // Customization - SOLO los 5 colores hexadecimales
-        colorPalette: finalColorPalette, // Los 5 colores hex procesados
-
-        // Images as base64 strings
+        
+        selectedFeatureIds: selectedFeatureIds, // Array of string IDs instead of keys
+        businessTypeId: String(businessTypeId), // ID as string instead of number
+        
+        // Customization
+        colorPalette: finalColorPalette,
+        
+        // Images as base64
         ...imageFiles,
-
-        // Plan information - SOLO ID y billing period
-        planId: planId, // ID del plan basado en tipo y billing
-        planBillingPeriod: data.plan.billingPeriod || 'monthly', // 'monthly' o 'annual'
-        finalPrice: data.plan.price, // Precio final calculado
-
-        // Additional metadata
+        
+        // Plan information - ONLY NUMERIC ID
+        planId: String(planId), // Numeric ID as string (101, 102, 103)
+        planBillingPeriod: data.plan.billingPeriod || 'monthly',
+        finalPrice: data.plan.price,
+        
+        // Metadata
         registrationDate: new Date().toISOString(),
         source: 'landing_onboarding'
       }
 
-      console.log('=== DATOS ENVIADOS AL BACKEND (SOLO IDs y DATOS PROCESADOS) ===')
-      console.log('Registration Data enviada:', JSON.stringify(registrationData, null, 2))
-      console.log('=== DETALLES DE LO QUE SE ENVÍA ===')
-      console.log('Business Type ID:', data.businessType)
-      console.log('Selected Feature IDs:', data.selectedFeatures)
-      console.log('Plan ID:', planId)
-      console.log('Plan Billing Period:', data.plan.billingPeriod)
-      console.log('Final Price:', data.plan.price)
-      console.log('Color Palette (5 hex colors):', finalColorPalette)
-      console.log('Images converted to base64:', {
-        logo: !!imageFiles.logoImage,
-        isotopo: !!imageFiles.isotopoImage, 
-        imagotipo: !!imageFiles.imagotipoImage
-      })
-      console.log('===========================================')
+      console.log('📤 SENDING TO BACKEND (IDs ONLY):')
+      console.log('Business Type ID:', businessTypeId)
+      console.log('Selected Feature IDs:', selectedFeatureIds)
+      console.log('Plan ID (numeric):', planId)
 
-      // Test backend connection first
-      const healthCheck = await authService.healthCheck()
-      console.log('Backend health:', healthCheck)
+      console.log('++++++++++++++++++++++++:', registrationData)
 
-      // Register brand
-      console.log('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',registrationData);
       const result = await authService.registerBrand(registrationData)
       
       if (result.success && result.data) {
-        console.log('Registration successful:', result.data)
-        // Store auth token and user data
+        // Store auth data
         localStorage.setItem('auth_token', result.data.token)
         localStorage.setItem('user_data', JSON.stringify(result.data.user))
         localStorage.setItem('brand_data', JSON.stringify(result.data.brand))
         
-        // Proceed to next step (success/dashboard)
         onNext()
       } else {
         setError(result.errors?.map(e => e.description).join(', ') || 'Error en el registro')
@@ -221,6 +235,47 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
       setIsRegistering(false)
     }
   }
+
+  // Handle loading/error states
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-lg text-gray-600">Cargando datos...</span>
+      </div>
+    );
+  }
+
+  if (apiError) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-600 text-lg mb-4">Error al cargar los datos.</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
+
+  const infoSections = [
+    {
+      icon: User,
+      title: "Información Personal",
+      color: "text-blue-500",
+      fields: [
+        { label: "Nombre completo", value: `${data.personalInfo.firstName} ${data.personalInfo.lastName}` },
+        { label: "Email", value: data.personalInfo.email },
+        { label: "Username", value: data.personalInfo.username },
+        { label: "Teléfono", value: data.personalInfo.phone || 'No especificado' },
+        { label: "Contraseña", value: `${'*'.repeat(data.personalInfo.password.length)} (configurada)` },
+        { label: "Nombre del negocio", value: data.personalInfo.businessName, fullWidth: true },
+        ...(data.personalInfo.description ? [{ label: "Descripción", value: data.personalInfo.description, fullWidth: true }] : [])
+      ]
+    }
+  ];
+
+  const featuresPrice = calculateFeaturesPrice()
+  const planBasePrice = plans.find(p => p.type === data.plan.type)?.basePrice || 0
 
   return (
     <div className="space-y-6">
@@ -240,44 +295,22 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
 
       <div className="grid gap-6">
         {/* Personal Information */}
-        <Card className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <User className="w-5 h-5 text-blue-500" />
-            <h3 className="font-semibold text-gray-900">Información Personal</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-500">Nombre completo</p>
-              <p className="font-medium">{data.personalInfo.firstName} {data.personalInfo.lastName}</p>
+        {infoSections.map((section) => (
+          <Card key={section.title} className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <section.icon className={`w-5 h-5 ${section.color}`} />
+              <h3 className="font-semibold text-gray-900">{section.title}</h3>
             </div>
-            <div>
-              <p className="text-gray-500">Email</p>
-              <p className="font-medium">{data.personalInfo.email}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              {section.fields.map((field, index) => (
+                <div key={index} className={field.fullWidth ? "md:col-span-2" : ""}>
+                  <p className="text-gray-500">{field.label}</p>
+                  <p className="font-medium">{field.value}</p>
+                </div>
+              ))}
             </div>
-            <div>
-              <p className="text-gray-500">Teléfono</p>
-              <p className="font-medium">{data.personalInfo.phone || 'No especificado'}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Contraseña</p>
-              <p className="font-medium">{'*'.repeat(data.personalInfo.password.length)} (configurada)</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Username</p>
-              <p className="font-medium">{data.personalInfo.username || 'No especificado'}</p>
-            </div>
-            <div className="md:col-span-2">
-              <p className="text-gray-500">Nombre del negocio</p>
-              <p className="font-medium">{data.personalInfo.businessName}</p>
-            </div>
-            {data.personalInfo.description && (
-              <div className="md:col-span-2">
-                <p className="text-gray-500">Descripción</p>
-                <p className="font-medium">{data.personalInfo.description}</p>
-              </div>
-            )}
-          </div>
-        </Card>
+          </Card>
+        ))}
 
         {/* Business Type */}
         <Card className="p-6">
@@ -286,7 +319,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <h3 className="font-semibold text-gray-900">Tipo de Negocio</h3>
           </div>
           <div className="flex items-center gap-3">
-            <Icon name={businessTypeInfo?.icon || "otro"} size={24} className="text-blue-600" />
+            <Icon name={businessTypeInfo?.icon || "Settings"} size={24} className="text-blue-600" />
             <p className="font-medium">{businessTypeInfo?.title || data.businessType}</p>
           </div>
         </Card>
@@ -298,15 +331,12 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <h3 className="font-semibold text-gray-900">Funciones Seleccionadas</h3>
           </div>
           <div className="flex flex-wrap gap-2">
-            {data.selectedFeatures.map((featureId) => {
-              const feature = features.find(f => f.key === featureId)
-              return (
-                <Badge key={featureId} variant="secondary" className="px-3 py-1">
-                  <Sparkles className="w-3 h-3" />
-                  {feature?.title || featureId}
-                </Badge>
-              )
-            })}
+            {getFeatureNames().map((featureName, index) => (
+              <Badge key={index} variant="secondary" className="px-3 py-1">
+                <Sparkles className="w-3 h-3 mr-1" />
+                {featureName}
+              </Badge>
+            ))}
           </div>
         </Card>
 
@@ -329,52 +359,46 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <h3 className="font-semibold text-gray-900">Plan Seleccionado</h3>
           </div>
           
-          {/* Plan type and basic info */}
           <div className="mb-4">
-            <p className="font-medium capitalize text-lg">
-              {data.plan.type === 'web' ? 'Solo Web' : 
-               data.plan.type === 'app' ? 'Solo App Móvil' : 
-               'Web + App Completa'} - {data.plan.billingPeriod === 'monthly' ? 'Mensual' : 'Anual'}
+            <p className="font-medium text-lg">
+              {getPlanName()} - {data.plan.billingPeriod === 'monthly' ? 'Mensual' : 'Anual'}
             </p>
             <p className="text-sm text-gray-500">{data.selectedFeatures.length} funciones seleccionadas</p>
           </div>
 
-          {/* Price breakdown */}
           <div className="space-y-2 mb-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex justify-between text-sm">
               <span>Plan base:</span>
               <span>
-                {data.plan.type === 'web' ? (
-                  '$0/mes'
-                ) : data.plan.billingPeriod === 'annual' ? (
-                  `$${data.plan.type === 'app' ? '59' : '60'} × 12 × 0.8 = $${data.plan.type === 'app' ? '566' : '576'}/año`
-                ) : (
-                  `$${data.plan.type === 'app' ? '59' : '60'}/mes`
-                )}
+                {data.plan.type === 'web' ? '$0/mes' : 
+                 data.plan.billingPeriod === 'annual' ? 
+                 `$${planBasePrice} × 12 × 0.8 = $${(planBasePrice * 12 * 0.8).toFixed(0)}/año` :
+                 `$${planBasePrice}/mes`}
               </span>
             </div>
             
             {data.selectedFeatures.length > 0 && (
               <>
                 <div className="text-sm font-medium text-gray-700 pt-2 border-t">Funciones adicionales:</div>
-                {data.selectedFeatures.map(featureId => {
-                  const feature = features.find(f => f.key === featureId);
+                {data.selectedFeatures.map(featureKey => {
+                  const feature = features.find(f => f.key === featureKey);
                   if (!feature) return null;
+                  
                   const monthlyPrice = feature.price;
                   const yearlyPrice = data.plan.billingPeriod === 'annual' ? monthlyPrice * 12 * 0.8 : monthlyPrice;
                   
                   return (
-                    <div key={featureId} className="flex justify-between text-sm">
+                    <div key={featureKey} className="flex justify-between text-sm">
                       <span>• {feature.title}</span>
                       <span>
                         {data.plan.billingPeriod === 'annual' 
                           ? `$${monthlyPrice} × 12 × 0.8 = $${yearlyPrice.toFixed(2)}/año`
-                          : `$${monthlyPrice}/mes`
-                        }
+                          : `$${monthlyPrice}/mes`}
                       </span>
                     </div>
                   );
                 })}
+                
                 {data.plan.billingPeriod === 'annual' && (
                   <div className="flex justify-between text-sm text-green-600 pt-1 border-t">
                     <span>Descuento anual (20%):</span>
