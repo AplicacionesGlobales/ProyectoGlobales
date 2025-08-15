@@ -6,32 +6,47 @@ import { ERROR_CODES } from '../common/constants';
 
 @Injectable()
 export class ValidateService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async validateEmail(email: string, brandId?: number): Promise<BaseResponseDto<EmailValidationResponseDto>> {
     try {
       console.log('\n🔍 === VALIDACIÓN EMAIL ===');
       console.log('📧 Email solicitado:', email);
       console.log('🏢 BrandId:', brandId);
-      
+
       const normalizedEmail = email.toLowerCase().trim();
       console.log('📧 Email normalizado:', normalizedEmail);
 
-      // Para ROOT/ADMIN: email debe ser único globalmente
-      if (!brandId) {
-        console.log('🔑 Validación para ROOT/ADMIN (sin brandId)');
+      // Si no se proporciona brandId, validar en todas las marcas
+      if (brandId === undefined || brandId === null) {
+        console.log('🌐 Validación GLOBAL (sin brandId específico)');
         const existingUser = await this.prisma.user.findFirst({
-          where: { email: normalizedEmail }
+          where: { email: normalizedEmail },
+          include: {
+            userBrands: {
+              include: {
+                brand: {
+                  select: { id: true, name: true }
+                }
+              }
+            }
+          }
         });
-        
-        if (existingUser) {
-          console.log('❌ EMAIL OCUPADO (ROOT/ADMIN):', existingUser);
+
+        if (existingUser && existingUser.userBrands.length > 0) {
+          console.log('❌ EMAIL OCUPADO EN ALGUNA MARCA:', {
+            userId: existingUser.id,
+            marcas: existingUser.userBrands.map(ub => ({
+              brandId: ub.brand.id,
+              brandName: ub.brand.name
+            }))
+          });
           return BaseResponseDto.success({
             isAvailable: false,
             email: normalizedEmail
           });
         } else {
-          console.log('✅ EMAIL DISPONIBLE (ROOT/ADMIN)');
+          console.log('✅ EMAIL DISPONIBLE GLOBALMENTE');
           return BaseResponseDto.success({
             isAvailable: true,
             email: normalizedEmail
@@ -39,8 +54,8 @@ export class ValidateService {
         }
       }
 
-      // Para CLIENT: verificar si el email ya existe y si ya está registrado en esa marca
-      console.log('👤 Validación para CLIENT (con brandId)');
+      // Para CLIENT con brandId específico: verificar si ya está registrado en esa marca
+      console.log('👤 Validación para marca específica (brandId:', brandId, ')');
       const existingUser = await this.prisma.user.findFirst({
         where: { email: normalizedEmail },
         include: {
@@ -88,9 +103,9 @@ export class ValidateService {
 
     } catch (error) {
       console.error('💥 Error validating email:', error);
-      return BaseResponseDto.error([{ 
-        code: ERROR_CODES.INTERNAL_ERROR, 
-        description: 'Error validating email' 
+      return BaseResponseDto.error([{
+        code: ERROR_CODES.INTERNAL_ERROR,
+        description: 'Error validating email'
       }]);
     }
   }
@@ -99,7 +114,7 @@ export class ValidateService {
     try {
       console.log('\n🔍 === VALIDACIÓN USERNAME ===');
       console.log('👤 Username solicitado:', username);
-      
+
       const normalizedUsername = username.toLowerCase().trim();
       console.log('👤 Username normalizado:', normalizedUsername);
 
@@ -129,9 +144,9 @@ export class ValidateService {
 
     } catch (error) {
       console.error('💥 Error validating username:', error);
-      return BaseResponseDto.error([{ 
-        code: ERROR_CODES.INTERNAL_ERROR, 
-        description: 'Error validating username' 
+      return BaseResponseDto.error([{
+        code: ERROR_CODES.INTERNAL_ERROR,
+        description: 'Error validating username'
       }]);
     }
   }

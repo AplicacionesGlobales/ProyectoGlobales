@@ -1,9 +1,3 @@
-/**
- * Validation Service
- * Handles all validation-related API calls
- * Follows Single Responsibility Principle
- */
-
 import { apiClient } from '../app/api/client';
 import { API_ROUTES } from '../constants/api-routes';
 
@@ -38,26 +32,54 @@ export class ValidationService {
    */
   async validateEmail(email: string): Promise<ValidationResponse> {
     try {
-      const response = await apiClient.post<ValidationResponse>(
+      console.log('🔍 Validating email:', email);
+      
+      const response = await apiClient.post(
         API_ROUTES.VALIDATION.EMAIL,
         { email }
       );
       
+      console.log('📧 Email validation response:', response);
+      
+      // El response ya viene como BaseResponseDto desde el backend
       if (response.success && response.data) {
-        return response.data;
+        return {
+          success: true,
+          data: {
+            isAvailable: (response.data as { isAvailable: boolean; email: string }).isAvailable,
+            email: (response.data as { isAvailable: boolean; email: string }).email
+          }
+        };
+      }
+      
+      // Si hay errores en la respuesta
+      return {
+        success: false,
+        data: { isAvailable: false, email },
+        errors: response.errors
+          ? response.errors.map((err: any) => ({
+              field: err.field || 'email',
+              description: err.description
+            }))
+          : [{ field: 'email', description: 'Error al validar email' }]
+      };
+      
+    } catch (error: any) {
+      console.error('❌ Email validation failed:', error);
+      
+      // Extraer mensaje de error más específico
+      let errorMessage = 'Error al validar email';
+      
+      if (error?.response?.data?.errors?.[0]?.description) {
+        errorMessage = error.response.data.errors[0].description;
+      } else if (error?.message) {
+        errorMessage = error.message;
       }
       
       return {
         success: false,
         data: { isAvailable: false, email },
-        errors: [{ field: 'email', description: 'Error al validar email' }]
-      };
-    } catch (error) {
-      console.error('Email validation failed:', error);
-      return {
-        success: false,
-        data: { isAvailable: false, email },
-        errors: [{ field: 'email', description: 'Error al validar email' }]
+        errors: [{ field: 'email', description: errorMessage }]
       };
     }
   }
@@ -69,26 +91,54 @@ export class ValidationService {
    */
   async validateUsername(username: string): Promise<ValidationResponse> {
     try {
-      const response = await apiClient.post<ValidationResponse>(
+      console.log('🔍 Validating username:', username);
+      
+      const response = await apiClient.post(
         API_ROUTES.VALIDATION.USERNAME,
         { username }
       );
       
+      console.log('👤 Username validation response:', response);
+      
+      // El response ya viene como BaseResponseDto desde el backend
       if (response.success && response.data) {
-        return response.data;
+        return {
+          success: true,
+          data: {
+            isAvailable: (response.data as { isAvailable: boolean; username: string }).isAvailable,
+            username: (response.data as { isAvailable: boolean; username: string }).username
+          }
+        };
+      }
+      
+      // Si hay errores en la respuesta
+      return {
+        success: false,
+        data: { isAvailable: false, username },
+        errors: response.errors
+          ? response.errors.map((err: any) => ({
+              field: err.field || 'username',
+              description: err.description
+            }))
+          : [{ field: 'username', description: 'Error al validar username' }]
+      };
+      
+    } catch (error: any) {
+      console.error('❌ Username validation failed:', error);
+      
+      // Extraer mensaje de error más específico
+      let errorMessage = 'Error al validar username';
+      
+      if (error?.response?.data?.errors?.[0]?.description) {
+        errorMessage = error.response.data.errors[0].description;
+      } else if (error?.message) {
+        errorMessage = error.message;
       }
       
       return {
         success: false,
         data: { isAvailable: false, username },
-        errors: [{ field: 'username', description: 'Error al validar username' }]
-      };
-    } catch (error) {
-      console.error('Username validation failed:', error);
-      return {
-        success: false,
-        data: { isAvailable: false, username },
-        errors: [{ field: 'username', description: 'Error al validar username' }]
+        errors: [{ field: 'username', description: errorMessage }]
       };
     }
   }
@@ -100,7 +150,6 @@ export class ValidationService {
    */
   async validateFields(fields: { email?: string; username?: string }) {
     const results: { email?: ValidationResponse; username?: ValidationResponse } = {};
-
     const promises = [];
 
     if (fields.email) {

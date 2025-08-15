@@ -1,9 +1,3 @@
-/**
- * Custom hook for field validation
- * Handles real-time validation with debouncing
- * Follows Single Responsibility Principle
- */
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { validationService, ValidationResponse } from '../services/validation.service';
 
@@ -14,7 +8,7 @@ export interface UseValidationOptions {
   minLength?: number;
 }
 
-export interface ValidationState {
+interface ValidationState {
   isValidating: boolean;
   isValid: boolean | null;
   error: string | null;
@@ -26,20 +20,15 @@ export function useValidation(
   value: string,
   options: UseValidationOptions = {}
 ) {
-  const {
-    debounceMs = 500,
-    validateOnMount = false,
-    required = false,
-    minLength = 0
-  } = options;
-
+  const { debounceMs = 500, validateOnMount = false, required = false, minLength = 0 } = options;
+  
   const [state, setState] = useState<ValidationState>({
     isValidating: false,
     isValid: null,
     error: null,
     touched: false
   });
-
+  
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
 
@@ -48,28 +37,29 @@ export function useValidation(
     if (required && !val.trim()) {
       return `${type === 'email' ? 'El email' : 'El username'} es requerido`;
     }
-
+    
     if (val && minLength > 0 && val.length < minLength) {
       return `Debe tener al menos ${minLength} caracteres`;
     }
-
+    
     if (type === 'email' && val) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // Regex más permisiva para emails válidos
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(val)) {
         return 'Formato de email inválido';
       }
     }
-
+    
     if (type === 'username' && val) {
-      // Username validation rules
       if (val.length < 3) {
         return 'El username debe tener al menos 3 caracteres';
       }
+      // Permitir letras, números y guiones bajos
       if (!/^[a-zA-Z0-9_]+$/.test(val)) {
         return 'Solo se permiten letras, números y guiones bajos';
       }
     }
-
+    
     return null;
   }, [type, required, minLength]);
 
@@ -77,20 +67,19 @@ export function useValidation(
   const validateServerSide = useCallback(async (val: string) => {
     if (!val || !mountedRef.current) return;
 
-    // Skip server validation if client-side validation fails
     const clientError = validateClientSide(val);
     if (clientError) return;
 
     setState(prev => ({ ...prev, isValidating: true, error: null }));
 
     try {
-      let result: ValidationResponse;
+      console.log(`🔍 Validating ${type}:`, val);
       
-      if (type === 'email') {
-        result = await validationService.validateEmail(val);
-      } else {
-        result = await validationService.validateUsername(val);
-      }
+      const result: ValidationResponse = type === 'email' 
+        ? await validationService.validateEmail(val)
+        : await validationService.validateUsername(val);
+
+      console.log(`✅ ${type} validation result:`, result);
 
       if (!mountedRef.current) return;
 
@@ -110,6 +99,8 @@ export function useValidation(
         }));
       }
     } catch (error) {
+      console.error(`❌ ${type} validation error:`, error);
+      
       if (!mountedRef.current) return;
       
       setState(prev => ({
@@ -121,14 +112,12 @@ export function useValidation(
     }
   }, [type, validateClientSide]);
 
-  // Debounced validation effect
+  // Main validation effect
   useEffect(() => {
-    // Clear previous timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    // Client-side validation (immediate)
     const clientError = validateClientSide(value);
     
     if (clientError) {
@@ -141,7 +130,6 @@ export function useValidation(
       return;
     }
 
-    // If no value, reset state
     if (!value) {
       setState(prev => ({
         ...prev,
@@ -152,7 +140,6 @@ export function useValidation(
       return;
     }
 
-    // Server-side validation (debounced)
     if (state.touched || validateOnMount) {
       timeoutRef.current = setTimeout(() => {
         validateServerSide(value);
@@ -166,12 +153,10 @@ export function useValidation(
     };
   }, [value, validateClientSide, validateServerSide, debounceMs, validateOnMount, state.touched]);
 
-  // Mark as touched
   const markAsTouched = useCallback(() => {
     setState(prev => ({ ...prev, touched: true }));
   }, []);
 
-  // Reset validation state
   const reset = useCallback(() => {
     setState({
       isValidating: false,
@@ -181,7 +166,7 @@ export function useValidation(
     });
   }, []);
 
-  // Cleanup effect
+  // Cleanup
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -195,7 +180,6 @@ export function useValidation(
     ...state,
     markAsTouched,
     reset,
-    // Helper computed properties
     hasError: state.touched && !!state.error,
     isValidAndTouched: state.touched && state.isValid === true,
     shouldShowValidation: state.touched && !state.isValidating
