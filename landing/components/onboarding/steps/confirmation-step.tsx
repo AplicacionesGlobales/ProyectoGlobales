@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle, Sparkles } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ArrowLeft, ArrowRight, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle, Sparkles, CheckCircle, XCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { authService, BrandRegistrationData } from "@/lib/api/auth"
 import { useLandingData } from "@/hooks/use-landing-data"
@@ -21,6 +23,7 @@ interface ConfirmationStepProps {
       description: string
       password: string
       confirmPassword: string
+      username?: string // Agregar username personalizado
     }
     businessType: string
     selectedFeatures: string[]
@@ -70,6 +73,12 @@ const colorPalettes: { [key: string]: any } = {
 export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps) {
   const [isRegistering, setIsRegistering] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Username validation states
+  const [customUsername, setCustomUsername] = useState(data.personalInfo.username || '')
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [usernameChecking, setUsernameChecking] = useState(false)
+  const [usernameError, setUsernameError] = useState<string | null>(null)
 
   const { 
     businessTypes, 
@@ -80,6 +89,79 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
   } = useLandingData();
 
   const businessTypeInfo = getBusinessTypeByKey(data.businessType)
+
+  // Helper function to convert File to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          // Remove the data:image/jpeg;base64, prefix to get just the base64
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        } else {
+          reject(new Error('Failed to convert file to base64'));
+        }
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  // Username validation function
+  const validateUsername = async (username: string) => {
+    if (!username || username.length < 3) {
+      setUsernameError('El username debe tener al menos 3 caracteres')
+      setUsernameAvailable(false)
+      return
+    }
+
+    setUsernameChecking(true)
+    setUsernameError(null)
+
+    try {
+      const result = await authService.validateUsername({ username })
+      if (result.success) {
+        setUsernameAvailable(result.data.isAvailable)
+        if (!result.data.isAvailable) {
+          setUsernameError('Este username ya está en uso')
+        }
+      } else {
+        setUsernameError('Error al validar username')
+        setUsernameAvailable(false)
+      }
+    } catch (error) {
+      setUsernameError('Error al conectar con el servidor')
+      setUsernameAvailable(false)
+    } finally {
+      setUsernameChecking(false)
+    }
+  }
+
+  // Effect to validate username in real time with debounce
+  useEffect(() => {
+    if (!customUsername) {
+      setUsernameAvailable(null)
+      setUsernameError(null)
+      return
+    }
+
+    const timeoutId = setTimeout(() => {
+      validateUsername(customUsername)
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [customUsername])
+
+  // Generate default username if none provided
+  useEffect(() => {
+    if (!customUsername && data.personalInfo.email) {
+      const cleanEmail = data.personalInfo.email.split('@')[0]
+      const shortId = Math.random().toString(36).substring(2, 6) // 4 character random string
+      const defaultUsername = `${cleanEmail}_${shortId}`
+      setCustomUsername(defaultUsername)
+    }
+  }, [data.personalInfo.email, customUsername])
   
   // Handle loading state
   if (loading) {
@@ -108,10 +190,15 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
     setError(null)
 
     try {
-      // Generate a shorter, cleaner username
-      const cleanEmail = data.personalInfo.email.split('@')[0]
-      const shortId = Math.random().toString(36).substring(2, 8) // 6 character random string
-      const username = `${cleanEmail}_${shortId}`
+      // Validate username availability before proceeding
+      if (!usernameAvailable) {
+        setError('Por favor, selecciona un username válido y disponible')
+        setIsRegistering(false)
+        return
+      }
+
+      // Use the custom username or generate a fallback
+      const finalUsername = customUsername || `${data.personalInfo.email.split('@')[0]}_${Math.random().toString(36).substring(2, 8)}`
 
       // Preparar paleta de colores
       let finalColorPalette;
@@ -129,11 +216,27 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         finalColorPalette = colorPalettes[data.customization.colorPalette] || colorPalettes.modern;
       }
 
-      // Prepare complete registration data with ALL flow information
+      // Convert images to base64 if they exist
+      let logoBase64, isotopoBase64, imagotipoBase64;
+      
+      if (data.customization.logoUrl) {
+        logoBase64 = await fileToBase64(data.customization.logoUrl);
+      }
+      if (data.customization.isotopoUrl) {
+        isotopoBase64 = await fileToBase64(data.customization.isotopoUrl);
+      }
+      if (data.customization.imagotipoUrl) {
+        imagotipoBase64 = await fileToBase64(data.customization.imagotipoUrl);
+      }
+
+      // Get planId - assuming data.plan has an id property or we generate one based on type
+      const planId = `${data.plan.type}_${data.plan.billingPeriod || 'monthly'}`;
+
+      // Prepare registration data with ONLY IDs and processed data for backend
       const registrationData: BrandRegistrationData = {
         // User authentication info
         email: data.personalInfo.email,
-        username: username,
+        username: finalUsername,
         password: data.personalInfo.password,
         firstName: data.personalInfo.firstName,
         lastName: data.personalInfo.lastName,
@@ -143,47 +246,50 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         brandDescription: data.personalInfo.description || undefined,
         brandPhone: data.personalInfo.phone || undefined,
 
-        // Business details
-        businessType: data.businessType,
-        selectedFeatures: data.selectedFeatures,
+        // Business details - SOLO IDs
+        businessTypeId: data.businessType, // Solo el ID del tipo de negocio
+        selectedFeatureIds: data.selectedFeatures, // Solo los IDs de las features
 
-        // Customization
-        colorPalette: finalColorPalette,
+        // Customization - SOLO los 5 colores hexadecimales
+        colorPalette: finalColorPalette, // Los 5 colores hex procesados
 
-        // Images/Files (FormData will be handled separately)
-        logoFile: data.customization.logoUrl,
-        isotopoFile: data.customization.isotopoUrl,
-        imagotipoFile: data.customization.imagotipoUrl,
+        // Images as base64 strings
+        logoImage: logoBase64,
+        isotopoImage: isotopoBase64,
+        imagotipoImage: imagotipoBase64,
 
-        // Plan and pricing information
-        plan: {
-          type: data.plan.type,
-          price: data.plan.price,
-          features: data.plan.features,
-          billingPeriod: data.plan.billingPeriod || 'monthly'
-        },
+        // Plan information - SOLO ID y billing period
+        planId: planId, // ID del plan basado en tipo y billing
+        planBillingPeriod: data.plan.billingPeriod || 'monthly', // 'monthly' o 'annual'
+        finalPrice: data.plan.price, // Precio final calculado
 
         // Additional metadata
         registrationDate: new Date().toISOString(),
         source: 'landing_onboarding'
       }
 
-      console.log('=== DATOS COMPLETOS ENVIADOS A LA API ===')
-      console.log('Datos del formulario completo:', JSON.stringify(data, null, 2))
-      console.log('=== DATOS PROCESADOS PARA LA API ===')
+      console.log('=== DATOS ENVIADOS AL BACKEND (SOLO IDs y DATOS PROCESADOS) ===')
       console.log('Registration Data enviada:', JSON.stringify(registrationData, null, 2))
-      console.log('=== DETALLES ADICIONALES ===')
-      console.log('Business Type:', data.businessType)
-      console.log('Selected Features:', data.selectedFeatures)
-      console.log('Plan:', data.plan)
-      console.log('Customization:', data.customization)
-      console.log('=========================================')
+      console.log('=== DETALLES DE LO QUE SE ENVÍA ===')
+      console.log('Business Type ID:', data.businessType)
+      console.log('Selected Feature IDs:', data.selectedFeatures)
+      console.log('Plan ID:', planId)
+      console.log('Plan Billing Period:', data.plan.billingPeriod)
+      console.log('Final Price:', data.plan.price)
+      console.log('Color Palette (5 hex colors):', finalColorPalette)
+      console.log('Images converted to base64:', {
+        logo: !!logoBase64,
+        isotopo: !!isotopoBase64, 
+        imagotipo: !!imagotipoBase64
+      })
+      console.log('===========================================')
 
       // Test backend connection first
       const healthCheck = await authService.healthCheck()
       console.log('Backend health:', healthCheck)
 
       // Register brand
+      console.log('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',registrationData);
       const result = await authService.registerBrand(registrationData)
       
       if (result.success && result.data) {
@@ -245,6 +351,31 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <div>
               <p className="text-gray-500">Contraseña</p>
               <p className="font-medium">{'*'.repeat(data.personalInfo.password.length)} (configurada)</p>
+            </div>
+            <div className="md:col-span-2">
+              <Label htmlFor="username" className="text-gray-500">Username</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Input
+                  id="username"
+                  value={customUsername}
+                  onChange={(e) => setCustomUsername(e.target.value)}
+                  placeholder="Ingresa tu username"
+                  className={`flex-1 ${
+                    usernameAvailable === true ? 'border-green-500' : 
+                    usernameAvailable === false ? 'border-red-500' : ''
+                  }`}
+                  disabled={isRegistering}
+                />
+                {usernameChecking && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                {!usernameChecking && usernameAvailable === true && <CheckCircle className="w-4 h-4 text-green-500" />}
+                {!usernameChecking && usernameAvailable === false && <XCircle className="w-4 h-4 text-red-500" />}
+              </div>
+              {usernameError && (
+                <p className="text-red-500 text-xs mt-1">{usernameError}</p>
+              )}
+              {usernameAvailable === true && (
+                <p className="text-green-600 text-xs mt-1">✓ Username disponible</p>
+              )}
             </div>
             <div className="md:col-span-2">
               <p className="text-gray-500">Nombre del negocio</p>
@@ -381,13 +512,23 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         
         <Button 
           onClick={handleRegister} 
-          disabled={isRegistering}
-          className="gap-2 bg-green-600 hover:bg-green-700"
+          disabled={isRegistering || !usernameAvailable || usernameChecking}
+          className="gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50"
         >
           {isRegistering ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
               Creando tu aplicación...
+            </>
+          ) : usernameChecking ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Validando username...
+            </>
+          ) : !usernameAvailable ? (
+            <>
+              <XCircle className="w-4 h-4" />
+              Username requerido
             </>
           ) : (
             <>

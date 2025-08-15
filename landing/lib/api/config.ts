@@ -21,6 +21,12 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD: '/auth/reset-password',
   },
   
+  // Validation endpoints
+  VALIDATE: {
+    EMAIL: '/validate/email',
+    USERNAME: '/validate/username',
+  },
+  
   // Payment endpoints
   PAYMENT: {
     CREATE: '/payment/create',

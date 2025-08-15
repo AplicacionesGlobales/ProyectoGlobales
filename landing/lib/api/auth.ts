@@ -16,11 +16,11 @@ export interface BrandRegistrationData {
   brandAddress?: string;
   brandPhone?: string;
 
-  // Business details
-  businessType?: string;
-  selectedFeatures?: string[];
+  // Business details - SOLO IDs
+  businessTypeId: string; // Solo el ID del tipo de negocio
+  selectedFeatureIds: string[]; // Solo los IDs de las features seleccionadas
 
-  // Customization
+  // Customization - SOLO los 5 colores hexadecimales procesados
   colorPalette: {
     primary: string;
     secondary: string;
@@ -29,18 +29,15 @@ export interface BrandRegistrationData {
     success: string;
   };
 
-  // Files (these will be handled as FormData)
-  logoFile?: File;
-  isotopoFile?: File;
-  imagotipoFile?: File;
+  // Files - convertir a base64 strings para envío JSON
+  logoImage?: string; // Base64 string de la imagen
+  isotopoImage?: string; // Base64 string de la imagen  
+  imagotipoImage?: string; // Base64 string de la imagen
 
-  // Plan and pricing information
-  plan?: {
-    type: "web" | "app" | "complete";
-    price: number;
-    features: string[];
-    billingPeriod?: "monthly" | "annual";
-  };
+  // Plan information - SOLO ID del plan
+  planId: string; // ID del plan seleccionado
+  planBillingPeriod: "monthly" | "annual"; // Período de facturación
+  finalPrice: number; // Precio final calculado
 
   // Additional metadata
   registrationDate?: string;
@@ -78,6 +75,24 @@ export interface LoginData {
   brandId?: number;
 }
 
+// Validation interfaces
+export interface EmailValidationRequest {
+  email: string;
+}
+
+export interface UsernameValidationRequest {
+  username: string;
+}
+
+export interface ValidationResponse {
+  success: boolean;
+  data: {
+    isAvailable: boolean;
+    username?: string;
+    email?: string;
+  };
+}
+
 export interface AuthResponse {
   user: {
     id: number;
@@ -100,45 +115,19 @@ export const authService = {
    * Register a new brand with ROOT user
    */
   async registerBrand(data: BrandRegistrationData): Promise<ApiResponse<BrandRegistrationResponse>> {
-    // Check if we have files to upload
-    const hasFiles = data.logoFile || data.isotopoFile || data.imagotipoFile;
+    // Now we only use JSON since images are base64 strings
+    return apiClient.post(API_ENDPOINTS.AUTH.REGISTER_BRAND, data);
+  },
 
-    if (hasFiles) {
-      // Create FormData for file uploads
-      const formData = new FormData();
-      
-      // Add text fields
-      formData.append('email', data.email);
-      formData.append('username', data.username);
-      formData.append('password', data.password);
-      formData.append('firstName', data.firstName);
-      formData.append('lastName', data.lastName);
-      formData.append('brandName', data.brandName);
-      
-      if (data.brandDescription) formData.append('brandDescription', data.brandDescription);
-      if (data.brandPhone) formData.append('brandPhone', data.brandPhone);
-      if (data.businessType) formData.append('businessType', data.businessType);
-      
-      // Add arrays and objects as JSON strings
-      if (data.selectedFeatures) formData.append('selectedFeatures', JSON.stringify(data.selectedFeatures));
-      formData.append('colorPalette', JSON.stringify(data.colorPalette));
-      if (data.plan) formData.append('plan', JSON.stringify(data.plan));
-      
-      // Add optional metadata
-      if (data.registrationDate) formData.append('registrationDate', data.registrationDate);
-      if (data.source) formData.append('source', data.source);
-      
-      // Add files
-      if (data.logoFile) formData.append('logoFile', data.logoFile);
-      if (data.isotopoFile) formData.append('isotopoFile', data.isotopoFile);
-      if (data.imagotipoFile) formData.append('imagotipoFile', data.imagotipoFile);
+  // Validation methods
+  async validateEmail(data: EmailValidationRequest): Promise<ValidationResponse> {
+    const response = await apiClient.post(API_ENDPOINTS.VALIDATE.EMAIL, data);
+    return response as ValidationResponse;
+  },
 
-      // Use apiClient.postFormData for file uploads
-      return apiClient.postFormData(API_ENDPOINTS.AUTH.REGISTER_BRAND, formData);
-    } else {
-      // Use regular JSON post when no files
-      return apiClient.post(API_ENDPOINTS.AUTH.REGISTER_BRAND, data);
-    }
+  async validateUsername(data: UsernameValidationRequest): Promise<ValidationResponse> {
+    const response = await apiClient.post(API_ENDPOINTS.VALIDATE.USERNAME, data);
+    return response as ValidationResponse;
   },
 
   /**
