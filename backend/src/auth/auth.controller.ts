@@ -14,7 +14,7 @@ import {
   RefreshRequestDto,
   RefreshResponseDto,
 } from './dto';
-import { CreateBrandDto } from './dto/create-brand.dto';
+import { CreateBrandDto } from '../brand/dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
 import { AUTH_SUCCESS_RESPONSE } from '../common/templates';
 import { Public } from '../common/decorators';
@@ -35,19 +35,6 @@ export class AuthController {
     @Body(ValidationPipe) registerDto: RegisterClientDto
   ): Promise<BaseResponseDto<AuthResponse>> {
     return this.authService.registerClient(registerDto);
-  }
-
-
-  @Public()
-  @Post('register/brand')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Registrar nueva marca con usuario administrador' })
-  @ApiBody({ type: CreateBrandDto })
-  @ApiResponse({ status: 200, description: 'Marca registrada', type: BaseResponseDto })
-  async registerBrand(
-    @Body(ValidationPipe) createBrandDto: CreateBrandDto
-  ): Promise<BaseResponseDto<any>> {
-    return this.authService.registerBrand(createBrandDto);
   }
 
   // ==================== LOGIN ENDPOINTS ====================

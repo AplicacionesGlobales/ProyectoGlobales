@@ -1,32 +1,24 @@
-/**
- * Authentication Service
- * Handles all authentication-related operations
- * Follows Single Responsibility Principle
- */
-
 import { apiClient } from '../app/api/client';
 import { API_ROUTES } from '../constants/api-routes';
 
-// Types
 export interface BrandRegistrationData {
-  // User authentication info
+  // User info
   email: string;
   username: string;
   password: string;
   firstName: string;
   lastName: string;
-
+  
   // Brand info
   brandName: string;
   brandDescription?: string;
-  brandAddress?: string;
   brandPhone?: string;
-
-  // Business details - SOLO IDs
-  businessTypeId: string;
-  selectedFeatureIds: string[];
-
-  // Customization - SOLO los 5 colores hexadecimales
+  
+  // Business details - ONLY IDs
+  businessTypeId: number;
+  selectedFeatureIds: number[];
+  
+  // Customization
   colorPalette: {
     primary: string;
     secondary: string;
@@ -34,147 +26,110 @@ export interface BrandRegistrationData {
     neutral: string;
     success: string;
   };
-
+  
   // Images as base64 strings
   logoImage?: string;
   isotopoImage?: string;
   imagotipoImage?: string;
-
-  // Plan information - SOLO ID del plan
-  planId: string;
-  planBillingPeriod: "monthly" | "annual";
-  finalPrice: number;
-
-  // Additional metadata
-  registrationDate?: string;
-  source?: string;
+  
+  // Plan information - ONLY NUMERIC ID
+  planId: number;
+  planBillingPeriod: 'monthly' | 'annual';
+  totalPrice: number;
+  
+  // Metadata
+  registrationDate: string;
+  source: string;
 }
 
 export interface BrandRegistrationResponse {
-  user: {
-    id: number;
-    email: string;
-    username: string;
-    firstName: string;
-    lastName: string;
-    role: string;
+  success: boolean;
+  data?: {
+    user: {
+      id: number;
+      email: string;
+      username: string;
+      firstName: string;
+      lastName: string;
+      role: string;
+    };
+    brand: {
+      id: number;
+      name: string;
+      description?: string;
+      phone?: string;
+      businessType?: string;
+      features?: string[];
+      logoUrl?: string;
+      isotopoUrl?: string;
+      imagotipoUrl?: string;
+    };
+    colorPalette: {
+      id: number;
+      primary: string;
+      secondary: string;
+      accent: string;
+      neutral: string;
+      success: string;
+    };
+    plan: {
+      id: number;
+      type: string;
+      price: number;
+      features: string[];
+      billingPeriod: string;
+    };
+    payment?: {
+      status: string;
+      tilopayReference?: string;
+      processedAt?: string;
+    };
+    token: string;
   };
-  brand: {
-    id: number;
-    name: string;
-    description?: string;
-  };
-  colorPalette: {
-    id: number;
-    primary: string;
-    secondary: string;
-    accent: string;
-    neutral: string;
-    success: string;
-  };
-  token: string;
+  errors?: Array<{
+    code: string;
+    description: string;
+  }>;
 }
 
-export interface LoginData {
-  email: string;
-  password: string;
-  brandId?: number;
-}
-
-/**
- * Authentication Service Class
- * Handles all authentication operations
- */
-export class AuthService {
-  
-  /**
-   * Health check endpoint
-   * @returns Promise with health status
-   */
-  async healthCheck() {
+class AuthService {
+  async registerBrand(data: BrandRegistrationData): Promise<BrandRegistrationResponse> {
     try {
-      return await apiClient.get(API_ROUTES.HEALTH);
-    } catch (error) {
-      console.error('Health check failed:', error);
-      return { success: false, error: 'Health check failed' };
-    }
-  }
-
-  /**
-   * Register a new brand
-   * @param data - Brand registration data
-   * @returns Promise<BrandRegistrationResponse>
-   */
-  async registerBrand(data: BrandRegistrationData) {
-    try {
+      console.log('🚀 Sending registration data:', JSON.stringify(data, null, 2));
+      
       const response = await apiClient.post<BrandRegistrationResponse>(
         API_ROUTES.AUTH.REGISTER_BRAND,
         data
       );
-      return response;
-    } catch (error) {
-      console.error('Brand registration failed:', error);
-      throw error;
+      
+      console.log('✅ Registration response:', response);
+      return response.data || { success: false, errors: [{ code: 'NO_DATA', description: 'No data received' }] };
+      
+    } catch (error: any) {
+      console.error('❌ Registration error:', error);
+      
+      return {
+        success: false,
+        errors: [
+          {
+            code: 'REGISTRATION_ERROR',
+            description: error?.response?.data?.errors?.[0]?.description || 
+                        error?.message || 
+                        'Error durante el registro'
+          }
+        ]
+      };
     }
   }
 
-  /**
-   * Login admin user
-   * @param credentials - Login credentials
-   * @returns Promise with login result
-   */
-  async loginAdmin(credentials: LoginData) {
+  async healthCheck(): Promise<{ status: string }> {
     try {
-      return await apiClient.post(API_ROUTES.AUTH.LOGIN_ADMIN, credentials);
+      const response = await apiClient.get('/health');
+      return { status: 'ok' };
     } catch (error) {
-      console.error('Admin login failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Login client user
-   * @param credentials - Login credentials
-   * @returns Promise with login result
-   */
-  async loginClient(credentials: LoginData) {
-    try {
-      return await apiClient.post(API_ROUTES.AUTH.LOGIN_CLIENT, credentials);
-    } catch (error) {
-      console.error('Client login failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Forgot password
-   * @param email - User email
-   * @returns Promise with result
-   */
-  async forgotPassword(email: string) {
-    try {
-      return await apiClient.post(API_ROUTES.AUTH.FORGOT_PASSWORD, { email });
-    } catch (error) {
-      console.error('Forgot password failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Reset password
-   * @param token - Reset token
-   * @param password - New password
-   * @returns Promise with result
-   */
-  async resetPassword(token: string, password: string) {
-    try {
-      return await apiClient.post(API_ROUTES.AUTH.RESET_PASSWORD, { token, password });
-    } catch (error) {
-      console.error('Reset password failed:', error);
-      throw error;
+      return { status: 'error' };
     }
   }
 }
 
-// Export singleton instance
 export const authService = new AuthService();

@@ -35,26 +35,6 @@ export class ColorPaletteDto {
   success: string;
 }
 
-export class PlanDto {
-  @ApiProperty({ enum: PlanType, example: PlanType.WEB })
-  @IsEnum(PlanType)
-  type: PlanType;
-
-  @ApiProperty({ example: 0 })
-  @IsNumber()
-  price: number;
-
-  @ApiProperty({ example: ['Citas ilimitadas', 'Soporte básico'] })
-  @IsArray()
-  @IsString({ each: true })
-  features: string[];
-
-  @ApiPropertyOptional({ enum: BillingPeriod, example: BillingPeriod.MONTHLY })
-  @IsEnum(BillingPeriod)
-  @IsOptional()
-  billingPeriod?: BillingPeriod;
-}
-
 export class CreateBrandDto {
   // Información de autenticación del usuario
   @ApiProperty({ example: 'usuario@ejemplo.com' })
@@ -93,17 +73,15 @@ export class CreateBrandDto {
   @IsOptional()
   brandPhone?: string;
 
-  // Detalles del negocio
-  @ApiPropertyOptional({ example: 'fotografo' })
-  @IsString()
-  @IsOptional()
-  businessType?: string;
+  // Detalles del negocio - AHORA CON IDs NUMÉRICOS
+  @ApiProperty({ example: 23, description: 'ID numérico del tipo de negocio' })
+  @IsNumber()
+  businessTypeId: number;
 
-  @ApiPropertyOptional({ example: ['citas', 'ubicaciones', 'archivos', 'pagos'] })
+  @ApiProperty({ example: [236, 237, 238], description: 'Array de IDs numéricos de features' })
   @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  selectedFeatures?: string[];
+  @IsNumber({}, { each: true })
+  selectedFeatureIds: number[];
 
   // Personalización
   @ApiProperty({ type: ColorPaletteDto })
@@ -112,12 +90,35 @@ export class CreateBrandDto {
   @IsObject()
   colorPalette: ColorPaletteDto;
 
-  // Plan seleccionado
-  @ApiProperty({ type: PlanDto })
-  @ValidateNested()
-  @Type(() => PlanDto)
-  @IsObject()
-  plan: PlanDto;
+  // Plan seleccionado - AHORA CON ID NUMÉRICO
+  @ApiProperty({ example: 103, description: 'ID numérico del plan' })
+  @IsNumber()
+  planId: number;
+
+  @ApiPropertyOptional({ enum: BillingPeriod, example: BillingPeriod.MONTHLY })
+  @IsEnum(BillingPeriod)
+  @IsOptional()
+  planBillingPeriod?: BillingPeriod;
+
+  @ApiProperty({ example: 167, description: 'Precio total calculado' })
+  @IsNumber()
+  totalPrice: number;
+
+  // Imágenes como base64 strings
+  @ApiPropertyOptional({ example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...' })
+  @IsString()
+  @IsOptional()
+  logoImage?: string;
+
+  @ApiPropertyOptional({ example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...' })
+  @IsString()
+  @IsOptional()
+  isotopoImage?: string;
+
+  @ApiPropertyOptional({ example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...' })
+  @IsString()
+  @IsOptional()
+  imagotipoImage?: string;
 
   // Metadatos
   @ApiPropertyOptional({ example: '2025-08-10T21:30:00.000Z' })
@@ -129,9 +130,4 @@ export class CreateBrandDto {
   @IsString()
   @IsOptional()
   source?: string;
-
-  // Para manejar archivos (estos campos se agregarán en el controller con FormData)
-  logoFile?: any;
-  isotopoFile?: any;
-  imagotipoFile?: any;
 }

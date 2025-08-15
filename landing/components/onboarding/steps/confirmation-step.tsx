@@ -166,56 +166,24 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
       console.log('🔍 Files before conversion:', {
         logoUrl: !!data.customization.logoUrl,
         isotopoUrl: !!data.customization.isotopoUrl,
-        imagotipoUrl: !!data.customization.imagotipoUrl
-      });
-      
-      console.log('🔍 Detailed file info:', {
-        logoFile: data.customization.logoUrl ? {
-          name: data.customization.logoUrl.name,
-          size: data.customization.logoUrl.size,
-          type: data.customization.logoUrl.type
-        } : null,
-        isotopoFile: data.customization.isotopoUrl ? {
-          name: data.customization.isotopoUrl.name,
-          size: data.customization.isotopoUrl.size,
-          type: data.customization.isotopoUrl.type
-        } : null,
-        imagotipoFile: data.customization.imagotipoUrl ? {
-          name: data.customization.imagotipoUrl.name,
-          size: data.customization.imagotipoUrl.size,
-          type: data.customization.imagotipoUrl.type
-        } : null
+        imagotipoUrl: !!data.customization.imagotipoUrl,
+        logoFile: data.customization.logoUrl,
+        isotopoFile: data.customization.isotopoUrl,
+        imagotipoFile: data.customization.imagotipoUrl
       });
 
-      // Convert images to base64 with detailed error handling
-      let imageFiles;
-      try {
-        imageFiles = await convertFilesForRegistration({
-          logoUrl: data.customization.logoUrl,
-          isotopoUrl: data.customization.isotopoUrl,
-          imagotipoUrl: data.customization.imagotipoUrl
-        });
-        
-        console.log('🖼️ Images converted:', {
-          logoImage: !!imageFiles.logoImage,
-          isotopoImage: !!imageFiles.isotopoImage, 
-          imagotipoImage: !!imageFiles.imagotipoImage
-        });
+      // Convert images to base64
+      const imageFiles = await convertFilesForRegistration({
+        logoUrl: data.customization.logoUrl,
+        isotopoUrl: data.customization.isotopoUrl,
+        imagotipoUrl: data.customization.imagotipoUrl
+      });
 
-        // Debug: Show actual base64 lengths
-        console.log('📏 Image sizes:', {
-          logoImageLength: imageFiles.logoImage?.length || 0,
-          isotopoImageLength: imageFiles.isotopoImage?.length || 0,
-          imagotipoImageLength: imageFiles.imagotipoImage?.length || 0
-        });
-      } catch (conversionError) {
-        console.error('❌ Image conversion failed:', conversionError);
-        let errorMessage = 'Error desconocido';
-        if (conversionError && typeof conversionError === 'object' && 'message' in conversionError) {
-          errorMessage = (conversionError as { message: string }).message;
-        }
-        throw new Error(`Error al procesar las imágenes: ${errorMessage}`);
-      }
+      console.log('🖼️ Images converted:', {
+        logoImage: !!imageFiles.logoImage,
+        isotopoImage: !!imageFiles.isotopoImage,
+        imagotipoImage: !!imageFiles.imagotipoImage
+      });
 
       // Prepare color palette
       let finalColorPalette;
@@ -240,7 +208,10 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         throw new Error('Error obteniendo IDs de negocio o plan')
       }
 
-      // Prepare registration data with ONLY IDs
+      // Calculate total price for validation
+      const totalPrice = calculateTotalPrice()
+
+      // Prepare registration data with ONLY IDs and base64 images
       const registrationData: BrandRegistrationData = {
         // User info
         email: data.personalInfo.email,
@@ -254,22 +225,22 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         brandDescription: data.personalInfo.description || undefined,
         brandPhone: data.personalInfo.phone || undefined,
         
-        // Business details - ONLY IDs (converted to strings)
-        businessTypeId: businessTypeId?.toString() || '', // ID as string
-        selectedFeatureIds: selectedFeatureIds.filter(id => id !== undefined).map(id => id!.toString()), // Array of string IDs
+        // Business details - ONLY NUMERIC IDs
+        businessTypeId: businessTypeId,
+        selectedFeatureIds: selectedFeatureIds.filter((id): id is number => id !== undefined),
         
         // Customization
         colorPalette: finalColorPalette,
         
         // Images as base64 strings
-        logoImage: imageFiles?.logoImage || undefined,
-        isotopoImage: imageFiles?.isotopoImage || undefined, 
-        imagotipoImage: imageFiles?.imagotipoImage || undefined,
+        logoImage: imageFiles.logoImage,
+        isotopoImage: imageFiles.isotopoImage,
+        imagotipoImage: imageFiles.imagotipoImage,
         
-        // Plan information - ID as string
-        planId: planId?.toString() || '', // String ID
+        // Plan information - ONLY NUMERIC ID
+        planId: planId,
         planBillingPeriod: data.plan.billingPeriod || 'monthly',
-        finalPrice: calculateTotalPrice(), // Required field for final price
+        totalPrice: totalPrice,
         
         // Metadata
         registrationDate: new Date().toISOString(),
@@ -280,8 +251,12 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
       console.log('Business Type ID:', businessTypeId)
       console.log('Selected Feature IDs:', selectedFeatureIds)
       console.log('Plan ID (numeric):', planId)
-      console.log('Total Price (calculated):', calculateTotalPrice())
-      console.log('Plan Billing Period:', data.plan.billingPeriod)
+      console.log('Total Price (calculated):', totalPrice)
+      console.log('Images included:', {
+        logo: !!registrationData.logoImage,
+        isotopo: !!registrationData.isotopoImage,
+        imagotipo: !!registrationData.imagotipoImage
+      })
       console.log('Full Registration Data:', registrationData)
 
       const result = await authService.registerBrand(registrationData)

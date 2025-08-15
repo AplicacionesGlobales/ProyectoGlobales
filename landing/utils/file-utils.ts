@@ -92,15 +92,15 @@ export const multipleFilesToBase64 = async (
  * @param files - Object with logo, isotopo, imagotipo files
  * @returns Promise with base64 strings
  */
-export const convertFilesForRegistration = async (files: {
-  logoUrl?: File;
-  isotopoUrl?: File;
-  imagotipoUrl?: File;
+export async function convertFilesForRegistration(files: {
+  logoUrl?: File | null;
+  isotopoUrl?: File | null;
+  imagotipoUrl?: File | null;
 }): Promise<{
   logoImage?: string;
   isotopoImage?: string;
   imagotipoImage?: string;
-}> => {
+}> {
   const result: {
     logoImage?: string;
     isotopoImage?: string;
@@ -108,24 +108,111 @@ export const convertFilesForRegistration = async (files: {
   } = {};
 
   try {
+    // Convertir logo
     if (files.logoUrl) {
-      const logoResult = await fileToBase64(files.logoUrl);
-      result.logoImage = logoResult.base64;
+      console.log('🔄 Converting logo to base64...');
+      result.logoImage = await fileToBase64Simple(files.logoUrl);
+      console.log('✅ Logo converted successfully');
     }
 
+    // Convertir isotopo
     if (files.isotopoUrl) {
-      const isotopoResult = await fileToBase64(files.isotopoUrl);
-      result.isotopoImage = isotopoResult.base64;
+      console.log('🔄 Converting isotopo to base64...');
+      result.isotopoImage = await fileToBase64Simple(files.isotopoUrl);
+      console.log('✅ Isotopo converted successfully');
     }
 
+    // Convertir imagotipo
     if (files.imagotipoUrl) {
-      const imagotipoResult = await fileToBase64(files.imagotipoUrl);
-      result.imagotipoImage = imagotipoResult.base64;
+      console.log('🔄 Converting imagotipo to base64...');
+      result.imagotipoImage = await fileToBase64Simple(files.imagotipoUrl);
+      console.log('✅ Imagotipo converted successfully');
     }
+
+    console.log('🎉 All files converted successfully:', {
+      logoImage: !!result.logoImage,
+      isotopoImage: !!result.isotopoImage,
+      imagotipoImage: !!result.imagotipoImage
+    });
 
     return result;
+
   } catch (error) {
-    console.error('Error converting files for registration:', error);
-    throw new Error('Failed to process images for registration');
+    console.error('💥 Error converting files:', error);
+    return {};
   }
-};
+}
+
+/**
+ * Convierte un archivo File a string base64
+ */
+function fileToBase64Simple(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error('No file provided'));
+      return;
+    }
+
+    console.log('📁 Converting file:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+
+    const reader = new FileReader();
+    
+    reader.onload = () => {
+      try {
+        const result = reader.result as string;
+        if (!result) {
+          reject(new Error('Failed to read file'));
+          return;
+        }
+        
+        // Verificar que el resultado sea un data URL válido
+        if (!result.startsWith('data:')) {
+          reject(new Error('Invalid file format'));
+          return;
+        }
+        
+        console.log(`✅ File converted to base64: ${result.substring(0, 50)}...`);
+        resolve(result);
+      } catch (error) {
+        console.error('❌ Error processing file result:', error);
+        reject(error);
+      }
+    };
+    
+    reader.onerror = (error) => {
+      console.error('❌ FileReader error:', error);
+      reject(new Error('Failed to read file'));
+    };
+    
+    // Leer el archivo como data URL (incluye el tipo MIME)
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Valida que un archivo sea una imagen válida
+ */
+export function validateImageFile(file: File): { isValid: boolean; error?: string } {
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
+  const maxSize = 5 * 1024 * 1024; // 5MB
+
+  if (!validTypes.includes(file.type)) {
+    return {
+      isValid: false,
+      error: 'Tipo de archivo no válido. Solo se permiten: JPG, PNG, WebP, SVG'
+    };
+  }
+
+  if (file.size > maxSize) {
+    return {
+      isValid: false,
+      error: 'El archivo es muy grande. Máximo 5MB'
+    };
+  }
+
+  return { isValid: true };
+}
