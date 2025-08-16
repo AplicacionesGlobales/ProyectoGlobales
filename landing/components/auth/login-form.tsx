@@ -61,9 +61,9 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
             router.push('/payment/pending')
           }, 2000)
         } else {
-          // Redirigir al dashboard o aplicación principal
+          // Redirigir al panel de control
           setTimeout(() => {
-            router.push('/dashboard')
+            router.push('/panel/dashboard')
           }, 2000)
         }
       } else {
