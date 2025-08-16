@@ -20,7 +20,8 @@ import {
   CheckCircle,
   Clock,
   Zap,
-  BarChart3
+  BarChart3,
+  TrendingDown
 } from "lucide-react"
 import { 
   dashboardService, 
@@ -29,7 +30,7 @@ import {
   RevenueStats,
   ClientDashboardStats,
   BusinessInsights
-} from "@/services/dashboardService"
+} from "@/services/dashboard.service"
 import {
   RevenueChart,
   AppointmentsTrendChart,

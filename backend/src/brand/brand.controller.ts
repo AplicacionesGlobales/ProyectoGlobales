@@ -90,6 +90,12 @@ export class BrandController {
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiQuery({ name: 'page', required: false, example: 1, description: 'Número de página' })
   @ApiQuery({ name: 'limit', required: false, example: 10, description: 'Elementos por página' })
+  @ApiQuery({ 
+    name: 'role', 
+    required: false, 
+    example: 'all', 
+    description: 'Filtrar por rol (all, client, staff, admin, employee)' 
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de usuarios obtenida exitosamente',
@@ -99,12 +105,14 @@ export class BrandController {
     @Param('brandId') brandId: string,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
+    @Query('role') role: string = 'all',
     @Request() req: any
   ): Promise<BaseResponseDto<BrandUserResponseDto[]>> {
     return this.brandService.getBrandUsers(
       parseInt(brandId),
       parseInt(page),
       parseInt(limit),
+      role,
       req.user.userId
     );
   }
@@ -291,8 +299,8 @@ export class BrandController {
   @ApiQuery({ 
     name: 'status', 
     required: false, 
-    example: 'completed',
-    description: 'Filtrar por estado (pending, completed, failed, cancelled)'
+    example: 'all',
+    description: 'Filtrar por estado (all, pending, completed, failed, cancelled)'
   })
   @ApiResponse({
     status: 200,
@@ -303,7 +311,7 @@ export class BrandController {
     @Param('brandId') brandId: string,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
-    @Query('status') status: string = '',
+    @Query('status') status: string = 'all',
     @Request() req: any
   ): Promise<BaseResponseDto<any>> {
     return this.brandService.getBrandPayments(

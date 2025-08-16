@@ -288,7 +288,7 @@ export default function CalendarioPage() {
       </div>
 
       {/* Componente principal del calendario */}
-      <CalendarView brandId={brandData.id} />
+      <CalendarView />
 
       {/* Panel lateral con citas del día y próximas */}
       <div className="grid gap-4 md:grid-cols-2">

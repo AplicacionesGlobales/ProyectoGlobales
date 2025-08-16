@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Calendar, Plus, Edit, Trash2, AlertCircle, CheckCircle, CalendarDays } from "lucide-react"
-import { scheduleService, SpecialHour } from "@/services/scheduleService"
+import { scheduleService, SpecialHour } from "@/services/schedule.service"
 import { 
   SpecialHourType, 
   SPECIAL_HOUR_LABELS, 
@@ -239,7 +239,9 @@ export function SpecialHours({ brandId }: SpecialHoursProps) {
     })
   }
 
-  const getTypeColor = (type: string): string => {
+  const getTypeColor = (
+    type: string
+  ): "destructive" | "secondary" | "outline" | "default" => {
     switch (type) {
       case 'closed':
       case 'Cerrado':

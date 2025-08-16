@@ -4,7 +4,7 @@ export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   errors?: Array<{
-    code: number;
+    code: string;
     description: string;
   }>;
   message?: string;
@@ -109,6 +109,14 @@ class ApiClient {
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async patch<T>(endpoint: string, data?: any, options?: RequestInit): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     });
   }

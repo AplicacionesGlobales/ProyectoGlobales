@@ -1,5 +1,5 @@
 // services/clientsService.ts
-import { apiClient } from '../app/api/client';
+import { apiClient, ApiResponse } from '../app/api/client';
 import { API_ENDPOINTS } from '../app/api/config';
 
 // Interfaces para Clients
@@ -104,15 +104,6 @@ export const CLIENT_TYPE_COLORS: Record<ClientType, string> = {
   [ClientType.VIP]: 'purple'
 };
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  errors?: Array<{
-    code: string;
-    description: string;
-  }>;
-}
-
 class ClientsService {
   private getAuthToken(): string | null {
     if (typeof window !== 'undefined') {
@@ -121,9 +112,12 @@ class ClientsService {
     return null;
   }
 
-  private getAuthHeaders() {
+  private getAuthHeaders(): Record<string, string> {
     const token = this.getAuthToken();
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    if (token) {
+      return { 'Authorization': `Bearer ${token}` };
+    }
+    return {};
   }
 
   // ==================== CRUD OPERATIONS ====================
@@ -140,11 +134,16 @@ class ClientsService {
     }
   ): Promise<ApiResponse<Client[]>> {
     try {
-      const params = new URLSearchParams({
+      const paramsObj: Record<string, string> = {
         page: page.toString(),
         limit: limit.toString(),
-        ...filters
-      });
+      };
+      if (filters) {
+        if (filters.search !== undefined) paramsObj.search = filters.search;
+        if (filters.clientType !== undefined) paramsObj.clientType = filters.clientType.toString();
+        if (filters.isActive !== undefined) paramsObj.isActive = filters.isActive.toString();
+      }
+      const params = new URLSearchParams(paramsObj);
 
       console.log('🚀 Getting clients:', { brandId, page, limit, filters });
       const response = await apiClient.get<Client[]>(

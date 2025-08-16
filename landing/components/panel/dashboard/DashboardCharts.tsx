@@ -20,7 +20,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts'
-import { TrendingUp, TrendingDown, Calendar, DollarSign, Users, Zap } from "lucide-react"
+import { TrendingUp, TrendingDown, Calendar, DollarSign, Users, Zap, Clock } from "lucide-react"
 
 // ==================== REVENUE CHART ====================
 interface RevenueChartProps {

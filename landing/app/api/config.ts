@@ -83,6 +83,12 @@ export const API_ENDPOINTS = {
     UPDATE: (brandId: number, appointmentId: number) => `/brand/${brandId}/appointments/${appointmentId}`,
     DELETE: (brandId: number, appointmentId: number) => `/brand/${brandId}/appointments/${appointmentId}`,
     GET_BY_DATE_RANGE: (brandId: number) => `/brand/${brandId}/appointments/calendar`,
+    CONFIRM: (brandId: number, appointmentId: number) => `/brand/${brandId}/appointments/${appointmentId}/confirm`,
+    CANCEL: (brandId: number, appointmentId: number) => `/brand/${brandId}/appointments/${appointmentId}/cancel`,
+    COMPLETE: (brandId: number, appointmentId: number) => `/brand/${brandId}/appointments/${appointmentId}/complete`,
+    GET_BY_DATE: (brandId: number, date: string) => `/brand/${brandId}/appointments/date/${date}`,
+    CHECK_CONFLICTS: (brandId: number) => `/brand/${brandId}/appointments/check-conflicts`,
+    GET_AVAILABILITY: (brandId: number) => `/brand/${brandId}/appointments/availability`,
   },
 
   // Clients endpoints (para el próximo módulo)
@@ -93,6 +99,8 @@ export const API_ENDPOINTS = {
     UPDATE: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}`,
     DELETE: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}`,
     SEARCH: (brandId: number) => `/brand/${brandId}/clients/search`,
+    GET_APPOINTMENTS: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}/appointments`,
+    GET_HISTORY: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}/history`,
   },
 
   // Services endpoints (Features como servicios)

@@ -1,5 +1,5 @@
 // services/scheduleService.ts
-import { apiClient } from '../app/api/client';
+import { apiClient, ApiResponse } from '../app/api/client';
 import { API_ENDPOINTS } from '../app/api/config';
 
 // Interfaces para Schedule
@@ -77,15 +77,6 @@ export interface UpdateAppointmentSettingsData {
   allowSameDayBooking?: boolean;
 }
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  errors?: Array<{
-    code: string;
-    description: string;
-  }>;
-}
-
 class ScheduleService {
   private getAuthToken(): string | null {
     if (typeof window !== 'undefined') {
@@ -94,7 +85,7 @@ class ScheduleService {
     return null;
   }
 
-  private getAuthHeaders() {
+  private getAuthHeaders(): Record<string, string> {
     const token = this.getAuthToken();
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   }

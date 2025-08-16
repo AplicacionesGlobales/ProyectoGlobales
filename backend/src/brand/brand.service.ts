@@ -10,7 +10,8 @@ import {
   UpdateBrandUserDto,
   BrandUserResponseDto,
   UpdateBrandPlanDto,
-  BrandPlanResponseDto
+  BrandPlanResponseDto,
+  BillingPeriod
 } from './dto/index';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
@@ -375,6 +376,7 @@ export class BrandService {
     brandId: number,
     page: number,
     limit: number,
+    role: string,
     requestingUserId: number
   ): Promise<BaseResponseDto<BrandUserResponseDto[]>> {
     try {
@@ -382,11 +384,31 @@ export class BrandService {
 
       const skip = (page - 1) * limit;
 
+      // Construir filtros
+      const where: any = {
+        brandId,
+        isActive: true
+      };
+
+      // Aplicar filtro de rol si no es "all"
+      if (role && role !== 'all') {
+        if (role === 'client') {
+          where.user = { role: 'CLIENT' };
+        } else if (role === 'staff') {
+          where.user = { role: { in: ['ADMIN', 'EMPLOYEE'] } };
+        } else {
+          where.user = { role: role.toUpperCase() };
+        }
+      }
+
+      // Excluir al usuario que está haciendo la consulta
+      where.user = {
+        ...where.user,
+        id: { not: requestingUserId }
+      };
+
       const userBrands = await this.prisma.userBrand.findMany({
-        where: {
-          brandId,
-          isActive: true
-        },
+        where,
         include: {
           user: true
         },
@@ -571,42 +593,627 @@ export class BrandService {
 
   // Métodos adicionales que necesitarás implementar
   async updateBrandUser(brandId: number, userId: number, updateData: UpdateBrandUserDto, requestingUserId: number): Promise<BaseResponseDto<BrandUserResponseDto>> {
-    // TODO: Implementar
-    throw new Error('Method not implemented');
+    try {
+      // Verificar acceso al brand
+      await this.validateBrandAccess(brandId, requestingUserId);
+
+      // Verificar que el usuario existe en el brand
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: {
+          brandId: brandId,
+          userId: userId,
+          isActive: true
+        },
+        include: {
+          user: true
+        }
+      });
+
+      if (!userBrand) {
+        return BaseResponseDto.singleError(404, 'Usuario no encontrado en este brand');
+      }
+
+      // Solo permitir actualizar el rol y estado activo
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          role: updateData.role || userBrand.user.role,
+          isActive: updateData.isActive !== undefined ? updateData.isActive : userBrand.user.isActive
+        }
+      });
+
+      const response: BrandUserResponseDto = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        username: updatedUser.username,
+        firstName: updatedUser.firstName || '',
+        lastName: updatedUser.lastName || '',
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        createdAt: updatedUser.createdAt.toISOString(),
+        updatedAt: updatedUser.updatedAt.toISOString()
+      };
+
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('Error updating brand user:', error);
+      if (error.status === 403) {
+        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+      }
+      return BaseResponseDto.singleError(500, 'Error interno del servidor');
+    }
   }
 
   async deleteBrandUser(brandId: number, userId: number, requestingUserId: number): Promise<void> {
-    // TODO: Implementar
-    throw new Error('Method not implemented');
+    try {
+      // Verificar acceso al brand
+      await this.validateBrandAccess(brandId, requestingUserId);
+
+      // No permitir que el usuario se elimine a sí mismo
+      if (userId === requestingUserId) {
+        throw new ForbiddenException('No puedes eliminarte a ti mismo del brand');
+      }
+
+      // Verificar que el usuario existe en el brand
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: {
+          brandId: brandId,
+          userId: userId,
+          isActive: true
+        },
+        include: {
+          user: true
+        }
+      });
+
+      if (!userBrand) {
+        throw new NotFoundException('Usuario no encontrado en este brand');
+      }
+
+      // No permitir eliminar al owner del brand
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId }
+      });
+
+      if (brand?.ownerId === userId) {
+        throw new ForbiddenException('No se puede eliminar al propietario del brand');
+      }
+
+      // Desactivar la relación usuario-brand en lugar de eliminar
+      await this.prisma.userBrand.update({
+        where: {
+          id: userBrand.id
+        },
+        data: {
+          isActive: false,
+          updatedAt: new Date()
+        }
+      });
+
+    } catch (error) {
+      console.error('Error deleting brand user:', error);
+      if (error.status === 403 || error.status === 404) {
+        throw error;
+      }
+      throw new Error('Error interno del servidor');
+    }
   }
 
   async updateBrandFeatures(brandId: number, featureIds: number[], requestingUserId: number): Promise<BaseResponseDto<BrandAdminResponseDto>> {
-    // TODO: Implementar
-    throw new Error('Method not implemented');
+    try {
+      // Verificar acceso al brand
+      await this.validateBrandAccess(brandId, requestingUserId);
+
+      // Obtener las features existentes del brand
+      const existingBrandFeatures = await this.prisma.brandFeature.findMany({
+        where: { brandId: brandId }
+      });
+
+      // Obtener las features válidas
+      const validFeatures = await this.prisma.feature.findMany({
+        where: {
+          id: { in: featureIds },
+          isActive: true
+        }
+      });
+
+      if (validFeatures.length !== featureIds.length) {
+        return BaseResponseDto.singleError(400, 'Algunas features no son válidas o están inactivas');
+      }
+
+      // Desactivar todas las features existentes
+      await this.prisma.brandFeature.updateMany({
+        where: { brandId: brandId },
+        data: { isActive: false }
+      });
+
+      // Activar o crear las nuevas features
+      for (const featureId of featureIds) {
+        const existingBrandFeature = existingBrandFeatures.find(bf => bf.featureId === featureId);
+        
+        if (existingBrandFeature) {
+          // Reactivar feature existente
+          await this.prisma.brandFeature.update({
+            where: { id: existingBrandFeature.id },
+            data: { 
+              isActive: true,
+              updatedAt: new Date()
+            }
+          });
+        } else {
+          // Crear nueva relación brand-feature
+          await this.prisma.brandFeature.create({
+            data: {
+              brandId: brandId,
+              featureId: featureId,
+              isActive: true
+            }
+          });
+        }
+      }
+
+      // Devolver la información actualizada del brand
+      return this.getBrandAdminInfo(brandId, requestingUserId);
+
+    } catch (error) {
+      console.error('Error updating brand features:', error);
+      if (error.status === 403) {
+        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+      }
+      return BaseResponseDto.singleError(500, 'Error interno del servidor');
+    }
   }
 
   async getBrandPlanDetails(brandId: number, requestingUserId: number): Promise<BaseResponseDto<BrandPlanResponseDto>> {
-    // TODO: Implementar
-    throw new Error('Method not implemented');
+    try {
+      // Verificar acceso al brand
+      await this.validateBrandAccess(brandId, requestingUserId);
+
+      // Obtener el plan actual del brand
+      const currentBrandPlan = await this.prisma.brandPlan.findFirst({
+        where: { 
+          brandId: brandId,
+          isActive: true 
+        },
+        include: {
+          plan: true
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (!currentBrandPlan) {
+        return BaseResponseDto.singleError(404, 'No se encontró un plan activo para este brand');
+      }
+
+      // Obtener historial de planes
+      const planHistory = await this.prisma.brandPlan.findMany({
+        where: { brandId: brandId },
+        include: { plan: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10
+      });
+
+      // Obtener planes disponibles para upgrade
+      const availablePlans = await this.prisma.plan.findMany({
+        where: { 
+          isActive: true,
+          id: { not: currentBrandPlan.planId }
+        },
+        orderBy: { basePrice: 'asc' }
+      });
+
+      const response: BrandPlanResponseDto = {
+        id: currentBrandPlan.id,
+        planId: currentBrandPlan.planId,
+        planType: currentBrandPlan.plan.type,
+        planName: currentBrandPlan.plan.name,
+        planDescription: currentBrandPlan.plan.description || '',
+        basePrice: Number(currentBrandPlan.plan.basePrice),
+        currentPrice: Number(currentBrandPlan.price),
+        billingPeriod: currentBrandPlan.billingPeriod,
+        startDate: currentBrandPlan.startDate.toISOString(),
+        endDate: currentBrandPlan.endDate?.toISOString(),
+        isActive: currentBrandPlan.isActive,
+        nextBillingDate: undefined, // TODO: Calcular fecha de próximo pago
+        daysUntilNextBilling: 0, // TODO: Calcular días restantes
+        history: planHistory.map(bp => ({
+          id: bp.id,
+          planId: bp.planId,
+          planName: bp.plan.name,
+          planType: bp.plan.type,
+          price: Number(bp.price),
+          billingPeriod: bp.billingPeriod,
+          startDate: bp.startDate.toISOString(),
+          endDate: bp.endDate?.toISOString(),
+          isActive: bp.isActive,
+          changeReason: bp.id === currentBrandPlan.id ? 'current' : 'upgrade'
+        })),
+        availableUpgrades: availablePlans.map(plan => ({
+          planId: plan.id,
+          name: plan.name,
+          description: plan.description || '',
+          type: plan.type,
+          basePrice: Number(plan.basePrice),
+          totalPriceWithFeatures: Number(plan.basePrice), // TODO: Calcular con features
+          includedFeatures: [], // TODO: Implementar features del plan
+          isRecommended: false,
+          isCurrentPlan: false
+        }))
+      };
+
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('Error getting brand plan:', error);
+      if (error.status === 403) {
+        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+      }
+      return BaseResponseDto.singleError(500, 'Error interno del servidor');
+    }
   }
 
   async updateBrandPlan(brandId: number, updateData: UpdateBrandPlanDto, requestingUserId: number): Promise<BaseResponseDto<BrandPlanResponseDto>> {
-    // TODO: Implementar
-    throw new Error('Method not implemented');
+    try {
+      // Verificar acceso al brand
+      await this.validateBrandAccess(brandId, requestingUserId);
+
+      // Verificar que el plan nuevo existe
+      const newPlan = await this.prisma.plan.findUnique({
+        where: { 
+          id: updateData.planId,
+          isActive: true 
+        }
+      });
+
+      if (!newPlan) {
+        return BaseResponseDto.singleError(404, 'Plan no encontrado o inactivo');
+      }
+
+      // Desactivar el plan actual
+      await this.prisma.brandPlan.updateMany({
+        where: { 
+          brandId: brandId,
+          isActive: true 
+        },
+        data: { 
+          isActive: false,
+          endDate: new Date()
+        }
+      });
+
+      // Calcular próxima fecha de facturación
+      const startDate = new Date();
+      let nextBillingDate = new Date(startDate);
+      
+      switch (updateData.billingPeriod || BillingPeriod.MONTHLY) {
+        case BillingPeriod.MONTHLY:
+          nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+          break;
+        case BillingPeriod.ANNUAL:
+          nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+          break;
+      }
+
+      // Crear nuevo plan activo
+      const newBrandPlan = await this.prisma.brandPlan.create({
+        data: {
+          brandId: brandId,
+          planId: updateData.planId,
+          price: newPlan.basePrice,
+          billingPeriod: updateData.billingPeriod || BillingPeriod.MONTHLY,
+          startDate: startDate,
+          isActive: true
+        },
+        include: {
+          plan: true
+        }
+      });
+
+      // Calcular días hasta próxima facturación
+      const daysUntilNextBilling = Math.ceil((nextBillingDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
+      const response: BrandPlanResponseDto = {
+        id: newBrandPlan.id,
+        planId: newBrandPlan.planId,
+        planType: newBrandPlan.plan.type,
+        planName: newBrandPlan.plan.name,
+        planDescription: newBrandPlan.plan.description || '',
+        basePrice: Number(newBrandPlan.plan.basePrice),
+        currentPrice: Number(newBrandPlan.price),
+        billingPeriod: newBrandPlan.billingPeriod,
+        startDate: newBrandPlan.startDate.toISOString(),
+        endDate: newBrandPlan.endDate?.toISOString(),
+        isActive: newBrandPlan.isActive,
+        nextBillingDate: nextBillingDate.toISOString(),
+        daysUntilNextBilling: daysUntilNextBilling,
+        history: [],
+        availableUpgrades: []
+      };
+
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('Error updating brand plan:', error);
+      if (error.status === 403) {
+        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+      }
+      return BaseResponseDto.singleError(500, 'Error interno del servidor');
+    }
   }
 
   async getBrandStats(brandId: number, period: string, requestingUserId: number): Promise<BaseResponseDto<any>> {
-    // TODO: Implementar
-    throw new Error('Method not implemented');
+    try {
+      // Verificar acceso al brand
+      await this.validateBrandAccess(brandId, requestingUserId);
+
+      // Calcular fechas según el período
+      const endDate = new Date();
+      let startDate = new Date();
+      
+      switch (period) {
+        case '7d':
+          startDate.setDate(endDate.getDate() - 7);
+          break;
+        case '30d':
+          startDate.setDate(endDate.getDate() - 30);
+          break;
+        case '90d':
+          startDate.setDate(endDate.getDate() - 90);
+          break;
+        case '1y':
+          startDate.setFullYear(endDate.getFullYear() - 1);
+          break;
+        default:
+          startDate.setDate(endDate.getDate() - 30);
+      }
+
+      // Obtener estadísticas básicas del brand
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId },
+        include: {
+          userBrands: {
+            where: { isActive: true },
+            include: { user: true }
+          },
+          brandFeatures: {
+            include: { feature: true }
+          },
+          brandPlans: {
+            where: { isActive: true },
+            orderBy: { createdAt: 'desc' },
+            take: 1
+          }
+        }
+      });
+
+      if (!brand) {
+        return BaseResponseDto.singleError(404, 'Brand no encontrado');
+      }
+
+      // Contar características activas
+      const activeFeatures = brand.brandFeatures.filter(bf => bf.isActive).length;
+
+      // Calcular estadísticas
+      const stats = {
+        totalUsers: brand.userBrands.length,
+        totalFeatures: brand.brandFeatures.length,
+        activeFeatures: activeFeatures,
+        totalRevenue: 0, // TODO: Calcular desde pagos cuando se implemente
+        monthlyRevenue: 0,
+        subscriptionStatus: brand.brandPlans.length > 0 ? 'active' : 'inactive',
+        lastActivity: brand.updatedAt,
+        createdAt: brand.createdAt,
+        daysActive: Math.floor((endDate.getTime() - brand.createdAt.getTime()) / (1000 * 60 * 60 * 24)),
+        userGrowth: {
+          period: period,
+          totalUsers: brand.userBrands.length,
+          newUsers: brand.userBrands.filter(ub => 
+            ub.createdAt >= startDate && ub.createdAt <= endDate
+          ).length
+        },
+        featureUsage: brand.brandFeatures.map(brandFeature => ({
+          id: brandFeature.id,
+          key: brandFeature.feature.key,
+          title: brandFeature.feature.title,
+          isActive: brandFeature.isActive,
+          activatedAt: brandFeature.createdAt,
+          price: brandFeature.feature.price
+        }))
+      };
+
+      return BaseResponseDto.success(stats);
+
+    } catch (error) {
+      console.error('Error getting brand stats:', error);
+      if (error.status === 403) {
+        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+      }
+      return BaseResponseDto.singleError(500, 'Error interno del servidor');
+    }
   }
 
   async getBrandPayments(brandId: number, page: number, limit: number, status: string, requestingUserId: number): Promise<BaseResponseDto<any>> {
-    // TODO: Implementar
-    throw new Error('Method not implemented');
+    try {
+      // Verificar acceso al brand
+      await this.validateBrandAccess(brandId, requestingUserId);
+
+      // Construir filtros
+      const where: any = {
+        brandId: brandId
+      };
+
+      // Aplicar filtro de status si no es "all"
+      if (status && status !== 'all') {
+        where.status = status;
+      }
+
+      // Calcular offset
+      const skip = (page - 1) * limit;
+
+      // Obtener pagos con paginación
+      const [payments, totalCount] = await Promise.all([
+        this.prisma.payment.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            brandPlan: {
+              include: {
+                plan: true
+              }
+            }
+          }
+        }),
+        this.prisma.payment.count({ where })
+      ]);
+
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return BaseResponseDto.success({
+        payments: payments.map(payment => ({
+          id: payment.id,
+          amount: payment.amount,
+          currency: payment.currency,
+          status: payment.status,
+          paymentMethod: payment.paymentMethod,
+          transactionId: payment.tilopayTransactionId,
+          reference: payment.tilopayReference,
+          processedAt: payment.processedAt,
+          createdAt: payment.createdAt,
+          updatedAt: payment.updatedAt,
+          plan: payment.brandPlan?.plan ? {
+            id: payment.brandPlan.plan.id,
+            name: payment.brandPlan.plan.name,
+            type: payment.brandPlan.plan.type
+          } : null
+        })),
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalCount,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1
+        }
+      });
+
+    } catch (error) {
+      console.error('Error getting brand payments:', error);
+      if (error.status === 403) {
+        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+      }
+      return BaseResponseDto.singleError(500, 'Error interno del servidor');
+    }
   }
 
   async getBrandActivity(brandId: number, page: number, limit: number, requestingUserId: number): Promise<BaseResponseDto<any>> {
-    // TODO: Implementar
-    throw new Error('Method not implemented');
+    try {
+      // Verificar acceso al brand
+      await this.validateBrandAccess(brandId, requestingUserId);
+
+      // Como no tenemos un modelo de Activity, vamos a crear actividades basadas en otros eventos
+      const skip = (page - 1) * limit;
+
+      // Obtener actividades de diferentes fuentes
+      const [recentUsers, recentFeatures, recentPayments] = await Promise.all([
+        this.prisma.userBrand.findMany({
+          where: { brandId, isActive: true },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: { user: true }
+        }),
+        this.prisma.brandFeature.findMany({
+          where: { brandId },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: { feature: true }
+        }),
+        this.prisma.payment.findMany({
+          where: { brandId },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: { brandPlan: { include: { plan: true } } }
+        })
+      ]);
+
+      // Crear actividades combinadas
+      const activities: any[] = [];
+
+      // Actividades de usuarios
+      recentUsers.forEach(userBrand => {
+        activities.push({
+          id: `user-${userBrand.id}`,
+          type: 'user_joined',
+          title: 'Usuario se unió al brand',
+          description: `${userBrand.user.firstName} ${userBrand.user.lastName} (${userBrand.user.email}) se unió como ${userBrand.user.role}`,
+          createdAt: userBrand.createdAt,
+          metadata: {
+            userId: userBrand.user.id,
+            userName: `${userBrand.user.firstName} ${userBrand.user.lastName}`,
+            userRole: userBrand.user.role
+          }
+        });
+      });
+
+      // Actividades de features
+      recentFeatures.forEach(brandFeature => {
+        activities.push({
+          id: `feature-${brandFeature.id}`,
+          type: 'feature_activated',
+          title: 'Feature activada',
+          description: `Se activó la feature "${brandFeature.feature.title}"`,
+          createdAt: brandFeature.createdAt,
+          metadata: {
+            featureId: brandFeature.feature.id,
+            featureName: brandFeature.feature.title,
+            featurePrice: brandFeature.feature.price
+          }
+        });
+      });
+
+      // Actividades de pagos
+      recentPayments.forEach(payment => {
+        activities.push({
+          id: `payment-${payment.id}`,
+          type: 'payment_processed',
+          title: 'Pago procesado',
+          description: `Pago de ${payment.currency} ${payment.amount} - ${payment.status}`,
+          createdAt: payment.createdAt,
+          metadata: {
+            paymentId: payment.id,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status,
+            planName: payment.brandPlan?.plan?.name
+          }
+        });
+      });
+
+      // Ordenar por fecha descendente y paginar
+      activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      const totalCount = activities.length;
+      const paginatedActivities = activities.slice(skip, skip + limit);
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return BaseResponseDto.success({
+        activities: paginatedActivities,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalCount,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1
+        }
+      });
+
+    } catch (error) {
+      console.error('Error getting brand activity:', error);
+      if (error.status === 403) {
+        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+      }
+      return BaseResponseDto.singleError(500, 'Error interno del servidor');
+    }
   }
 }

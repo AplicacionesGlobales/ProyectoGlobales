@@ -29,9 +29,9 @@ import {
   Plus,
   RefreshCw
 } from "lucide-react"
-import { appointmentsService, CalendarEvent, CreateAppointmentData, UpdateAppointmentData, AppointmentConflict } from "@/services/appointmentsService"
-import { clientsService, Client } from "@/services/clientsService"
-import { functionsService, BrandFunction } from "@/services/functionsService"
+import { appointmentsService, CalendarEvent, CreateAppointmentData, UpdateAppointmentData, AppointmentConflict } from "@/services/appointment.service"
+import { clientsService, Client } from "@/services/client.service"
+import { functionsService, BrandFunction } from "@/services/functions.service"
 import { scheduleUtils } from "@/types/schedule.types"
 
 interface AppointmentModalProps {
@@ -634,11 +634,11 @@ export function AppointmentModal({
       </DialogContent>
     </Dialog>
   )
-}FormChange = (field: keyof AppointmentFormData, value: any) => {
+
+  function handleFormChange(field: keyof AppointmentFormData, value: any) {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
   }
-
-  const handle
+}

@@ -1,4 +1,4 @@
-import { apiClient } from '../app/api/client';
+import { apiClient, ApiResponse } from '../app/api/client';
 import { API_ROUTES } from '../constants/api-routes';
 
 // Interfaces para Brand
@@ -132,15 +132,6 @@ export interface CreateBrandUserData {
   role?: string;
 }
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  errors?: Array<{
-    code: string;
-    description: string;
-  }>;
-}
-
 class BrandService {
   private getAuthToken(): string | null {
     if (typeof window !== 'undefined') {
@@ -149,7 +140,7 @@ class BrandService {
     return null;
   }
 
-  private getAuthHeaders() {
+  private getAuthHeaders(): Record<string, string> {
     const token = this.getAuthToken();
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   }

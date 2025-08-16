@@ -1,5 +1,5 @@
 // services/appointmentsService.ts
-import { apiClient } from '../app/api/client';
+import { apiClient, ApiResponse } from '../app/api/client';
 import { API_ENDPOINTS } from '../app/api/config';
 
 // Interfaces para Appointments
@@ -109,15 +109,6 @@ export const APPOINTMENT_STATUS_COLORS: Record<AppointmentStatus, string> = {
   [AppointmentStatus.NO_SHOW]: 'destructive'
 };
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  errors?: Array<{
-    code: string;
-    description: string;
-  }>;
-}
-
 class AppointmentsService {
   private getAuthToken(): string | null {
     if (typeof window !== 'undefined') {
@@ -126,7 +117,7 @@ class AppointmentsService {
     return null;
   }
 
-  private getAuthHeaders() {
+  private getAuthHeaders(): Record<string, string> {
     const token = this.getAuthToken();
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   }
@@ -150,7 +141,11 @@ class AppointmentsService {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        ...filters
+        ...(filters?.startDate ? { startDate: filters.startDate } : {}),
+        ...(filters?.endDate ? { endDate: filters.endDate } : {}),
+        ...(filters?.status ? { status: filters.status } : {}),
+        ...(filters?.clientId !== undefined ? { clientId: filters.clientId.toString() } : {}),
+        ...(filters?.serviceId !== undefined ? { serviceId: filters.serviceId.toString() } : {})
       });
 
       console.log('🚀 Getting appointments:', { brandId, page, limit, filters });

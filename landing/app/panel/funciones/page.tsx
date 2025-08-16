@@ -35,8 +35,9 @@ import {
   CheckCircle,
   RefreshCw
 } from "lucide-react"
-import { functionsService, BrandFunction, AvailableFeature, FunctionStats } from "@/services/functionsService"
+import { functionsService, AvailableFeature, FunctionStats } from "@/services/functions.service"
 import { 
+  BrandFunction,
   FunctionCategory, 
   CATEGORY_LABELS, 
   CATEGORY_COLORS,
@@ -146,7 +147,7 @@ export default function FuncionesPage() {
 
       const functionData = {
         ...formData,
-        featureId: selectedFeatureId
+        featureId: selectedFeatureId || undefined
       }
 
       let response

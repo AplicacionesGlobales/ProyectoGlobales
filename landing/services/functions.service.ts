@@ -1,6 +1,7 @@
 // services/functionsService.ts
-import { apiClient } from '../app/api/client';
+import { apiClient, ApiResponse } from '../app/api/client';
 import { API_ENDPOINTS } from '../app/api/config';
+import { FunctionCategory } from '../types/functions.types';
 
 // Interfaces para Functions (Features como funciones del negocio)
 export interface BrandFunction {
@@ -11,7 +12,7 @@ export interface BrandFunction {
   description: string;
   basePrice: number;
   currentPrice: number;
-  category: 'ESSENTIAL' | 'BUSINESS' | 'ADVANCED';
+  category: FunctionCategory;
   duration: number; // en minutos
   isActive: boolean;
   isPopular: boolean;
@@ -50,6 +51,9 @@ export interface FunctionStats {
   averagePrice: number;
   totalRevenue: number;
   monthlyRevenue: number;
+  averageDuration: number;
+  monthlyBookings: number;
+  bookingGrowth: number;
 }
 
 export interface AvailableFeature {
@@ -58,20 +62,11 @@ export interface AvailableFeature {
   title: string;
   description: string;
   basePrice: number;
-  category: 'ESSENTIAL' | 'BUSINESS' | 'ADVANCED';
+  category: FunctionCategory;
   isPopular: boolean;
   isRecommended: boolean;
   businessTypes: string[];
   isActive: boolean;
-}
-
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  errors?: Array<{
-    code: string;
-    description: string;
-  }>;
 }
 
 class FunctionsService {
@@ -82,7 +77,7 @@ class FunctionsService {
     return null;
   }
 
-  private getAuthHeaders() {
+  private getAuthHeaders(): Record<string, string> {
     const token = this.getAuthToken();
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   }
@@ -386,6 +381,88 @@ class FunctionsService {
       return { status: 'ok' };
     } catch (error) {
       return { status: 'error' };
+    }
+  }
+
+  // ==================== MISSING METHODS ====================
+
+  // Crear función
+  async createFunction(brandId: number, data: Partial<BrandFunction>): Promise<ApiResponse<BrandFunction>> {
+    try {
+      console.log('🚀 Creating function:', { brandId, data });
+      const response = await apiClient.post<BrandFunction>(
+        API_ENDPOINTS.SERVICES.CREATE(brandId),
+        data,
+        { headers: this.getAuthHeaders() }
+      );
+      console.log('✅ Function creation response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('❌ Function creation error:', error);
+      return {
+        success: false,
+        errors: [
+          {
+            code: 'FUNCTION_CREATE_ERROR',
+            description: error?.response?.data?.errors?.[0]?.description || 
+                        error?.message || 
+                        'Error creando función'
+          }
+        ]
+      };
+    }
+  }
+
+  // Actualizar función
+  async updateFunction(brandId: number, functionId: number, data: Partial<BrandFunction>): Promise<ApiResponse<BrandFunction>> {
+    try {
+      console.log('🚀 Updating function:', { brandId, functionId, data });
+      const response = await apiClient.put<BrandFunction>(
+        API_ENDPOINTS.SERVICES.UPDATE(brandId, functionId),
+        data,
+        { headers: this.getAuthHeaders() }
+      );
+      console.log('✅ Function update response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('❌ Function update error:', error);
+      return {
+        success: false,
+        errors: [
+          {
+            code: 'FUNCTION_UPDATE_ERROR',
+            description: error?.response?.data?.errors?.[0]?.description || 
+                        error?.message || 
+                        'Error actualizando función'
+          }
+        ]
+      };
+    }
+  }
+
+  // Eliminar función
+  async deleteFunction(brandId: number, functionId: number): Promise<ApiResponse<void>> {
+    try {
+      console.log('🚀 Deleting function:', { brandId, functionId });
+      const response = await apiClient.delete<void>(
+        API_ENDPOINTS.SERVICES.DELETE(brandId, functionId),
+        { headers: this.getAuthHeaders() }
+      );
+      console.log('✅ Function deletion response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('❌ Function deletion error:', error);
+      return {
+        success: false,
+        errors: [
+          {
+            code: 'FUNCTION_DELETE_ERROR',
+            description: error?.response?.data?.errors?.[0]?.description || 
+                        error?.message || 
+                        'Error eliminando función'
+          }
+        ]
+      };
     }
   }
 }

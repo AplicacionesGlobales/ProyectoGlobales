@@ -25,7 +25,7 @@ export const landingService = {
       return {
         success: false,
         errors: [{
-          code: 500,
+          code: '500',
           description: 'Failed to load landing configuration'
         }]
       };
@@ -43,7 +43,7 @@ export const landingService = {
       return {
         success: false,
         errors: [{
-          code: 500,
+          code: '500',
           description: 'Failed to load business types'
         }]
       };
@@ -61,7 +61,7 @@ export const landingService = {
       return {
         success: false,
         errors: [{
-          code: 500,
+          code: '500',
           description: 'Failed to load features'
         }]
       };
@@ -79,7 +79,7 @@ export const landingService = {
       return {
         success: false,
         errors: [{
-          code: 500,
+          code: '500',
           description: 'Failed to load recommended features'
         }]
       };
@@ -97,7 +97,7 @@ export const landingService = {
       return {
         success: false,
         errors: [{
-          code: 500,
+          code: '500',
           description: 'Failed to load plans'
         }]
       };
@@ -115,7 +115,7 @@ export const landingService = {
       return {
         success: false,
         errors: [{
-          code: 500,
+          code: '500',
           description: 'Failed to load business type configuration'
         }]
       };
