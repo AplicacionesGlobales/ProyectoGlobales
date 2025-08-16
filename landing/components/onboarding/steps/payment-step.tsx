@@ -1,11 +1,13 @@
+// components/onboarding/PaymentStep.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CreditCard, Clock, Check, Smartphone, ExternalLink, Loader2 } from 'lucide-react';
+import { CreditCard, Clock, Check, Smartphone, ExternalLink, Loader2, ArrowLeft } from 'lucide-react';
+import { paymentService } from '@/services/payment.service';
 
 interface PaymentStepProps {
   data: any;
@@ -25,19 +27,21 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
 
   // Simular información del plan basado en los datos del onboarding
   const plan: PlanInfo = {
     id: 1,
     type: data.businessType || 'app',
-    price: 185, // Precio base
-    features: ['Gestión de Citas', 'Catálogo de Servicios', 'Reportes', 'Notificaciones'],
-    billingPeriod: 'monthly'
+    price: calculatePlanPrice(data.businessType, data.selectedFeatures),
+    features: getPlanFeatures(data.businessType, data.selectedFeatures),
+    billingPeriod: data.billingCycle || 'monthly'
   };
 
   const handlePayment = async () => {
     setIsProcessing(true);
     setError(null);
+    setPaymentStatus('processing');
 
     try {
       // Preparar datos para el pago según el DTO del backend
@@ -47,97 +51,52 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
         phone: data.brandPhone || data.phone || '00000000',
         ownerName: `${data.firstName} ${data.lastName}`,
         location: data.location || 'San José, Costa Rica',
-        planType: data.businessType || 'app', // 'web', 'app', 'completo'
-        billingCycle: 'monthly', // 'monthly' o 'annual'
+        planType: data.businessType || 'app',
+        billingCycle: data.billingCycle || 'monthly',
         selectedServices: data.selectedFeatures || ['basic_features']
       };
 
-      console.log('🚀 Sending payment data:', paymentData);
+      const response = await paymentService.createPayment(paymentData);
 
-      // Hacer request al endpoint de pago
-      const response = await fetch('http://localhost:3000/payment/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(paymentData)
-      });
-
-      const result = await response.json();
-      console.log('💳 Payment response:', result);
-
-      if (!response.ok) {
-        throw new Error(result.errors?.[0]?.description || 'Error al crear el pago');
-      }
-      
-      if (result.success && result.data?.paymentUrl) {
-        setPaymentUrl(result.data.paymentUrl);
+      if (response.success && response.data?.paymentUrl) {
+        setPaymentUrl(response.data.paymentUrl);
         
-        // En lugar de abrir en nueva ventana, embeber la pasarela
-        // Crear iframe para mostrar Tilopay
-        const iframe = document.createElement('iframe');
-        iframe.src = result.data.paymentUrl;
-        iframe.style.width = '100%';
-        iframe.style.height = '600px';
-        iframe.style.border = 'none';
-        iframe.style.borderRadius = '8px';
-        
-        // Agregar el iframe al contenedor de pago
-        const paymentContainer = document.getElementById('payment-container');
-        if (paymentContainer) {
-          paymentContainer.innerHTML = '';
-          paymentContainer.appendChild(iframe);
+        // Iniciar verificación periódica del estado del pago
+        if (response.data.orderNumber) {
+          checkPaymentStatus(response.data.orderNumber);
         }
-        
-        // Escuchar mensajes del iframe para detectar cuando se complete el pago
-        const handleMessage = (event: MessageEvent) => {
-          if (event.origin !== 'https://tilopay.com') return;
-          
-          if (event.data.type === 'payment_success') {
-            window.removeEventListener('message', handleMessage);
-            onComplete({
-              ...data,
-              payment: {
-                status: 'completed',
-                reference: event.data.reference || result.data.reference,
-                amount: plan.price
-              }
-            });
-          } else if (event.data.type === 'payment_error') {
-            window.removeEventListener('message', handleMessage);
-            setError('Error en el pago. Por favor, inténtalo de nuevo.');
-            setIsProcessing(false);
-          }
-        };
-        
-        window.addEventListener('message', handleMessage);
-        
-        // Fallback: después de 30 segundos, preguntar al usuario
-        setTimeout(() => {
-          if (confirm('¿Se completó el pago exitosamente?')) {
-            window.removeEventListener('message', handleMessage);
-            onComplete({
-              ...data,
-              payment: {
-                status: 'completed',
-                reference: result.data.reference,
-                amount: plan.price
-              }
-            });
-          } else {
-            setError('Pago cancelado o fallido');
-            setIsProcessing(false);
-          }
-        }, 30000);
-        
       } else {
-        throw new Error(result.message || 'Error al generar URL de pago');
+        throw new Error(response.errors?.[0]?.description || 'Error al generar URL de pago');
       }
-
     } catch (error: any) {
       console.error('Payment error:', error);
       setError(error.message || 'Error al procesar el pago');
+      setPaymentStatus('failed');
       setIsProcessing(false);
+    }
+  };
+
+  const checkPaymentStatus = async (orderNumber: string) => {
+    try {
+      const response = await paymentService.getPaymentStatus(orderNumber);
+      
+      if (response.success && response.data?.status === 'completed') {
+        setPaymentStatus('completed');
+        onComplete({
+          ...data,
+          payment: {
+            status: 'completed',
+            reference: response.data.reference,
+            amount: plan.price
+          }
+        });
+      } else {
+        // Reintentar después de 5 segundos si el pago no está completo
+        setTimeout(() => checkPaymentStatus(orderNumber), 5000);
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+      setTimeout(() => checkPaymentStatus(orderNumber), 5000);
     }
   };
 
@@ -151,6 +110,50 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
       }
     });
   };
+
+  // Calcular precio del plan
+  function calculatePlanPrice(planType: string, selectedFeatures: string[] = []): number {
+    const basePrices: Record<string, number> = {
+      web: 0,
+      app: 59,
+      completo: 60
+    };
+
+    const featurePrices: Record<string, number> = {
+      citas: 20,
+      ubicaciones: 15,
+      archivos: 25,
+      pagos: 30,
+      reportes: 15
+    };
+
+    const basePrice = basePrices[planType] || 0;
+    const featuresPrice = selectedFeatures.reduce((sum, feature) => sum + (featurePrices[feature] || 0), 0);
+    
+    return basePrice + featuresPrice;
+  }
+
+  // Obtener características del plan
+  function getPlanFeatures(planType: string, selectedFeatures: string[] = []): string[] {
+    const baseFeatures: Record<string, string[]> = {
+      web: ['Sitio web básico', 'Perfil de negocio'],
+      app: ['Aplicación móvil', 'Gestión básica'],
+      completo: ['Aplicación móvil', 'Sitio web completo', 'Gestión avanzada']
+    };
+
+    const featureNames: Record<string, string> = {
+      citas: 'Gestión de Citas',
+      ubicaciones: 'Múltiples Ubicaciones',
+      archivos: 'Almacenamiento de Archivos',
+      pagos: 'Pagos en Línea',
+      reportes: 'Reportes Avanzados'
+    };
+
+    const features = baseFeatures[planType] || [];
+    const additionalFeatures = selectedFeatures.map(f => featureNames[f] || f);
+    
+    return [...features, ...additionalFeatures];
+  }
 
   return (
     <div className="space-y-8">
@@ -278,21 +281,22 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-blue-600" />
                   <span className="text-blue-700 font-medium">
-                    Complete su pago en la pasarela segura de Tilopay
+                    {paymentStatus === 'processing' ? 'Procesando tu pago...' : 'Complete su pago en la pasarela segura de Tilopay'}
                   </span>
                 </div>
               </div>
               
               {/* Contenedor del iframe */}
               <div 
-                id="payment-container" 
                 className="border rounded-lg overflow-hidden bg-white shadow-sm"
                 style={{ minHeight: '600px' }}
               >
-                <div className="flex items-center justify-center h-96">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  <span className="ml-2 text-gray-600">Cargando pasarela de pago...</span>
-                </div>
+                <iframe
+                  src={paymentUrl}
+                  title="Pasarela de pago Tilopay"
+                  className="w-full h-full border-none"
+                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                />
               </div>
 
               <div className="flex justify-center">
@@ -323,14 +327,16 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
               </Button>
               
               {/* Botón para desarrollo */}
-              <Button
-                onClick={handleSkipPayment}
-                variant="outline"
-                size="lg"
-                className="sm:w-auto"
-              >
-                Saltar Pago (Dev)
-              </Button>
+              {process.env.NODE_ENV === 'development' && (
+                <Button
+                  onClick={handleSkipPayment}
+                  variant="outline"
+                  size="lg"
+                  className="sm:w-auto"
+                >
+                  Saltar Pago (Dev)
+                </Button>
+              )}
             </div>
           )}
 
@@ -346,8 +352,9 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
         <Button 
           variant="outline" 
           onClick={onPrev}
-          disabled={isProcessing}
+          disabled={isProcessing || paymentStatus === 'processing'}
         >
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Anterior
         </Button>
         

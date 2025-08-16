@@ -143,6 +143,7 @@ export const API_ENDPOINTS = {
     EMAIL: '/validate/email',
     PHONE: '/validate/phone',
     BRAND_NAME: '/validate/brand-name',
+    PAYMENT: '/validate/payment',
   },
 
   // Function endpoints

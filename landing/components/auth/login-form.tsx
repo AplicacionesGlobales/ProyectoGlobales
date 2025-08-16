@@ -28,22 +28,19 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
     setSuccess(null)
 
     try {
-      console.log("Login attempt:", { email, rememberMe })
-      
       const result = await authService.login(email, password, rememberMe)
       
       if (result.success && result.data) {
-        // Login exitoso
         setSuccess("¡Login exitoso! Redirigiendo...")
         
-        // Guardar los datos del usuario
+        // Guardar datos del usuario
         localStorage.setItem('auth_token', result.data.token)
         localStorage.setItem('user_data', JSON.stringify(result.data.user))
         localStorage.setItem('brand_data', JSON.stringify(result.data.brand))
@@ -51,29 +48,28 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
         if (rememberMe && result.data.refreshToken) {
           localStorage.setItem('refresh_token', result.data.refreshToken)
         }
+
+        // Validar estado de pago con el servicio de validación
+        const paymentValidation = await authService.validatePayment(result.data.brand.id)
         
-        // Verificar si el pago está pendiente
-        const brandPlan = result.data.plan
-        const isPaymentPending = brandPlan && brandPlan.price > 0 && (!result.data.payment || result.data.payment.status !== 'completed')
-        
-        if (isPaymentPending) {
-          // Redirigir a una página de pago pendiente
-          setTimeout(() => {
-            router.push('/payment/pending')
-          }, 2000)
-        } else {
-          // Redirigir al panel de control
-          setTimeout(() => {
-            router.push('/panel/dashboard')
-          }, 2000)
+        if (paymentValidation.success && paymentValidation.data) {
+          if (!paymentValidation.data.isPaymentComplete) {
+            // Redirigir a página de pago pendiente
+            setTimeout(() => {
+              router.push(`/payment/pending?status=${paymentValidation.data?.paymentStatus || 'pending'}`)
+            }, 1500)
+            return
+          }
         }
+
+        // Redirigir al panel
+        setTimeout(() => {
+          router.push('/panel/dashboard')
+        }, 1500)
       } else {
-        // Login fallido
-        const errorMsg = result.errors?.[0]?.description || 'Credenciales inválidas'
-        setError(errorMsg)
+        setError(result.errors?.[0]?.description || 'Credenciales inválidas')
       }
     } catch (error: any) {
-      console.error("Login error:", error)
       setError("Error de conexión. Verifica tu conexión e inténtalo de nuevo.")
     } finally {
       setIsLoading(false)

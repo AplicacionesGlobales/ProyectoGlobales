@@ -1,3 +1,5 @@
+// landing\app\payment\pending\page.tsx
+
 "use client"
 
 import { useState, useEffect } from "react"

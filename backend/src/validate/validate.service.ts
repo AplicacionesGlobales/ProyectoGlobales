@@ -1,7 +1,10 @@
+// backend\src\validate\validate.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
-import { EmailValidationResponseDto, UsernameValidationResponseDto } from './dto';
+import { EmailValidationResponseDto, UsernameValidationResponseDto,
+  PaymentValidationResponseDto, 
+ } from './dto';
 import { ERROR_CODES } from '../common/constants';
 
 @Injectable()
@@ -150,4 +153,85 @@ export class ValidateService {
       }]);
     }
   }
+
+
+  async validatePayment(brandId: number): Promise<BaseResponseDto<PaymentValidationResponseDto>> {
+    try {
+      console.log('\n🔍 === VALIDACIÓN PAGO ===');
+      console.log('🏢 Brand ID:', brandId);
+
+      // Obtener el plan activo del brand
+      const brandPlan = await this.prisma.brandPlan.findFirst({
+        where: { 
+          brandId: brandId,
+          isActive: true
+        },
+        include: {
+          plan: true,
+          payments: {
+            orderBy: { createdAt: 'desc' },
+            take: 1
+          }
+        }
+      });
+
+      if (!brandPlan) {
+        console.log('⚠️ Brand no tiene plan activo');
+        return BaseResponseDto.success({
+          isPaymentComplete: false,
+          paymentStatus: 'no_plan'
+        });
+      }
+
+      // Si el plan es gratuito (web)
+      if (brandPlan.plan.type === 'web' && Number(brandPlan.price) === 0) {
+        console.log('✅ Plan gratuito, no requiere pago');
+        return BaseResponseDto.success({
+          isPaymentComplete: true,
+          paymentStatus: 'free_plan'
+        });
+      }
+
+      // Verificar el último pago
+      const lastPayment = brandPlan.payments[0];
+      
+      if (!lastPayment) {
+        console.log('⚠️ No hay pagos registrados');
+        return BaseResponseDto.success({
+          isPaymentComplete: false,
+          paymentStatus: 'pending',
+          dueDate: brandPlan.startDate.toISOString()
+        });
+      }
+
+      console.log('💰 Último pago:', {
+        status: lastPayment.status,
+        amount: lastPayment.amount,
+        date: lastPayment.processedAt
+      });
+
+      if (lastPayment.status === 'completed') {
+        console.log('✅ Pago completado');
+        return BaseResponseDto.success({
+          isPaymentComplete: true,
+          paymentStatus: 'completed'
+        });
+      }
+
+      // Pago pendiente o fallido
+      return BaseResponseDto.success({
+        isPaymentComplete: false,
+        paymentStatus: lastPayment.status,
+        dueDate: brandPlan.endDate?.toISOString() || undefined
+      });
+
+    } catch (error) {
+      console.error('💥 Error validating payment:', error);
+      return BaseResponseDto.error([{
+        code: ERROR_CODES.INTERNAL_ERROR,
+        description: 'Error validating payment status'
+      }]);
+    }
+  }
+
 }
