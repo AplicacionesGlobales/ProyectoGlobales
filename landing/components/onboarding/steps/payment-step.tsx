@@ -40,19 +40,19 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
     setError(null);
 
     try {
-      // Preparar datos para el pago
+      // Preparar datos para el pago según el DTO del backend
       const paymentData = {
-        brandId: data.brandId || 1,
-        planId: plan.id,
-        amount: plan.price,
-        currency: 'CRC',
-        description: `Plan ${plan.type} - ${plan.billingPeriod}`,
-        customer: {
-          email: data.email,
-          name: `${data.firstName} ${data.lastName}`,
-          phone: data.brandPhone || ''
-        }
+        name: data.brandName,
+        email: data.email,
+        phone: data.brandPhone || data.phone || '00000000',
+        ownerName: `${data.firstName} ${data.lastName}`,
+        location: data.location || 'San José, Costa Rica',
+        planType: data.businessType || 'app', // 'web', 'app', 'completo'
+        billingCycle: 'monthly', // 'monthly' o 'annual'
+        selectedServices: data.selectedFeatures || ['basic_features']
       };
+
+      console.log('🚀 Sending payment data:', paymentData);
 
       // Hacer request al endpoint de pago
       const response = await fetch('http://localhost:3000/payment/create', {
@@ -63,29 +63,73 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
         body: JSON.stringify(paymentData)
       });
 
-      if (!response.ok) {
-        throw new Error('Error al crear el pago');
-      }
-
       const result = await response.json();
+      console.log('💳 Payment response:', result);
+
+      if (!response.ok) {
+        throw new Error(result.errors?.[0]?.description || 'Error al crear el pago');
+      }
       
       if (result.success && result.data?.paymentUrl) {
         setPaymentUrl(result.data.paymentUrl);
-        // Abrir Tilopay en nueva ventana
-        window.open(result.data.paymentUrl, '_blank', 'width=800,height=600');
         
-        // En producción, esto vendría de un webhook
-        // Por ahora simular que se completó
+        // En lugar de abrir en nueva ventana, embeber la pasarela
+        // Crear iframe para mostrar Tilopay
+        const iframe = document.createElement('iframe');
+        iframe.src = result.data.paymentUrl;
+        iframe.style.width = '100%';
+        iframe.style.height = '600px';
+        iframe.style.border = 'none';
+        iframe.style.borderRadius = '8px';
+        
+        // Agregar el iframe al contenedor de pago
+        const paymentContainer = document.getElementById('payment-container');
+        if (paymentContainer) {
+          paymentContainer.innerHTML = '';
+          paymentContainer.appendChild(iframe);
+        }
+        
+        // Escuchar mensajes del iframe para detectar cuando se complete el pago
+        const handleMessage = (event: MessageEvent) => {
+          if (event.origin !== 'https://tilopay.com') return;
+          
+          if (event.data.type === 'payment_success') {
+            window.removeEventListener('message', handleMessage);
+            onComplete({
+              ...data,
+              payment: {
+                status: 'completed',
+                reference: event.data.reference || result.data.reference,
+                amount: plan.price
+              }
+            });
+          } else if (event.data.type === 'payment_error') {
+            window.removeEventListener('message', handleMessage);
+            setError('Error en el pago. Por favor, inténtalo de nuevo.');
+            setIsProcessing(false);
+          }
+        };
+        
+        window.addEventListener('message', handleMessage);
+        
+        // Fallback: después de 30 segundos, preguntar al usuario
         setTimeout(() => {
-          onComplete({
-            ...data,
-            payment: {
-              status: 'completed',
-              reference: result.data.reference,
-              amount: plan.price
-            }
-          });
-        }, 15000); // 15 segundos para completar el pago
+          if (confirm('¿Se completó el pago exitosamente?')) {
+            window.removeEventListener('message', handleMessage);
+            onComplete({
+              ...data,
+              payment: {
+                status: 'completed',
+                reference: result.data.reference,
+                amount: plan.price
+              }
+            });
+          } else {
+            setError('Pago cancelado o fallido');
+            setIsProcessing(false);
+          }
+        }, 30000);
+        
       } else {
         throw new Error(result.message || 'Error al generar URL de pago');
       }
@@ -93,7 +137,6 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
     } catch (error: any) {
       console.error('Payment error:', error);
       setError(error.message || 'Error al procesar el pago');
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -228,51 +271,68 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
             </div>
           )}
 
-          {paymentUrl && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-blue-600" />
-                <span className="text-blue-700 font-medium">
-                  Ventana de pago abierta. Complete el pago en la nueva ventana.
-                </span>
+          {/* Contenedor para la pasarela embebida */}
+          {paymentUrl ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                  <span className="text-blue-700 font-medium">
+                    Complete su pago en la pasarela segura de Tilopay
+                  </span>
+                </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => window.open(paymentUrl, '_blank', 'width=800,height=600')}
+              
+              {/* Contenedor del iframe */}
+              <div 
+                id="payment-container" 
+                className="border rounded-lg overflow-hidden bg-white shadow-sm"
+                style={{ minHeight: '600px' }}
               >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Reabrir ventana de pago
+                <div className="flex items-center justify-center h-96">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <span className="ml-2 text-gray-600">Cargando pasarela de pago...</span>
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(paymentUrl, '_blank', 'width=800,height=600')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Abrir en nueva ventana
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                onClick={handlePayment}
+                disabled={isProcessing}
+                size="lg"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isProcessing ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <CreditCard className="h-5 w-5 mr-2" />
+                )}
+                {isProcessing ? 'Procesando...' : `Pagar ₡${Math.round(plan.price * 1.13).toLocaleString()}`}
+              </Button>
+              
+              {/* Botón para desarrollo */}
+              <Button
+                onClick={handleSkipPayment}
+                variant="outline"
+                size="lg"
+                className="sm:w-auto"
+              >
+                Saltar Pago (Dev)
               </Button>
             </div>
           )}
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button
-              onClick={handlePayment}
-              disabled={isProcessing}
-              size="lg"
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-            >
-              {isProcessing ? (
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              ) : (
-                <CreditCard className="h-5 w-5 mr-2" />
-              )}
-              {isProcessing ? 'Procesando...' : `Pagar ₡${Math.round(plan.price * 1.13).toLocaleString()}`}
-            </Button>
-            
-            {/* Botón para desarrollo */}
-            <Button
-              onClick={handleSkipPayment}
-              variant="outline"
-              size="lg"
-              className="sm:w-auto"
-            >
-              Saltar Pago (Dev)
-            </Button>
-          </div>
 
           <div className="text-xs text-gray-500 text-center">
             Al proceder, aceptas nuestros términos y condiciones. 
