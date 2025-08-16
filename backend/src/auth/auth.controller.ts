@@ -14,7 +14,7 @@ import {
   RefreshRequestDto,
   RefreshResponseDto,
 } from './dto';
-import { CreateBrandDto } from '../brand/dto/create-brand.dto';
+import { CreateBrandDto } from '../brand-register/dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
 import { AUTH_SUCCESS_RESPONSE } from '../common/templates';
 import { Public } from '../common/decorators';
