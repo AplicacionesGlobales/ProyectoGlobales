@@ -40,7 +40,7 @@ import {
   PeakHoursChart,
   ActivityFeed,
   ComparisonMetricsCards
-} from "@/components/dashboard/DashboardCharts"
+} from "@/components/panel/dashboard/DashboardCharts"
 import { format, subDays, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 

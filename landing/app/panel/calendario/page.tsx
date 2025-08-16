@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Calendar, Plus, Users, Clock, TrendingUp, AlertCircle, Zap } from "lucide-react"
-import { CalendarView } from "@/components/calendar/CalendarView"
-import { appointmentsService, Appointment, AppointmentStatus } from "@/services/appointmentsService"
+import { CalendarView } from "@/components/panel/calendar/CalendarView"
+import { appointmentsService, Appointment, AppointmentStatus } from "@/services/appointment.service"
 import { format, isToday, isTomorrow, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 

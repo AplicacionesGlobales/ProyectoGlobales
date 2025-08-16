@@ -12,8 +12,8 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Settings, User, Building, Bell, Clock, Palette, Save, AlertCircle, CheckCircle } from "lucide-react"
-import { ScheduleConfig } from "@/components/schedule/ScheduleConfig"
-import { SpecialHours } from "@/components/schedule/SpecialHours"
+import { ScheduleConfig } from "@/components/panel/schedule/ScheduleConfig"
+import { SpecialHours } from "@/components/panel/schedule/SpecialHours"
 import { brandService } from "@/services/brandService"
 
 interface UserData {
