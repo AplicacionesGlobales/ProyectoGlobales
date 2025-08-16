@@ -24,8 +24,8 @@ async function bootstrap() {
   // Configurar validación global
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
-    forbidNonWhitelisted: true,
     transform: true,
+    forbidNonWhitelisted: false,
   }));
 
   const config = new DocumentBuilder()

@@ -15,7 +15,7 @@ import {
   RefreshCw,
   BarChart3
 } from "lucide-react"
-import { dashboardService, ComparisonPeriod } from "@/services/dashboardService"
+import { dashboardService, ComparisonPeriod } from "@/services/dashboard.service"
 import { format, subDays, subWeeks, subMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 
 interface ComparisonWidgetProps {

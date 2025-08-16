@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react';
-import { landingService, type BusinessType, type Feature, type Plan, type LandingConfig } from '@/app/api';
+import { landingService } from '@/api';
+import type { LandingConfig, BusinessType, Feature, Plan } from '@/api/types';
 
 interface UseLandingDataReturn {
   config: LandingConfig | null;
@@ -156,7 +157,7 @@ export function useBusinessTypeFeatures(businessTypeKey: string) {
         setLoading(true);
         setError(null);
         
-        const response = await landingService.getFeaturesForBusinessType(businessTypeKey);
+        const response = await landingService.getFeaturesForBusiness(businessTypeKey);
         
         if (response.success && response.data) {
           setFeatures(response.data);

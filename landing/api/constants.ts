@@ -1,8 +1,15 @@
-// app/api/config.ts
-
-// API Configuration
+// landing\api\constants.ts
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+export const API_CONFIG = {
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  timeout: 10000,
+};
+
+// API Endpoints - Consolidated from app/api/config.ts
 export const API_ENDPOINTS = {
   // Landing data endpoints (optimized)
   LANDING: {
@@ -49,33 +56,25 @@ export const API_ENDPOINTS = {
     GET_STATS: (brandId: number) => `/brand/${brandId}/stats`,
     GET_PAYMENTS: (brandId: number) => `/brand/${brandId}/payments`,
     GET_ACTIVITY: (brandId: number) => `/brand/${brandId}/activity`,
-  },
-  
-  // Schedule management endpoints
-  SCHEDULE: {
-    BASE: '/schedule',
     
-    // Business Hours
-    GET_BUSINESS_HOURS: (brandId: number) => `/brand/${brandId}/business-hours`,
-    UPDATE_BUSINESS_HOURS: (brandId: number) => `/brand/${brandId}/business-hours`,
-    UPDATE_BUSINESS_HOUR: (brandId: number, dayOfWeek: number) => `/brand/${brandId}/business-hours/${dayOfWeek}`,
-    
-    // Special Hours
-    GET_SPECIAL_HOURS: (brandId: number) => `/brand/${brandId}/special-hours`,
-    CREATE_SPECIAL_HOUR: (brandId: number) => `/brand/${brandId}/special-hours`,
-    UPDATE_SPECIAL_HOUR: (brandId: number, specialHourId: number) => `/brand/${brandId}/special-hours/${specialHourId}`,
-    DELETE_SPECIAL_HOUR: (brandId: number, specialHourId: number) => `/brand/${brandId}/special-hours/${specialHourId}`,
-    
-    // Appointment Settings
-    GET_APPOINTMENT_SETTINGS: (brandId: number) => `/brand/${brandId}/appointment-settings`,
-    UPDATE_APPOINTMENT_SETTINGS: (brandId: number) => `/brand/${brandId}/appointment-settings`,
-    
-    // Utilities
-    VALIDATE_HOURS: (brandId: number) => `/brand/${brandId}/validate-hours`,
-    GET_AVAILABLE_SLOTS: (brandId: number) => `/brand/${brandId}/available-slots`,
+    // Brand register process
+    REGISTER: '/brand-register',
+    UPDATE_REGISTER: (registerId: number) => `/brand-register/${registerId}`,
+    GET_REGISTER: (registerId: number) => `/brand-register/${registerId}`,
+    GET_REGISTER_BY_EMAIL: (email: string) => `/brand-register/email/${encodeURIComponent(email)}`,
   },
 
-  // Appointments endpoints (para el próximo módulo)
+  // Payment endpoints
+  PAYMENT: {
+    CREATE: '/payment/create',
+    CALLBACK: '/payment/callback',
+    BRANDS: '/payment/brands',
+    GET_BY_ORDER: (orderNumber: string) => `/payment/order/${orderNumber}`,
+    GET_BY_ID: (paymentId: number) => `/payment/${paymentId}`,
+    GET_METHODS: '/payment/methods',
+  },
+
+  // Appointment endpoints
   APPOINTMENTS: {
     GET_ALL: (brandId: number) => `/brand/${brandId}/appointments`,
     GET_BY_ID: (brandId: number, appointmentId: number) => `/brand/${brandId}/appointments/${appointmentId}`,
@@ -91,7 +90,7 @@ export const API_ENDPOINTS = {
     GET_AVAILABILITY: (brandId: number) => `/brand/${brandId}/appointments/availability`,
   },
 
-  // Clients endpoints (para el próximo módulo)
+  // Client management endpoints
   CLIENTS: {
     GET_ALL: (brandId: number) => `/brand/${brandId}/clients`,
     GET_BY_ID: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}`,
@@ -103,7 +102,34 @@ export const API_ENDPOINTS = {
     GET_HISTORY: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}/history`,
   },
 
-  // Services endpoints (Features como servicios)
+  // Schedule endpoints
+  SCHEDULE: {
+    BASE: (brandId: number) => `/brand/${brandId}/schedule`,
+    GET_CONFIG: (brandId: number) => `/brand/${brandId}/schedule/config`,
+    UPDATE_CONFIG: (brandId: number) => `/brand/${brandId}/schedule/config`,
+    GET_AVAILABILITY: (brandId: number, date?: string) => {
+      return date 
+        ? `/brand/${brandId}/schedule/availability?date=${date}`
+        : `/brand/${brandId}/schedule/availability`;
+    },
+    // Business hours endpoints
+    GET_BUSINESS_HOURS: (brandId: number) => `/brand/${brandId}/business-hours`,
+    UPDATE_BUSINESS_HOURS: (brandId: number) => `/brand/${brandId}/business-hours`,
+    UPDATE_BUSINESS_HOUR: (brandId: number, dayOfWeek: number) => `/brand/${brandId}/business-hours/${dayOfWeek}`,
+    // Special hours endpoints
+    GET_SPECIAL_HOURS: (brandId: number) => `/brand/${brandId}/special-hours`,
+    CREATE_SPECIAL_HOUR: (brandId: number) => `/brand/${brandId}/special-hours`,
+    UPDATE_SPECIAL_HOUR: (brandId: number, specialHourId: number) => `/brand/${brandId}/special-hours/${specialHourId}`,
+    DELETE_SPECIAL_HOUR: (brandId: number, specialHourId: number) => `/brand/${brandId}/special-hours/${specialHourId}`,
+    // Appointment settings endpoints
+    GET_APPOINTMENT_SETTINGS: (brandId: number) => `/brand/${brandId}/appointment-settings`,
+    UPDATE_APPOINTMENT_SETTINGS: (brandId: number) => `/brand/${brandId}/appointment-settings`,
+    // Validation and utilities
+    VALIDATE_HOURS: (brandId: number) => `/brand/${brandId}/validate-hours`,
+    GET_AVAILABLE_SLOTS: (brandId: number) => `/brand/${brandId}/available-slots`,
+  },
+
+  // Service endpoints
   SERVICES: {
     GET_ALL: (brandId: number) => `/brand/${brandId}/services`,
     GET_BY_ID: (brandId: number, serviceId: number) => `/brand/${brandId}/services/${serviceId}`,
@@ -111,19 +137,21 @@ export const API_ENDPOINTS = {
     UPDATE: (brandId: number, serviceId: number) => `/brand/${brandId}/services/${serviceId}`,
     DELETE: (brandId: number, serviceId: number) => `/brand/${brandId}/services/${serviceId}`,
   },
-  
+
   // Validation endpoints
-  VALIDATE: {
+  VALIDATION: {
     EMAIL: '/validate/email',
-    USERNAME: '/validate/username',
     PHONE: '/validate/phone',
+    BRAND_NAME: '/validate/brand-name',
   },
-  
-  // Payment endpoints
-  PAYMENT: {
-    CREATE: '/payment/create',
-    CALLBACK: '/payment/callback',
-    GET_METHODS: '/payment/methods',
+
+  // Function endpoints
+  FUNCTIONS: {
+    GET_ALL: (brandId: number) => `/brand/${brandId}/functions`,
+    GET_BY_ID: (brandId: number, functionId: number) => `/brand/${brandId}/functions/${functionId}`,
+    CREATE: (brandId: number) => `/brand/${brandId}/functions`,
+    UPDATE: (brandId: number, functionId: number) => `/brand/${brandId}/functions/${functionId}`,
+    DELETE: (brandId: number, functionId: number) => `/brand/${brandId}/functions/${functionId}`,
   },
 
   // File upload endpoints
@@ -137,13 +165,35 @@ export const API_ENDPOINTS = {
   HEALTH: '/health',
 } as const;
 
-// Request configuration
-export const API_CONFIG = {
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
+// HTTP Status Codes
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  INTERNAL_SERVER_ERROR: 500,
+} as const;
+
+// Request timeout (in milliseconds)
+export const REQUEST_TIMEOUT = 10000;
+
+// Plan pricing constants
+export const PLAN_PRICING = {
+  BASE: {
+    app: 59,
+    completo: 60,
+    web: 0,
   },
-  timeout: 10000, // 10 seconds
+  SERVICES: {
+    citas: 20,
+    ubicaciones: 15,
+    archivos: 25,
+    pagos: 30,
+    reportes: 15,
+  },
+  ANNUAL_MULTIPLIER: 12,
 } as const;
 
 // Environment configuration

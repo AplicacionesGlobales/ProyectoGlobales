@@ -10,6 +10,7 @@ import { LandingDataModule } from './landing-data/landing-data.module';
 import { ValidateModule } from './validate/validate.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BrandModule } from './brand/brand.module';
+import { ScheduleModule } from './schedule/schedule.module';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { BrandModule } from './brand/brand.module';
     BrandRegistrationModule,
     PaymentModule,
     LandingDataModule,
-    ValidateModule
+    ValidateModule,
+    ScheduleModule,
   ],
   controllers: [],
   providers: [

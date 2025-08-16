@@ -1,6 +1,6 @@
-// services/functionsService.ts
-import { apiClient, ApiResponse } from '../app/api/client';
-import { API_ENDPOINTS } from '../app/api/config';
+// services/functions.service.ts
+import { apiClient, ApiResponse } from '../api';
+import { API_ENDPOINTS } from '../api';
 import { FunctionCategory } from '../types/functions.types';
 
 // Interfaces para Functions (Features como funciones del negocio)

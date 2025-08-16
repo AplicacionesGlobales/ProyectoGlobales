@@ -1,4 +1,5 @@
-import { apiClient } from '../app/api/client';
+// landing\services\auth.service.ts
+import { apiClient } from '../api';
 import { API_ROUTES } from '../constants/api-routes';
 
 export interface BrandRegistrationData {
@@ -115,7 +116,7 @@ class AuthService {
           success: false,
           errors: response.errors?.map(error => ({
             code: String(error.code),
-            description: error.description
+            description: error.description ?? 'No description provided'
           })) || [{ code: 'NO_DATA', description: 'No data received' }]
         };
       }
@@ -168,7 +169,7 @@ class AuthService {
           success: false,
           errors: response.errors?.map(error => ({
             code: String(error.code),
-            description: error.description
+            description: error.description ?? 'No description provided'
           })) || [{ code: 'LOGIN_ERROR', description: 'Error en el login' }]
         };
       }

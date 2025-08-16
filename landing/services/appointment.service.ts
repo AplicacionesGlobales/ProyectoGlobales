@@ -1,6 +1,6 @@
-// services/appointmentsService.ts
-import { apiClient, ApiResponse } from '../app/api/client';
-import { API_ENDPOINTS } from '../app/api/config';
+// services/appointments.service.ts
+import { apiClient, ApiResponse } from '../api';
+import { API_ENDPOINTS } from '../api';
 
 // Interfaces para Appointments
 export interface Appointment {

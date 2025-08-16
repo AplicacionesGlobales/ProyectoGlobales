@@ -12,13 +12,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Clock, Settings, Save, RefreshCw, Calendar, AlertCircle, CheckCircle } from "lucide-react"
-import { scheduleService, BusinessHour, AppointmentSettings } from "@/services/scheduleService"
-import { 
-  DayOfWeek, 
-  DAY_NAMES, 
-  SCHEDULE_TEMPLATES, 
+import { scheduleService, BusinessHour, AppointmentSettings } from "@/services/schedule.service"
+import {
+  DayOfWeek,
+  DAY_NAMES,
+  SCHEDULE_TEMPLATES,
   scheduleUtils,
-  DaySchedule 
+  DaySchedule
 } from "@/types/schedule.types"
 
 interface ScheduleConfigProps {
@@ -41,7 +41,7 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  
+
   const [formData, setFormData] = useState<ScheduleFormData>({
     businessHours: scheduleUtils.getAllDays(),
     appointmentSettings: {
@@ -189,15 +189,14 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
 
   const handleSave = async () => {
     try {
-      setSaving(true)
-      setError(null)
-      setSuccess(null)
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
 
-      // Validar formulario
-      const validationError = validateForm()
+      const validationError = validateForm();
       if (validationError) {
-        setError(validationError)
-        return
+        setError(validationError);
+        return;
       }
 
       // Preparar datos para la API
@@ -206,37 +205,29 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
         isOpen: day.isOpen,
         openTime: day.isOpen ? day.openTime : undefined,
         closeTime: day.isOpen ? day.closeTime : undefined
-      }))
+      }));
 
-      // Guardar horarios de negocio y configuración en paralelo
-      const [businessHoursResponse, settingsResponse] = await Promise.all([
-        scheduleService.updateBusinessHours(brandId, businessHoursData),
-        scheduleService.updateAppointmentSettings(brandId, formData.appointmentSettings)
-      ])
+      // Solo guardar horarios de negocio primero
+      const response = await scheduleService.updateBusinessHours(brandId, businessHoursData);
 
-      // Verificar respuestas
-      if (!businessHoursResponse.success) {
-        throw new Error(businessHoursResponse.errors?.[0]?.description || 'Error actualizando horarios')
+      if (!response.success) {
+        throw new Error(response.errors?.[0]?.description || 'Error actualizando horarios');
       }
 
-      if (!settingsResponse.success) {
-        throw new Error(settingsResponse.errors?.[0]?.description || 'Error actualizando configuración')
-      }
+      setSuccess('Configuración de horarios guardada exitosamente');
 
-      setSuccess('Configuración de horarios guardada exitosamente')
-
-      // Recargar datos para confirmar cambios
+      // Opcional: Recargar datos después de un tiempo para confirmar
       setTimeout(() => {
-        loadScheduleData()
-      }, 1000)
+        loadScheduleData();
+      }, 1500);
 
     } catch (error: any) {
-      console.error('Error saving schedule:', error)
-      setError(error.message || 'Error guardando la configuración')
+      console.error('Error saving schedule:', error);
+      setError(error.message || 'Error guardando la configuración');
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   // Generar opciones de hora
   const timeOptions = scheduleUtils.generateHourOptions(6, 23, 30)
@@ -287,9 +278,9 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
               <div key={key} className="border rounded-lg p-4">
                 <h4 className="font-medium mb-2">{template.name}</h4>
                 <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => applyTemplate(key as keyof typeof SCHEDULE_TEMPLATES)}
                   className="w-full"
                 >
@@ -322,7 +313,7 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
                 />
                 <Label className="w-20 font-medium">{day.dayName}</Label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 {day.isOpen ? (
                   <>
@@ -341,9 +332,9 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                    
+
                     <span className="text-muted-foreground">-</span>
-                    
+
                     <Select
                       value={day.closeTime || ''}
                       onValueChange={(value) => handleTimeChange(day.dayOfWeek, 'closeTime', value)}
@@ -359,7 +350,7 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                    
+
                     {day.openTime && day.closeTime && (
                       <Badge variant="secondary" className="ml-2">
                         {scheduleUtils.calculateDuration(day.openTime, day.closeTime)} min
@@ -399,7 +390,7 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
                 onChange={(e) => handleSettingsChange('defaultDuration', parseInt(e.target.value))}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="bufferTime">Tiempo de buffer (minutos)</Label>
               <Input
@@ -411,7 +402,7 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
                 onChange={(e) => handleSettingsChange('bufferTime', parseInt(e.target.value))}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="maxAdvanceBookingDays">Máximo días de anticipación</Label>
               <Input
@@ -423,7 +414,7 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
                 onChange={(e) => handleSettingsChange('maxAdvanceBookingDays', parseInt(e.target.value))}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="minAdvanceBookingHours">Mínimo horas de anticipación</Label>
               <Input
@@ -436,9 +427,9 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
               />
             </div>
           </div>
-          
+
           <Separator />
-          
+
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Permitir reservas el mismo día</Label>

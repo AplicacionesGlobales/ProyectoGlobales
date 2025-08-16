@@ -1,6 +1,6 @@
-// services/scheduleService.ts
-import { apiClient, ApiResponse } from '../app/api/client';
-import { API_ENDPOINTS } from '../app/api/config';
+// services/schedule.service.ts
+import { apiClient, ApiResponse } from '../api';
+import { API_ENDPOINTS } from '../api';
 
 // Interfaces para Schedule
 export interface BusinessHour {
@@ -95,39 +95,19 @@ class ScheduleService {
   // Obtener todos los horarios de negocio
   async getBusinessHours(brandId: number): Promise<ApiResponse<BusinessHour[]>> {
     try {
-      console.log('🚀 Getting business hours for brand:', brandId);
-      
-      // TODO: Implementar endpoint en el backend
-      // Por ahora, simular respuesta con horarios por defecto
-      console.log('⚠️ Business hours endpoint not implemented yet, simulating default hours');
-      
-      const defaultHours: BusinessHour[] = [
-        { id: 1, brandId, dayOfWeek: 0, isOpen: false, openTime: undefined, closeTime: undefined, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Domingo
-        { id: 2, brandId, dayOfWeek: 1, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Lunes
-        { id: 3, brandId, dayOfWeek: 2, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Martes
-        { id: 4, brandId, dayOfWeek: 3, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Miércoles
-        { id: 5, brandId, dayOfWeek: 4, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Jueves
-        { id: 6, brandId, dayOfWeek: 5, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Viernes
-        { id: 7, brandId, dayOfWeek: 6, isOpen: false, openTime: undefined, closeTime: undefined, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Sábado
-      ];
-      
-      return {
-        success: true,
-        data: defaultHours
-      };
-      
+      const response = await apiClient.get<BusinessHour[]>(
+        API_ENDPOINTS.SCHEDULE.GET_BUSINESS_HOURS(brandId),
+        { headers: this.getAuthHeaders() }
+      );
+      return response;
     } catch (error: any) {
-      console.error('❌ Business hours error:', error);
+      console.error('Error getting business hours:', error);
       return {
         success: false,
-        errors: [
-          {
-            code: 'BUSINESS_HOURS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo horarios de negocio'
-          }
-        ]
+        errors: [{
+          code: 'GET_BUSINESS_HOURS_ERROR',
+          description: 'Error obteniendo horarios de negocio'
+        }]
       };
     }
   }
@@ -136,27 +116,16 @@ class ScheduleService {
   async updateBusinessHours(brandId: number, hours: CreateBusinessHourData[]): Promise<ApiResponse<BusinessHour[]>> {
     try {
       console.log('🚀 Updating business hours:', { brandId, hours });
-      
-      // TODO: Implementar endpoint en el backend
-      // Por ahora, simular respuesta exitosa
-      console.log('⚠️ Business hours endpoint not implemented yet, simulating success');
-      
-      const simulatedResponse: BusinessHour[] = hours.map((hour, index) => ({
-        id: index + 1,
-        brandId,
-        dayOfWeek: hour.dayOfWeek,
-        openTime: hour.openTime,
-        closeTime: hour.closeTime,
-        isOpen: hour.isOpen,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }));
-      
-      return {
-        success: true,
-        data: simulatedResponse
-      };
-      
+
+      const response = await apiClient.put<BusinessHour[]>(
+        API_ENDPOINTS.SCHEDULE.UPDATE_BUSINESS_HOURS(brandId),
+        { businessHours: hours },
+        { headers: this.getAuthHeaders() }
+      );
+
+      console.log('✅ Business hours update response:', response);
+      return response;
+
     } catch (error: any) {
       console.error('❌ Business hours update error:', error);
       return {
@@ -164,9 +133,9 @@ class ScheduleService {
         errors: [
           {
             code: 'BUSINESS_HOURS_UPDATE_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error actualizando horarios de negocio'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error actualizando horarios de negocio'
           }
         ]
       };
@@ -175,8 +144,8 @@ class ScheduleService {
 
   // Actualizar un día específico
   async updateBusinessHour(
-    brandId: number, 
-    dayOfWeek: number, 
+    brandId: number,
+    dayOfWeek: number,
     data: UpdateBusinessHourData
   ): Promise<ApiResponse<BusinessHour>> {
     try {
@@ -195,9 +164,9 @@ class ScheduleService {
         errors: [
           {
             code: 'BUSINESS_HOUR_UPDATE_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error actualizando horario del día'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error actualizando horario del día'
           }
         ]
       };
@@ -208,15 +177,15 @@ class ScheduleService {
 
   // Obtener horarios especiales
   async getSpecialHours(
-    brandId: number, 
-    startDate?: string, 
+    brandId: number,
+    startDate?: string,
     endDate?: string
   ): Promise<ApiResponse<SpecialHour[]>> {
     try {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
-      
+
       console.log('🚀 Getting special hours:', { brandId, startDate, endDate });
       const response = await apiClient.get<SpecialHour[]>(
         `/brand/${brandId}/special-hours?${params.toString()}`,
@@ -231,9 +200,9 @@ class ScheduleService {
         errors: [
           {
             code: 'SPECIAL_HOURS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo horarios especiales'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error obteniendo horarios especiales'
           }
         ]
       };
@@ -258,9 +227,9 @@ class ScheduleService {
         errors: [
           {
             code: 'SPECIAL_HOUR_CREATE_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error creando horario especial'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error creando horario especial'
           }
         ]
       };
@@ -269,8 +238,8 @@ class ScheduleService {
 
   // Actualizar horario especial
   async updateSpecialHour(
-    brandId: number, 
-    specialHourId: number, 
+    brandId: number,
+    specialHourId: number,
     data: UpdateSpecialHourData
   ): Promise<ApiResponse<SpecialHour>> {
     try {
@@ -289,9 +258,9 @@ class ScheduleService {
         errors: [
           {
             code: 'SPECIAL_HOUR_UPDATE_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error actualizando horario especial'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error actualizando horario especial'
           }
         ]
       };
@@ -315,9 +284,9 @@ class ScheduleService {
         errors: [
           {
             code: 'SPECIAL_HOUR_DELETE_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error eliminando horario especial'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error eliminando horario especial'
           }
         ]
       };
@@ -330,11 +299,11 @@ class ScheduleService {
   async getAppointmentSettings(brandId: number): Promise<ApiResponse<AppointmentSettings>> {
     try {
       console.log('🚀 Getting appointment settings for brand:', brandId);
-      
+
       // TODO: Implementar endpoint en el backend
       // Por ahora, simular respuesta con configuración por defecto
       console.log('⚠️ Appointment settings endpoint not implemented yet, simulating default settings');
-      
+
       const defaultSettings: AppointmentSettings = {
         id: 1,
         brandId,
@@ -346,12 +315,12 @@ class ScheduleService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      
+
       return {
         success: true,
         data: defaultSettings
       };
-      
+
     } catch (error: any) {
       console.error('❌ Appointment settings error:', error);
       return {
@@ -359,9 +328,9 @@ class ScheduleService {
         errors: [
           {
             code: 'APPOINTMENT_SETTINGS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo configuración de citas'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error obteniendo configuración de citas'
           }
         ]
       };
@@ -370,16 +339,16 @@ class ScheduleService {
 
   // Actualizar configuración de citas
   async updateAppointmentSettings(
-    brandId: number, 
+    brandId: number,
     data: UpdateAppointmentSettingsData
   ): Promise<ApiResponse<AppointmentSettings>> {
     try {
       console.log('🚀 Updating appointment settings:', { brandId, data });
-      
+
       // TODO: Implementar endpoint en el backend
       // Por ahora, simular respuesta exitosa
       console.log('⚠️ Appointment settings endpoint not implemented yet, simulating success');
-      
+
       const simulatedResponse: AppointmentSettings = {
         id: 1,
         brandId,
@@ -391,12 +360,12 @@ class ScheduleService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      
+
       return {
         success: true,
         data: simulatedResponse
       };
-      
+
     } catch (error: any) {
       console.error('❌ Appointment settings update error:', error);
       return {
@@ -404,9 +373,9 @@ class ScheduleService {
         errors: [
           {
             code: 'APPOINTMENT_SETTINGS_UPDATE_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error actualizando configuración de citas'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error actualizando configuración de citas'
           }
         ]
       };
@@ -417,8 +386,8 @@ class ScheduleService {
 
   // Validar si una fecha/hora está dentro de horarios de negocio
   async validateBusinessHours(
-    brandId: number, 
-    date: string, 
+    brandId: number,
+    date: string,
     time: string
   ): Promise<ApiResponse<{ isValid: boolean; reason?: string }>> {
     try {
@@ -437,9 +406,9 @@ class ScheduleService {
         errors: [
           {
             code: 'VALIDATION_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error validando horarios'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error validando horarios'
           }
         ]
       };
@@ -448,14 +417,14 @@ class ScheduleService {
 
   // Obtener slots disponibles para una fecha
   async getAvailableSlots(
-    brandId: number, 
-    date: string, 
+    brandId: number,
+    date: string,
     duration?: number
   ): Promise<ApiResponse<string[]>> {
     try {
       const params = new URLSearchParams({ date });
       if (duration) params.append('duration', duration.toString());
-      
+
       console.log('🚀 Getting available slots:', { brandId, date, duration });
       const response = await apiClient.get<string[]>(
         `/brand/${brandId}/available-slots?${params.toString()}`,
@@ -470,9 +439,9 @@ class ScheduleService {
         errors: [
           {
             code: 'AVAILABLE_SLOTS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo slots disponibles'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error obteniendo slots disponibles'
           }
         ]
       };
