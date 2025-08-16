@@ -1,5 +1,5 @@
 // landing\services\auth.service.ts
-import { apiClient } from '../src/api';
+import { apiClient } from '../api';
 import { API_ROUTES } from '../constants/api-routes';
 
 export interface BrandRegistrationData {

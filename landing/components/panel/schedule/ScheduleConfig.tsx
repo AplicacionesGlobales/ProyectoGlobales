@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Clock, Settings, Save, RefreshCw, Calendar, AlertCircle, CheckCircle } from "lucide-react"
-import { scheduleService, BusinessHour, AppointmentSettings } from "@/services/scheduleService"
+import { scheduleService, BusinessHour, AppointmentSettings } from "@/services/schedule.service"
 import { 
   DayOfWeek, 
   DAY_NAMES, 

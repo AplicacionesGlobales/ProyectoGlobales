@@ -1,5 +1,5 @@
 // landing\services\brand.service.ts
-import { apiClient, ApiResponse } from '../src/api';
+import { apiClient, ApiResponse } from '../api';
 import { API_ROUTES } from '../constants/api-routes';
 
 // Interfaces para Brand

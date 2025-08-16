@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react';
-import { landingService } from '@/src/api';
-import type { LandingConfig, BusinessType, Feature, Plan } from '@/src/api/types';
+import { landingService } from '@/api';
+import type { LandingConfig, BusinessType, Feature, Plan } from '@/api/types';
 
 interface UseLandingDataReturn {
   config: LandingConfig | null;
