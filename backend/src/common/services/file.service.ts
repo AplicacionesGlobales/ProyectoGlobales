@@ -1,126 +1,187 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
-
-export interface UploadedFile {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  buffer: Buffer;
-  size: number;
-}
-
-export interface FileUploadResult {
-  success: boolean;
-  url?: string;
-  error?: string;
-}
+import { Injectable } from '@nestjs/common';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 @Injectable()
 export class FileService {
-  private readonly logger = new Logger(FileService.name);
-  private readonly uploadDir: string;
-  private readonly baseUrl: string;
+  private readonly uploadsDir = join(process.cwd(), 'uploads');
+  private readonly brandImagesDir = join(this.uploadsDir, 'brands');
 
-  constructor(private configService: ConfigService) {
-    this.uploadDir = this.configService.get('UPLOAD_DIR', 'uploads');
-    this.baseUrl = this.configService.get('BASE_URL', 'http://localhost:3000');
+  constructor() {
+    this.ensureDirectoriesExist();
   }
 
-  async onModuleInit() {
-    // Crear directorio de uploads si no existe
-    try {
-      await fs.mkdir(this.uploadDir, { recursive: true });
-      await fs.mkdir(path.join(this.uploadDir, 'brands'), { recursive: true });
-      await fs.mkdir(path.join(this.uploadDir, 'brands', 'logos'), { recursive: true });
-    } catch (error) {
-      this.logger.error('Error creating upload directories', error);
+  private async ensureDirectoriesExist() {
+    if (!existsSync(this.uploadsDir)) {
+      await mkdir(this.uploadsDir, { recursive: true });
+    }
+    if (!existsSync(this.brandImagesDir)) {
+      await mkdir(this.brandImagesDir, { recursive: true });
     }
   }
 
   /**
-   * Sube archivo de imagen para una marca
+   * Sube una imagen desde base64 string
    */
-  async uploadBrandImage(
-    brandId: number,
-    file: UploadedFile,
-    type: 'logo' | 'isotopo' | 'imagotipo'
-  ): Promise<FileUploadResult> {
+  async uploadBase64Image(
+    brandId: number, 
+    base64String: string, 
+    imageType: 'logo' | 'isotopo' | 'imagotipo'
+  ): Promise<{ success: boolean; url?: string; error?: string }> {
     try {
-      // Validar archivo
-      const validation = this.validateImageFile(file);
-      if (!validation.valid) {
-        return { success: false, error: validation.error };
+      console.log(`🔄 Uploading ${imageType} for brand ${brandId}...`);
+
+      // Validar formato base64
+      if (!base64String.startsWith('data:image/')) {
+        return {
+          success: false,
+          error: 'Invalid base64 image format'
+        };
       }
 
-      // Generar nombre único
-      const extension = path.extname(file.originalname).toLowerCase();
-      const hash = crypto.createHash('md5').update(file.buffer).digest('hex');
-      const filename = `${brandId}_${type}_${hash}${extension}`;
-      
-      // Ruta completa
-      const brandDir = path.join(this.uploadDir, 'brands', brandId.toString());
-      await fs.mkdir(brandDir, { recursive: true });
-      
-      const filePath = path.join(brandDir, filename);
-      
-      // Escribir archivo
-      await fs.writeFile(filePath, file.buffer);
-      
-      // Retornar URL pública
-      const publicUrl = `${this.baseUrl}/uploads/brands/${brandId}/${filename}`;
-      
-      this.logger.log(`Image uploaded successfully: ${publicUrl}`);
-      return { success: true, url: publicUrl };
-      
-    } catch (error) {
-      this.logger.error('Error uploading file', error);
-      return { success: false, error: 'Error uploading file' };
-    }
-  }
-
-  /**
-   * Valida si el archivo es una imagen válida
-   */
-  private validateImageFile(file: UploadedFile): { valid: boolean; error?: string } {
-    // Validar tamaño (máximo 5MB)
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return { valid: false, error: 'File too large. Maximum size is 5MB' };
-    }
-
-    // Validar tipo MIME
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
-    if (!allowedTypes.includes(file.mimetype)) {
-      return { valid: false, error: 'Invalid file type. Only JPEG, PNG, WebP and SVG are allowed' };
-    }
-
-    // Validar extensión
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.svg'];
-    const extension = path.extname(file.originalname).toLowerCase();
-    if (!allowedExtensions.includes(extension)) {
-      return { valid: false, error: 'Invalid file extension' };
-    }
-
-    return { valid: true };
-  }
-
-  /**
-   * Elimina archivo existente (para actualizaciones)
-   */
-  async deleteFile(url: string): Promise<void> {
-    try {
-      if (url?.includes('/uploads/')) {
-        const relativePath = url.split('/uploads/')[1];
-        const fullPath = path.join(this.uploadDir, relativePath);
-        await fs.unlink(fullPath);
-        this.logger.log(`File deleted: ${fullPath}`);
+      // Extraer información del data URL
+      const matches = base64String.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        return {
+          success: false,
+          error: 'Invalid base64 data URL format'
+        };
       }
+
+      const imageExtension = matches[1];
+      const base64Data = matches[2];
+
+      // Validar extensión
+      const validExtensions = ['jpeg', 'jpg', 'png', 'webp'];
+      if (!validExtensions.includes(imageExtension.toLowerCase())) {
+        return {
+          success: false,
+          error: `Invalid image extension: ${imageExtension}`
+        };
+      }
+
+      // Crear directorio específico para la marca
+      const brandDir = join(this.brandImagesDir, brandId.toString());
+      if (!existsSync(brandDir)) {
+        await mkdir(brandDir, { recursive: true });
+      }
+
+      // Generar nombre único del archivo
+      const timestamp = Date.now();
+      const fileName = `${imageType}_${timestamp}.${imageExtension}`;
+      const filePath = join(brandDir, fileName);
+
+      // Convertir base64 a buffer y guardar
+      const buffer = Buffer.from(base64Data, 'base64');
+      await writeFile(filePath, buffer);
+
+      // Generar URL accesible
+      const publicUrl = `/uploads/brands/${brandId}/${fileName}`;
+
+      console.log(`✅ ${imageType} uploaded successfully:`, publicUrl);
+
+      return {
+        success: true,
+        url: publicUrl
+      };
+
     } catch (error) {
-      this.logger.error('Error deleting file', error);
+      console.error(`❌ Error uploading ${imageType}:`, error);
+      return {
+        success: false,
+        error: error.message || 'Upload failed'
+      };
+    }
+  }
+
+  /**
+   * Elimina una imagen de marca
+   */
+  async deleteBrandImage(imageUrl: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!imageUrl) return { success: true };
+
+      // Extraer ruta del archivo desde la URL
+      const urlParts = imageUrl.split('/uploads/');
+      if (urlParts.length !== 2) {
+        return {
+          success: false,
+          error: 'Invalid image URL format'
+        };
+      }
+
+      const filePath = join(this.uploadsDir, urlParts[1]);
+      
+      if (existsSync(filePath)) {
+        const { unlink } = await import('fs/promises');
+        await unlink(filePath);
+        console.log('✅ Image deleted:', filePath);
+      }
+
+      return { success: true };
+
+    } catch (error) {
+      console.error('❌ Error deleting image:', error);
+      return {
+        success: false,
+        error: error.message || 'Delete failed'
+      };
+    }
+  }
+
+  /**
+   * Valida el tamaño de una imagen base64
+   */
+  validateBase64ImageSize(base64String: string, maxSizeInMB: number = 5): boolean {
+    try {
+      // Calcular tamaño aproximado del archivo
+      const base64Data = base64String.split(',')[1] || base64String;
+      const sizeInBytes = (base64Data.length * 3) / 4;
+      const sizeInMB = sizeInBytes / (1024 * 1024);
+      
+      return sizeInMB <= maxSizeInMB;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Obtiene información de una imagen base64
+   */
+  getBase64ImageInfo(base64String: string): { 
+    mimeType?: string; 
+    extension?: string; 
+    sizeInMB?: number; 
+    isValid: boolean 
+  } {
+    try {
+      if (!base64String.startsWith('data:image/')) {
+        return { isValid: false };
+      }
+
+      const matches = base64String.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        return { isValid: false };
+      }
+
+      const extension = matches[1];
+      const base64Data = matches[2];
+      const mimeType = `image/${extension}`;
+      
+      // Calcular tamaño
+      const sizeInBytes = (base64Data.length * 3) / 4;
+      const sizeInMB = sizeInBytes / (1024 * 1024);
+
+      return {
+        mimeType,
+        extension,
+        sizeInMB: Math.round(sizeInMB * 100) / 100,
+        isValid: true
+      };
+
+    } catch (error) {
+      return { isValid: false };
     }
   }
 }

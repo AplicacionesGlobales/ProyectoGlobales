@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowLeft, ArrowRight, Lightbulb, Filter, Loader2 } from "lucide-react"
 import { useLandingData } from "@/hooks/use-landing-data"
-import { Feature } from "@/lib/api/types"
+import { Feature } from "@/app/api/types"
 
 interface FeaturesStepProps {
   features: string[]

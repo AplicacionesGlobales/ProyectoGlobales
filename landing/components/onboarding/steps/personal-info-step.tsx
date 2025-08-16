@@ -1,25 +1,14 @@
 "use client"
-
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
-  ArrowRight, 
-  Eye, 
-  EyeOff, 
-  Mail, 
-  Lock, 
-  User, 
-  Building, 
-  Phone, 
-  FileText,
-  Check,
-  ChevronDown,
-  Search,
-  X
+  ArrowRight, Eye, EyeOff, Mail, Lock, User, Building, Phone, FileText,
+  Check, ChevronDown, Search, X, Loader2, CheckCircle, XCircle, AtSign
 } from "lucide-react"
+import { useValidation } from "@/hooks/use-validation"
 
-// Lista de países con códigos
+// Countries data
 const countries = [
   { name: "Costa Rica", code: "+506", flag: "🇨🇷", iso: "CR" },
   { name: "Estados Unidos", code: "+1", flag: "🇺🇸", iso: "US" },
@@ -50,7 +39,7 @@ const countries = [
   { name: "Portugal", code: "+351", flag: "🇵🇹", iso: "PT" },
 ]
 
-// Password strength calculator
+// Password strength utilities
 const calculatePasswordStrength = (password: string) => {
   let strength = 0
   const checks = {
@@ -89,7 +78,7 @@ const CountrySelector = ({ selectedCountry, onSelect, phoneNumber, onPhoneChange
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const dropdownRef = useRef<HTMLDivElement>(null)
-
+  
   const filteredCountries = countries.filter(country =>
     country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     country.code.includes(searchQuery)
@@ -101,7 +90,6 @@ const CountrySelector = ({ selectedCountry, onSelect, phoneNumber, onPhoneChange
         setIsOpen(false)
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
@@ -109,7 +97,6 @@ const CountrySelector = ({ selectedCountry, onSelect, phoneNumber, onPhoneChange
   return (
     <div className="relative" ref={dropdownRef}>
       <div className="flex gap-2">
-        {/* Country Code Selector */}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
@@ -119,8 +106,7 @@ const CountrySelector = ({ selectedCountry, onSelect, phoneNumber, onPhoneChange
           <span className="text-sm font-medium text-gray-700">{selectedCountry.code}</span>
           <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
-
-        {/* Phone Number Input */}
+        
         <div className="flex-1 flex items-center border-2 rounded-xl px-4 bg-white border-gray-200 hover:border-blue-400 focus-within:border-blue-500 focus-within:bg-blue-50 transition-all duration-200 shadow-sm hover:shadow-md">
           <Phone className="mr-3 text-gray-400" size={20} />
           <input
@@ -133,7 +119,6 @@ const CountrySelector = ({ selectedCountry, onSelect, phoneNumber, onPhoneChange
         </div>
       </div>
 
-      {/* Dropdown */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -142,7 +127,6 @@ const CountrySelector = ({ selectedCountry, onSelect, phoneNumber, onPhoneChange
             exit={{ opacity: 0, y: -10 }}
             className="absolute z-50 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
           >
-            {/* Search Bar */}
             <div className="p-3 border-b border-gray-100">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -163,8 +147,7 @@ const CountrySelector = ({ selectedCountry, onSelect, phoneNumber, onPhoneChange
                 )}
               </div>
             </div>
-
-            {/* Countries List */}
+            
             <div className="max-h-64 overflow-y-auto">
               {filteredCountries.map((country) => (
                 <button
@@ -201,6 +184,7 @@ interface PersonalInfoStepProps {
     firstName: string
     lastName: string
     email: string
+    username: string
     phone: string
     businessName: string
     description: string
@@ -216,12 +200,30 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
-  const [selectedCountry, setSelectedCountry] = useState(countries[0]) // Costa Rica por defecto
+  const [selectedCountry, setSelectedCountry] = useState(countries[0])
   const [phoneNumber, setPhoneNumber] = useState("")
+  
+  // Validation hooks
+  const emailValidation = useValidation('email', data.email, { 
+    required: true, 
+    debounceMs: 500 
+  });
+  
+  const usernameValidation = useValidation('username', data.username, { 
+    required: true, 
+    minLength: 3, 
+    debounceMs: 500 
+  });
   
   const passwordStrength = calculatePasswordStrength(data.password)
 
-  // Validación de campos
+  // Initialize validation when fields have content
+  useEffect(() => {
+    if (data.email.trim()) emailValidation.markAsTouched()
+    if (data.username.trim()) usernameValidation.markAsTouched()
+  }, [])
+
+  // Field validation
   const validateField = (field: string, value: string) => {
     let error = ""
     
@@ -233,11 +235,6 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
       case "lastName":
         if (!value.trim()) error = "El apellido es requerido"
         else if (value.length < 2) error = "Debe tener al menos 2 caracteres"
-        break
-      case "email":
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (!value.trim()) error = "El correo es requerido"
-        else if (!emailRegex.test(value)) error = "Formato de correo inválido"
         break
       case "phone":
         if (phoneNumber && phoneNumber.length < 8) error = "El teléfono debe tener al menos 8 dígitos"
@@ -263,13 +260,20 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
 
   const handleFieldChange = (field: string, value: string) => {
     onChange({ ...data, [field]: value })
-    if (touched[field]) {
-      validateField(field, value)
-    }
+    
+    // Mark validation hooks as touched when field changes and has content
+    if (field === 'email' && value.trim()) emailValidation.markAsTouched()
+    if (field === 'username' && value.trim()) usernameValidation.markAsTouched()
+    
+    if (touched[field]) validateField(field, value)
   }
 
   const handleFieldBlur = (field: string) => {
     setTouched(prev => ({ ...prev, [field]: true }))
+    
+    if (field === 'email') emailValidation.markAsTouched()
+    if (field === 'username') usernameValidation.markAsTouched()
+    
     validateField(field, data[field as keyof typeof data])
   }
 
@@ -277,28 +281,45 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
     setPhoneNumber(value)
     const fullPhone = `${selectedCountry.code}${value}`
     onChange({ ...data, phone: fullPhone })
-    if (touched.phone) {
-      validateField("phone", fullPhone)
-    }
+    if (touched.phone) validateField("phone", fullPhone)
   }
 
   const handleNext = () => {
-    const fields = ["firstName", "lastName", "email", "businessName", "password", "confirmPassword"]
+    const fields = ["firstName", "lastName", "businessName", "password", "confirmPassword"]
     const newErrors: Record<string, string> = {}
     
+    // Mark validation hooks as touched
+    if (data.email.trim()) emailValidation.markAsTouched()
+    if (data.username.trim()) usernameValidation.markAsTouched()
+    
+    // Validate regular fields
     fields.forEach(field => {
       const error = validateField(field, data[field as keyof typeof data])
       if (error) newErrors[field] = error
     })
     
-    // Validar teléfono si se ha ingresado
+    // Check email validation
+    if (!data.email.trim()) {
+      newErrors.email = "El email es requerido"
+    } else if (emailValidation.hasError || emailValidation.isValidating || emailValidation.isValid !== true) {
+      newErrors.email = emailValidation.error || "Email requerido"
+    }
+    
+    // Check username validation
+    if (!data.username.trim()) {
+      newErrors.username = "El username es requerido"
+    } else if (usernameValidation.hasError || usernameValidation.isValidating || usernameValidation.isValid !== true) {
+      newErrors.username = usernameValidation.error || "Username requerido"
+    }
+    
+    // Validate phone if entered
     if (phoneNumber) {
       const phoneError = validateField("phone", phoneNumber)
       if (phoneError) newErrors.phone = phoneError
     }
     
     setErrors(newErrors)
-    setTouched(fields.reduce((acc, field) => ({ ...acc, [field]: true }), {}))
+    setTouched(fields.reduce((acc, field) => ({ ...acc, [field]: true }), { email: true, username: true }))
     
     if (Object.keys(newErrors).length === 0) {
       onNext()
@@ -314,8 +335,36 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
     required: boolean = false,
     options: any = {}
   ) => {
-    const hasError = touched[field] && errors[field]
-    const isValid = touched[field] && !errors[field] && data[field as keyof typeof data]
+    let hasError: boolean | string = touched[field] && errors[field]
+    let isValid: boolean = Boolean(touched[field] && !errors[field] && data[field as keyof typeof data])
+    let validationIcon = null
+    
+    // Special handling for email and username
+    if (field === 'email') {
+      hasError = emailValidation.hasError
+      isValid = emailValidation.isValidAndTouched
+      if (emailValidation.isValidating) {
+        validationIcon = <Loader2 className="text-blue-500 ml-2 animate-spin" size={20} />
+      } else if (emailValidation.isValidAndTouched) {
+        validationIcon = <CheckCircle className="text-green-500 ml-2" size={20} />
+      } else if (emailValidation.hasError) {
+        validationIcon = <XCircle className="text-red-500 ml-2" size={20} />
+      }
+    } else if (field === 'username') {
+      hasError = usernameValidation.hasError
+      isValid = usernameValidation.isValidAndTouched
+      if (usernameValidation.isValidating) {
+        validationIcon = <Loader2 className="text-blue-500 ml-2 animate-spin" size={20} />
+      } else if (usernameValidation.isValidAndTouched) {
+        validationIcon = <CheckCircle className="text-green-500 ml-2" size={20} />
+      } else if (usernameValidation.hasError) {
+        validationIcon = <XCircle className="text-red-500 ml-2" size={20} />
+      }
+    }
+    
+    const displayError = field === 'email' ? emailValidation.error : 
+                        field === 'username' ? usernameValidation.error : 
+                        errors[field]
     
     return (
       <motion.div
@@ -368,21 +417,43 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
                 {options.showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             )}
-            {isValid && !options.isPassword && !options.isTextarea && (
+            {/* Validation icons */}
+            {validationIcon || (isValid && !options.isPassword && !options.isTextarea && (
               <Check className="text-green-500 ml-2" size={20} />
-            )}
+            ))}
             {isValid && options.isTextarea && (
               <Check className="text-green-500 ml-2 mt-3" size={20} />
             )}
           </div>
-          {hasError && (
+          {hasError && displayError && (
             <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-red-500 text-xs mt-1 ml-1 flex items-center gap-1"
             >
               <span className="inline-block w-1 h-1 bg-red-500 rounded-full"></span>
-              {errors[field]}
+              {displayError}
+            </motion.p>
+          )}
+          {/* Success messages */}
+          {field === 'email' && emailValidation.isValidAndTouched && (
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-green-600 text-xs mt-1 ml-1 flex items-center gap-1"
+            >
+              <CheckCircle className="w-3 h-3" />
+              Email disponible
+            </motion.p>
+          )}
+          {field === 'username' && usernameValidation.isValidAndTouched && (
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-green-600 text-xs mt-1 ml-1 flex items-center gap-1"
+            >
+              <CheckCircle className="w-3 h-3" />
+              Username disponible
             </motion.p>
           )}
         </div>
@@ -392,7 +463,7 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
 
   return (
     <div className="space-y-6">
-      {/* Header con icono */}
+      {/* Header */}
       <div className="text-center mb-8">
         <motion.div 
           initial={{ scale: 0 }}
@@ -410,13 +481,14 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
         </p>
       </div>
 
-      {/* Campos del formulario */}
+      {/* Form fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {renderInput("firstName", <User size={20} />, "Juan", "Nombre", "text", true)}
         {renderInput("lastName", <User size={20} />, "Pérez", "Apellido", "text", true)}
       </div>
 
       {renderInput("email", <Mail size={20} />, "tu@ejemplo.com", "Correo Electrónico", "email", true)}
+      {renderInput("username", <AtSign size={20} />, "mi_usuario", "Nombre de Usuario", "text", true)}
       
       {/* Phone with Country Selector */}
       <motion.div
@@ -447,7 +519,6 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
       </motion.div>
 
       {renderInput("businessName", <Building size={20} />, "Mi Empresa", "Nombre de tu Negocio", "text", true)}
-      
       {renderInput(
         "description", 
         <FileText size={20} />, 
@@ -458,7 +529,7 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
         { isTextarea: true }
       )}
 
-      {/* Contraseñas */}
+      {/* Password fields */}
       <div className="space-y-4">
         {renderInput(
           "password",
@@ -502,46 +573,24 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
               />
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className={`flex items-center ${passwordStrength.checks.hasMinLength ? 'text-green-600' : 'text-gray-400'}`}>
-                {passwordStrength.checks.hasMinLength ? (
-                  <Check size={14} className="mr-1" />
-                ) : (
-                  <X size={14} className="mr-1" />
-                )}
-                8+ caracteres
-              </div>
-              <div className={`flex items-center ${passwordStrength.checks.hasUpperCase ? 'text-green-600' : 'text-gray-400'}`}>
-                {passwordStrength.checks.hasUpperCase ? (
-                  <Check size={14} className="mr-1" />
-                ) : (
-                  <X size={14} className="mr-1" />
-                )}
-                Una mayúscula
-              </div>
-              <div className={`flex items-center ${passwordStrength.checks.hasLowerCase ? 'text-green-600' : 'text-gray-400'}`}>
-                {passwordStrength.checks.hasLowerCase ? (
-                  <Check size={14} className="mr-1" />
-                ) : (
-                  <X size={14} className="mr-1" />
-                )}
-                Una minúscula
-              </div>
-              <div className={`flex items-center ${passwordStrength.checks.hasNumber ? 'text-green-600' : 'text-gray-400'}`}>
-                {passwordStrength.checks.hasNumber ? (
-                  <Check size={14} className="mr-1" />
-                ) : (
-                  <X size={14} className="mr-1" />
-                )}
-                Un número
-              </div>
-              <div className={`flex items-center col-span-2 ${passwordStrength.checks.hasSpecialChar ? 'text-green-600' : 'text-gray-400'}`}>
-                {passwordStrength.checks.hasSpecialChar ? (
-                  <Check size={14} className="mr-1" />
-                ) : (
-                  <X size={14} className="mr-1" />
-                )}
-                Carácter especial (!@#$%^&*)
-              </div>
+              {[
+                { key: 'hasMinLength', text: '8+ caracteres' },
+                { key: 'hasUpperCase', text: 'Una mayúscula' },
+                { key: 'hasLowerCase', text: 'Una minúscula' },
+                { key: 'hasNumber', text: 'Un número' },
+                { key: 'hasSpecialChar', text: 'Carácter especial (!@#$%^&*)', colSpan: 'col-span-2' }
+              ].map(({ key, text, colSpan }) => (
+                <div key={key} className={`flex items-center ${colSpan || ''} ${
+                  passwordStrength.checks[key as keyof typeof passwordStrength.checks] ? 'text-green-600' : 'text-gray-400'
+                }`}>
+                  {passwordStrength.checks[key as keyof typeof passwordStrength.checks] ? (
+                    <Check size={14} className="mr-1" />
+                  ) : (
+                    <X size={14} className="mr-1" />
+                  )}
+                  {text}
+                </div>
+              ))}
             </div>
           </motion.div>
         )}
@@ -562,7 +611,7 @@ export function PersonalInfoStep({ data, onChange, onNext }: PersonalInfoStepPro
         )}
       </div>
 
-      {/* Botón de continuar */}
+      {/* Continue button */}
       <div className="flex justify-end mt-8">
         <motion.button
           whileHover={{ scale: 1.02 }}

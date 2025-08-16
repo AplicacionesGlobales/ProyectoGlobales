@@ -1,26 +1,24 @@
 "use client"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, ArrowRight, Check, Home } from "lucide-react"
 import Link from "next/link"
-
-// Import individual step components
 import { PersonalInfoStep } from "./steps/personal-info-step"
 import { BusinessInfoStep } from "./steps/business-info-step"
 import { FeaturesStep } from "./steps/features-step"
 import { CustomizationStepNew } from "../customization-step"
 import { PricingStep } from "./steps/pricing-step"
 import { ConfirmationStep } from "./steps/confirmation-step"
-import { PaymentStep } from "./steps/payment-step"
+import PaymentStep from "./steps/payment-step"
+import { SuccessStep } from "./steps/success-step"
 
 export interface OnboardingData {
   personalInfo: {
     firstName: string
     lastName: string
     email: string
+    username: string
     phone: string
     businessName: string
     description: string
@@ -52,6 +50,7 @@ const steps = [
   { id: 5, title: "Plan", description: "Elige tu modalidad" },
   { id: 6, title: "Confirmación", description: "¡Casi listo!" },
   { id: 7, title: "Pago", description: "Procesar suscripción" },
+  { id: 8, title: "¡Listo!", description: "Registro completado" },
 ]
 
 export function OnboardingFlow() {
@@ -61,6 +60,7 @@ export function OnboardingFlow() {
       firstName: "",
       lastName: "",
       email: "",
+      username: "",
       phone: "",
       businessName: "",
       description: "",
@@ -106,9 +106,6 @@ export function OnboardingFlow() {
   }
 
   const handleCustomizationChange = (field: string, value: any) => {
-    console.log('handleCustomizationChange called with:', field, value); // Debug log
-    
-    // Mapear correctamente los campos
     if (field === "paletaColores") {
       updateData({
         customization: {
@@ -117,7 +114,6 @@ export function OnboardingFlow() {
         }
       })
     } else {
-      // Para otros campos como logos
       const fieldMapping: { [key: string]: string } = {
         'logotipo': 'logoUrl',
         'isotipo': 'isotopoUrl', 
@@ -148,105 +144,103 @@ export function OnboardingFlow() {
   }
 
   const handleComplete = async () => {
-    // TODO: Enviar datos al backend
     console.log("Onboarding completed:", data)
+    nextStep() // Ir al paso de éxito
   }
 
   const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <PersonalInfoStep
-            data={data.personalInfo}
-            onChange={(personalInfo) => updateData({ personalInfo })}
-            onNext={nextStep}
-          />
-        )
-      case 2:
-        return (
-          <BusinessInfoStep
-            businessType={data.businessType}
-            onChange={(businessType) => updateData({ businessType })}
-            onNext={nextStep}
-            onPrev={prevStep}
-          />
-        )
-      case 3:
-        return (
-          <FeaturesStep
-            features={data.selectedFeatures}
-            businessType={data.businessType}
-            onChange={(selectedFeatures) => updateData({ selectedFeatures })}
-            onNext={nextStep}
-            onPrev={prevStep}
-          />
-        )
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900">Personaliza tu App</h2>
-              <p className="mt-2 text-gray-600">
-                Elige los colores y sube tus logos para darle identidad a tu aplicación
-              </p>
-            </div>
-            <CustomizationStepNew
-              formData={{
-                paletaColores: data.customization.colorPalette,
-                coloresPersonalizados: data.customization.customColors,
-                logotipo: data.customization.logoUrl || null,
-                isotipo: data.customization.isotopoUrl || null,
-                imagotipo: data.customization.imagotipoUrl || null,
-              }}
-              onInputChange={handleCustomizationChange}
-              onCustomColorChange={handleCustomColorChange}
-              onFileChange={handleFileChange}
-            />
-            <div className="flex justify-between">
-              <Button onClick={prevStep} variant="outline" className="flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Anterior
-              </Button>
-              <Button 
-                onClick={nextStep} 
-                disabled={!data.customization.colorPalette} 
-                className="flex items-center gap-2"
-              >
-                Continuar
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
+    const stepComponents = {
+      1: (
+        <PersonalInfoStep
+          data={data.personalInfo}
+          onChange={(personalInfo) => updateData({ personalInfo })}
+          onNext={nextStep}
+        />
+      ),
+      2: (
+        <BusinessInfoStep
+          businessType={data.businessType}
+          onChange={(businessType) => updateData({ businessType })}
+          onNext={nextStep}
+          onPrev={prevStep}
+        />
+      ),
+      3: (
+        <FeaturesStep
+          features={data.selectedFeatures}
+          businessType={data.businessType}
+          onChange={(selectedFeatures) => updateData({ selectedFeatures })}
+          onNext={nextStep}
+          onPrev={prevStep}
+        />
+      ),
+      4: (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900">Personaliza tu App</h2>
+            <p className="mt-2 text-gray-600">
+              Elige los colores y sube tus logos para darle identidad a tu aplicación
+            </p>
           </div>
-        )
-      case 5:
-        return (
-          <PricingStep
-            plan={data.plan}
-            selectedFeatures={data.selectedFeatures}
-            onChange={(plan) => updateData({ plan })}
-            onNext={nextStep}
-            onPrev={prevStep}
+          <CustomizationStepNew
+            formData={{
+              paletaColores: data.customization.colorPalette,
+              coloresPersonalizados: data.customization.customColors,
+              logotipo: data.customization.logoUrl || null,
+              isotipo: data.customization.isotopoUrl || null,
+              imagotipo: data.customization.imagotipoUrl || null,
+            }}
+            onInputChange={handleCustomizationChange}
+            onCustomColorChange={handleCustomColorChange}
+            onFileChange={handleFileChange}
           />
-        )
-      case 6:
-        return (
-          <ConfirmationStep
-            data={data}
-            onNext={nextStep}
-            onPrev={prevStep}
-          />
-        )
-      case 7:
-        return (
-          <PaymentStep
-            data={data}
-            onComplete={handleComplete}
-            onPrev={prevStep}
-          />
-        )
-      default:
-        return null
+          <div className="flex justify-between">
+            <Button onClick={prevStep} variant="outline" className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Anterior
+            </Button>
+            <Button 
+              onClick={nextStep} 
+              disabled={!data.customization.colorPalette} 
+              className="flex items-center gap-2"
+            >
+              Continuar
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      ),
+      5: (
+        <PricingStep
+          plan={data.plan}
+          selectedFeatures={data.selectedFeatures}
+          onChange={(plan) => updateData({ plan })}
+          onNext={nextStep}
+          onPrev={prevStep}
+        />
+      ),
+      6: (
+        <ConfirmationStep
+          data={data}
+          onNext={nextStep}
+          onPrev={prevStep}
+        />
+      ),
+      7: (
+        <PaymentStep
+          data={data}
+          onComplete={handleComplete}
+          onPrev={prevStep}
+        />
+      ),
+      8: (
+        <SuccessStep
+          data={data}
+        />
+      )
     }
+
+    return stepComponents[currentStep as keyof typeof stepComponents] || null
   }
 
   const progress = (currentStep / steps.length) * 100
@@ -256,7 +250,6 @@ export function OnboardingFlow() {
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="mb-10">
-          {/* Título y contador de paso */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -276,9 +269,8 @@ export function OnboardingFlow() {
             </div>
           </div>
           
-          {/* Progress Steps - Diseño simplificado */}
+          {/* Progress Steps */}
           <div className="relative">
-            {/* Línea de conexión */}
             <div className="absolute top-5 left-5 right-5 h-0.5 bg-gray-200"></div>
             <div 
               className="absolute top-5 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-700 ease-out"
@@ -288,18 +280,13 @@ export function OnboardingFlow() {
               }}
             ></div>
             
-            {/* Steps */}
             <div className="relative flex justify-between">
-              {steps.map((step, index) => {
+              {steps.map((step) => {
                 const isCompleted = currentStep > step.id
                 const isCurrent = currentStep === step.id
                 
                 return (
-                  <div
-                    key={step.id}
-                    className="flex flex-col items-center"
-                  >
-                    {/* Círculo del paso */}
+                  <div key={step.id} className="flex flex-col items-center">
                     <div className="relative mb-3">
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
@@ -310,15 +297,10 @@ export function OnboardingFlow() {
                             : "bg-white border-2 border-gray-300 text-gray-500"
                         }`}
                       >
-                        {isCompleted ? (
-                          <Check className="w-4 h-4" />
-                        ) : (
-                          step.id
-                        )}
+                        {isCompleted ? <Check className="w-4 h-4" /> : step.id}
                       </div>
                     </div>
                     
-                    {/* Título del paso */}
                     <div className="text-center max-w-20">
                       <div className={`text-xs font-medium leading-tight ${
                         isCurrent 

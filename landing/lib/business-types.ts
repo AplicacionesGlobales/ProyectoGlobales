@@ -2,7 +2,7 @@
 // The main data should ALWAYS come from the backend API via landingService
 // Use useLandingData hook instead of these fallback constants
 
-import { BusinessType, Feature, Plan } from './api/types';
+import { BusinessType, Feature, Plan } from '../app/api/types';
 
 // Legacy interfaces for backward compatibility ONLY
 // These should not be used in new code - use API types instead

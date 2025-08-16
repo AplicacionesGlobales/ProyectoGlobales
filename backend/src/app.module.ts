@@ -3,18 +3,22 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
+import { BrandRegistrationModule } from './brand-register/brand-registration.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PaymentModule } from './payment/payment.module';
 import { LandingDataModule } from './landing-data/landing-data.module';
 import { ValidateModule } from './validate/validate.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { BrandModule } from './brand/brand.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    PrismaModule,
     HealthModule,
+    PrismaModule,
     AuthModule,
+    BrandModule,
+    BrandRegistrationModule,
     PaymentModule,
     LandingDataModule,
     ValidateModule
