@@ -50,7 +50,7 @@ import {
   CLIENT_TYPE_LABELS,
   CLIENT_TYPE_COLORS,
   ClientStats
-} from "@/services/clientsService"
+} from "@/services/client.service"
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -407,9 +407,9 @@ export default function ClientesPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalClients}</div>
+              <div className="text-2xl font-bold">{stats?.totalClients || 0}</div>
               <p className="text-xs text-muted-foreground">
-                {stats.activeClients} activos
+                {stats?.activeClients || 0} activos
               </p>
             </CardContent>
           </Card>
@@ -420,7 +420,7 @@ export default function ClientesPage() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.newClientsThisMonth}</div>
+              <div className="text-2xl font-bold">{stats?.newClientsThisMonth || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Clientes registrados
               </p>
@@ -429,26 +429,26 @@ export default function ClientesPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clientes VIP</CardTitle>
+              <CardTitle className="text-sm font-medium">Clientes</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.clientTypes.vip}</div>
+              <div className="text-2xl font-bold">{stats?.clientTypes?.client || 0}</div>
               <p className="text-xs text-muted-foreground">
-                Clientes premium
+                Clientes registrados
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Regulares</CardTitle>
+              <CardTitle className="text-sm font-medium">Administradores</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.clientTypes.regular}</div>
+              <div className="text-2xl font-bold">{stats?.clientTypes?.root || 0}</div>
               <p className="text-xs text-muted-foreground">
-                Clientes frecuentes
+                Usuarios admin
               </p>
             </CardContent>
           </Card>
@@ -474,9 +474,8 @@ export default function ClientesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value={ClientType.NEW}>Nuevos</SelectItem>
-                <SelectItem value={ClientType.REGULAR}>Regulares</SelectItem>
-                <SelectItem value={ClientType.VIP}>VIP</SelectItem>
+                <SelectItem value={ClientType.CLIENT}>Clientes</SelectItem>
+                <SelectItem value={ClientType.ROOT}>Administradores</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" onClick={loadClients}>

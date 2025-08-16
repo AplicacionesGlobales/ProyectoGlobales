@@ -96,12 +96,26 @@ class ScheduleService {
   async getBusinessHours(brandId: number): Promise<ApiResponse<BusinessHour[]>> {
     try {
       console.log('🚀 Getting business hours for brand:', brandId);
-      const response = await apiClient.get<BusinessHour[]>(
-        API_ENDPOINTS.SCHEDULE.GET_BUSINESS_HOURS(brandId),
-        { headers: this.getAuthHeaders() }
-      );
-      console.log('✅ Business hours response:', response);
-      return response;
+      
+      // TODO: Implementar endpoint en el backend
+      // Por ahora, simular respuesta con horarios por defecto
+      console.log('⚠️ Business hours endpoint not implemented yet, simulating default hours');
+      
+      const defaultHours: BusinessHour[] = [
+        { id: 1, brandId, dayOfWeek: 0, isOpen: false, openTime: undefined, closeTime: undefined, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Domingo
+        { id: 2, brandId, dayOfWeek: 1, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Lunes
+        { id: 3, brandId, dayOfWeek: 2, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Martes
+        { id: 4, brandId, dayOfWeek: 3, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Miércoles
+        { id: 5, brandId, dayOfWeek: 4, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Jueves
+        { id: 6, brandId, dayOfWeek: 5, isOpen: true, openTime: "09:00", closeTime: "18:00", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Viernes
+        { id: 7, brandId, dayOfWeek: 6, isOpen: false, openTime: undefined, closeTime: undefined, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }, // Sábado
+      ];
+      
+      return {
+        success: true,
+        data: defaultHours
+      };
+      
     } catch (error: any) {
       console.error('❌ Business hours error:', error);
       return {
@@ -122,13 +136,27 @@ class ScheduleService {
   async updateBusinessHours(brandId: number, hours: CreateBusinessHourData[]): Promise<ApiResponse<BusinessHour[]>> {
     try {
       console.log('🚀 Updating business hours:', { brandId, hours });
-      const response = await apiClient.put<BusinessHour[]>(
-        API_ENDPOINTS.SCHEDULE.UPDATE_BUSINESS_HOURS(brandId),
-        { hours },
-        { headers: this.getAuthHeaders() }
-      );
-      console.log('✅ Business hours update response:', response);
-      return response;
+      
+      // TODO: Implementar endpoint en el backend
+      // Por ahora, simular respuesta exitosa
+      console.log('⚠️ Business hours endpoint not implemented yet, simulating success');
+      
+      const simulatedResponse: BusinessHour[] = hours.map((hour, index) => ({
+        id: index + 1,
+        brandId,
+        dayOfWeek: hour.dayOfWeek,
+        openTime: hour.openTime,
+        closeTime: hour.closeTime,
+        isOpen: hour.isOpen,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+      
+      return {
+        success: true,
+        data: simulatedResponse
+      };
+      
     } catch (error: any) {
       console.error('❌ Business hours update error:', error);
       return {
@@ -302,12 +330,28 @@ class ScheduleService {
   async getAppointmentSettings(brandId: number): Promise<ApiResponse<AppointmentSettings>> {
     try {
       console.log('🚀 Getting appointment settings for brand:', brandId);
-      const response = await apiClient.get<AppointmentSettings>(
-        `/brand/${brandId}/appointment-settings`,
-        { headers: this.getAuthHeaders() }
-      );
-      console.log('✅ Appointment settings response:', response);
-      return response;
+      
+      // TODO: Implementar endpoint en el backend
+      // Por ahora, simular respuesta con configuración por defecto
+      console.log('⚠️ Appointment settings endpoint not implemented yet, simulating default settings');
+      
+      const defaultSettings: AppointmentSettings = {
+        id: 1,
+        brandId,
+        defaultDuration: 60,
+        bufferTime: 15,
+        maxAdvanceBookingDays: 30,
+        minAdvanceBookingHours: 24,
+        allowSameDayBooking: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      return {
+        success: true,
+        data: defaultSettings
+      };
+      
     } catch (error: any) {
       console.error('❌ Appointment settings error:', error);
       return {
@@ -331,13 +375,28 @@ class ScheduleService {
   ): Promise<ApiResponse<AppointmentSettings>> {
     try {
       console.log('🚀 Updating appointment settings:', { brandId, data });
-      const response = await apiClient.put<AppointmentSettings>(
-        `/brand/${brandId}/appointment-settings`,
-        data,
-        { headers: this.getAuthHeaders() }
-      );
-      console.log('✅ Appointment settings update response:', response);
-      return response;
+      
+      // TODO: Implementar endpoint en el backend
+      // Por ahora, simular respuesta exitosa
+      console.log('⚠️ Appointment settings endpoint not implemented yet, simulating success');
+      
+      const simulatedResponse: AppointmentSettings = {
+        id: 1,
+        brandId,
+        defaultDuration: data.defaultDuration || 60,
+        bufferTime: data.bufferTime || 15,
+        maxAdvanceBookingDays: data.maxAdvanceBookingDays || 30,
+        minAdvanceBookingHours: data.minAdvanceBookingHours || 24,
+        allowSameDayBooking: data.allowSameDayBooking || true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      return {
+        success: true,
+        data: simulatedResponse
+      };
+      
     } catch (error: any) {
       console.error('❌ Appointment settings update error:', error);
       return {

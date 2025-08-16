@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Settings, User, Building, Bell, Clock, Palette, Save, AlertCircle, CheckCircle } from "lucide-react"
 import { ScheduleConfig } from "@/components/panel/schedule/ScheduleConfig"
 import { SpecialHours } from "@/components/panel/schedule/SpecialHours"
-import { brandService } from "@/services/brandService"
+import { brandService } from "@/services/brand.service"
 
 interface UserData {
   id: number
