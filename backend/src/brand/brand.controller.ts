@@ -25,7 +25,7 @@ import {
 import { BrandService } from './brand.service';
 import { BaseResponseDto } from '../common/dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { BrandOwnerGuard } from './guards/brand-owner.guard';
+import { BrandOwnerGuard } from '../common/guards/brand-owner.guard';
 import {
   BrandAdminResponseDto,
   UpdateBrandDto,

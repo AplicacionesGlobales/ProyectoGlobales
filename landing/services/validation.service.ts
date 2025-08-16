@@ -1,4 +1,4 @@
-import { apiClient } from '../app/api/client';
+import { apiClient } from '../src/api';
 import { API_ROUTES } from '../constants/api-routes';
 
 // Types

@@ -1,8 +1,4 @@
 // constants/api-routes.ts
-/**
- * API Routes Constants
- * Centralized configuration for all API endpoints
- */
 
 // Base configuration
 export const API_CONFIG = {

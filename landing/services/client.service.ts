@@ -1,6 +1,6 @@
 // services/clientsService.ts
-import { apiClient, ApiResponse } from '../app/api/client';
-import { API_ENDPOINTS } from '../app/api/config';
+import { apiClient, ApiResponse } from '../src/api';
+import { API_ENDPOINTS } from '../src/api';
 
 // Interfaces para Clients
 export interface Client {
@@ -541,7 +541,7 @@ class ClientsService {
     try {
       console.log('🚀 Validating client email:', { email, excludeClientId });
       const response = await apiClient.post<{ isValid: boolean; exists: boolean }>(
-        API_ENDPOINTS.VALIDATE.EMAIL,
+        API_ENDPOINTS.VALIDATION.EMAIL,
         { email, excludeClientId },
         { headers: this.getAuthHeaders() }
       );
