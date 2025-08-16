@@ -1,3 +1,5 @@
+// landing\api\types.ts
+
 // API Response types matching backend
 export interface ApiResponse<T = any> {
   success: boolean;

@@ -1,3 +1,4 @@
+// landing\api\endpoints.ts
 import { API_BASE_URL, API_CONFIG, API_ENDPOINTS, REQUEST_TIMEOUT } from './constants';
 import {
   ApiResponse,

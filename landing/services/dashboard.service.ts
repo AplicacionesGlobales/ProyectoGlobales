@@ -1,4 +1,4 @@
-// services/dashboardService.ts
+// services/dashboard.service.ts
 import { apiClient, ApiResponse } from '../api';
 import { API_ENDPOINTS } from '../api';
 

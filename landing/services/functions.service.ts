@@ -1,4 +1,4 @@
-// services/functionsService.ts
+// services/functions.service.ts
 import { apiClient, ApiResponse } from '../api';
 import { API_ENDPOINTS } from '../api';
 import { FunctionCategory } from '../types/functions.types';

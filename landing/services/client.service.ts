@@ -1,4 +1,4 @@
-// services/clientsService.ts
+// services/clients.service.ts
 import { apiClient, ApiResponse } from '../api';
 import { API_ENDPOINTS } from '../api';
 
