@@ -1,210 +1,137 @@
 // landing\app\panel\funciones\page.tsx
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Zap, Plus, Clock, DollarSign, Edit, Trash2 } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { 
+  Zap, 
+  Plus, 
+  Clock, 
+  DollarSign, 
+  Edit, 
+  Trash2, 
+  Search,
+  TrendingUp,
+  Briefcase,
+  Crown,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw
+} from "lucide-react"
+import { functionsService, BrandFunction, AvailableFeature, FunctionStats } from "@/services/functionsService"
+import { 
+  FunctionCategory, 
+  CATEGORY_LABELS, 
+  CATEGORY_COLORS,
+  FUNCTION_TEMPLATES,
+  functionUtils,
+  FunctionFormData,
+  COMMON_DURATIONS,
+  PRICE_RANGES
+} from "@/types/functions.types"
+
+interface BrandData {
+  id: number
+  name: string
+  businessType?: string
+}
 
 export default function FuncionesPage() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Funciones</h1>
-          <p className="text-muted-foreground">
-            Gestiona los servicios y funciones que ofreces en tu negocio.
-          </p>
-        </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Función
-        </Button>
-      </div>
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  
+  const [brandData, setBrandData] = useState<BrandData | null>(null)
+  const [functions, setFunctions] = useState<BrandFunction[]>([])
+  const [availableFeatures, setAvailableFeatures] = useState<AvailableFeature[]>([])
+  const [stats, setStats] = useState<FunctionStats | null>(null)
+  
+  // Estados del UI
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<FunctionCategory | 'all'>('all')
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingFunction, setEditingFunction] = useState<BrandFunction | null>(null)
+  
+  // Estados del formulario
+  const [formData, setFormData] = useState<FunctionFormData>({
+    title: '',
+    description: '',
+    currentPrice: 0,
+    duration: 30,
+    isActive: true,
+    category: FunctionCategory.ESSENTIAL
+  })
+  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null)
 
-      {/* Estadísticas rápidas */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Servicios
-            </CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">
-              Servicios activos
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Más Popular
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Corte</div>
-            <p className="text-xs text-muted-foreground">
-              85% de las citas
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Ingreso Promedio
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$35</div>
-            <p className="text-xs text-muted-foreground">
-              Por servicio
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+  useEffect(() => {
+    loadInitialData()
+  }, [])
 
-      {/* Lista de servicios */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            Servicios Disponibles
-          </CardTitle>
-          <CardDescription>
-            Gestiona los precios y duración de tus servicios
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Servicio 1 */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Zap className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Corte de Cabello</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Corte profesional con lavado incluido
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="font-medium">$25</p>
-                  <p className="text-sm text-muted-foreground">45 min</p>
-                </div>
-                <Badge variant="secondary">Popular</Badge>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+  const loadInitialData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-            {/* Servicio 2 */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-                  <Zap className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Tinte Completo</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Coloración completa con productos premium
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="font-medium">$65</p>
-                  <p className="text-sm text-muted-foreground">2h 30min</p>
-                </div>
-                <Badge variant="default">Premium</Badge>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+      // Obtener datos del brand
+      const brandDataStr = localStorage.getItem('brand_data')
+      if (!brandDataStr) {
+        setError('No se encontraron datos del brand')
+        return
+      }
 
-            {/* Servicio 3 */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
-                  <Zap className="h-6 w-6 text-orange-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Barba y Bigote</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Recorte y perfilado profesional
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="font-medium">$15</p>
-                  <p className="text-sm text-muted-foreground">20 min</p>
-                </div>
-                <Badge variant="outline">Rápido</Badge>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+      const brand = JSON.parse(brandDataStr)
+      setBrandData(brand)
 
-            {/* Servicio 4 */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <Zap className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Peinado Especial</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Peinados para eventos especiales
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="font-medium">$45</p>
-                  <p className="text-sm text-muted-foreground">1h 15min</p>
-                </div>
-                <Badge variant="secondary">Especial</Badge>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+      // Cargar funciones, features disponibles y estadísticas en paralelo
+      const [functionsResponse, featuresResponse, statsResponse] = await Promise.all([
+        functionsService.getBrandFunctions(brand.id),
+        functionsService.getAvailableFeatures(brand.businessType),
+        functionsService.getFunctionStats(brand.id)
+      ])
+
+      // Procesar funciones
+      if (functionsResponse.success && functionsResponse.data) {
+        setFunctions(functionUtils.sortFunctions(functionsResponse.data))
+      } else {
+        console.warn('No functions found or error:', functionsResponse.errors)
+        setFunctions([])
+      }
+
+      // Procesar features disponibles
+      if (featuresResponse.success && featuresResponse.data) {
+        setAvailableFeatures(featuresResponse.data)
+      } else {
+        console.warn('No available features found:', featuresResponse.errors)
+        setAvailableFeatures([])
+      }
+
+      // Procesar estadísticas
+      if (statsResponse.success && statsResponse.data) {
+        setStats(statsResponse.data)
+      }
+
+    } catch (error) {
+      console.error('Error loading initial data:', error)
+      setError('Error cargando datos iniciales')
+    } finally {
+      setLoading(false)
+    }
+  }

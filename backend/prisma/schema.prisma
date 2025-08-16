@@ -46,7 +46,10 @@ model Brand {
   colorPalette     ColorPalette?
   payments         Payment[]
   userBrands       UserBrand[]
-
+  businessHours       BusinessHours[]
+  specialHours        SpecialHours[]
+  appointmentSettings AppointmentSettings?
+  
   @@map("brands")
 }
 
@@ -231,4 +234,56 @@ enum FeatureCategory {
   ESSENTIAL
   BUSINESS
   ADVANCED
+}
+
+model BusinessHours {
+  id        Int      @id @default(autoincrement())
+  brandId   Int
+  dayOfWeek Int      // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+  isOpen    Boolean  @default(true)
+  openTime  String?  // Formato "HH:MM" (ej: "09:00")
+  closeTime String?  // Formato "HH:MM" (ej: "18:00")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  
+  @@unique([brandId, dayOfWeek])
+  @@map("business_hours")
+}
+
+// Horarios especiales/excepciones (días festivos, vacaciones, etc.)
+model SpecialHours {
+  id          Int      @id @default(autoincrement())
+  brandId     Int
+  date        DateTime // Fecha específica
+  isOpen      Boolean  @default(false)
+  openTime    String?  // Formato "HH:MM"
+  closeTime   String?  // Formato "HH:MM"
+  reason      String?  // Motivo: "Día festivo", "Vacaciones", etc.
+  description String?  // Descripción adicional
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  
+  @@unique([brandId, date])
+  @@map("special_hours")
+}
+
+// Configuración general de citas
+model AppointmentSettings {
+  id                    Int      @id @default(autoincrement())
+  brandId               Int      @unique
+  defaultDuration       Int      @default(30) // Duración por defecto en minutos
+  bufferTime            Int      @default(5)  // Tiempo de buffer entre citas en minutos
+  maxAdvanceBookingDays Int      @default(30) // Máximo días de anticipación
+  minAdvanceBookingHours Int     @default(2)  // Mínimo horas de anticipación
+  allowSameDayBooking   Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  
+  @@map("appointment_settings")
 }
