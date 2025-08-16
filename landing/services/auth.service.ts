@@ -85,6 +85,8 @@ export interface BrandRegistrationResponse {
       processedAt?: string;
     };
     token: string;
+    refreshToken?: string;
+    rememberMe?: boolean;
   };
   errors?: Array<{
     code: string;
@@ -103,7 +105,20 @@ class AuthService {
       );
       
       console.log('✅ Registration response:', response);
-      return response.data || { success: false, errors: [{ code: 'NO_DATA', description: 'No data received' }] };
+      
+      // El response del apiClient ya es del tipo ApiResponse<BrandRegistrationResponse>
+      // Si la respuesta es exitosa, debería tener success: true y data
+      if (response.success && response.data) {
+        return response as BrandRegistrationResponse;
+      } else {
+        return {
+          success: false,
+          errors: response.errors?.map(error => ({
+            code: String(error.code),
+            description: error.description
+          })) || [{ code: 'NO_DATA', description: 'No data received' }]
+        };
+      }
       
     } catch (error: any) {
       console.error('❌ Registration error:', error);
@@ -128,6 +143,50 @@ class AuthService {
       return { status: 'ok' };
     } catch (error) {
       return { status: 'error' };
+    }
+  }
+
+  async login(email: string, password: string, rememberMe: boolean = false): Promise<BrandRegistrationResponse> {
+    try {
+      console.log('🚀 Sending login data:', { email, rememberMe });
+      
+      const response = await apiClient.post<BrandRegistrationResponse>(
+        '/auth/login',
+        {
+          email,
+          password,
+          rememberMe
+        }
+      );
+      
+      console.log('✅ Login response:', response);
+      
+      if (response.success && response.data) {
+        return response as BrandRegistrationResponse;
+      } else {
+        return {
+          success: false,
+          errors: response.errors?.map(error => ({
+            code: String(error.code),
+            description: error.description
+          })) || [{ code: 'LOGIN_ERROR', description: 'Error en el login' }]
+        };
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Login error:', error);
+      
+      return {
+        success: false,
+        errors: [
+          {
+            code: 'LOGIN_ERROR',
+            description: error?.response?.data?.errors?.[0]?.description || 
+                        error?.message || 
+                        'Error durante el login'
+          }
+        ]
+      };
     }
   }
 }

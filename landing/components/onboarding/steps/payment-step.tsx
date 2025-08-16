@@ -1,241 +1,300 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { ArrowLeft, CreditCard, Lock, Check } from "lucide-react"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { CreditCard, Clock, Check, Smartphone, ExternalLink, Loader2 } from 'lucide-react';
 
 interface PaymentStepProps {
-  data: {
-    personalInfo: {
-      firstName: string
-      lastName: string
-      email: string
-      phone: string
-      businessName: string
-      description: string
-    }
-    businessType: string
-    selectedFeatures: string[]
-    customization: {
-      colorPalette: string
-      logo?: File
-    }
-    plan: {
-      type: "web" | "app" | "complete"
-      features: string[]
-      price: number
-      billingPeriod?: "monthly" | "annual"
-    }
-  }
-  onComplete: () => void
-  onPrev: () => void
+  data: any;
+  onComplete: (stepData: any) => void;
+  onPrev: () => void;
 }
 
-export function PaymentStep({ data, onComplete, onPrev }: PaymentStepProps) {
-  const [paymentMethod, setPaymentMethod] = useState("card")
-  const [cardData, setCardData] = useState({
-    number: "",
-    expiry: "",
-    cvv: "",
-    name: ""
-  })
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [isComplete, setIsComplete] = useState(false)
+interface PlanInfo {
+  id: number;
+  type: string;
+  price: number;
+  features: string[];
+  billingPeriod: string;
+}
 
-  const handleCardChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCardData(prev => ({
-      ...prev,
-      [field]: e.target.value
-    }))
-  }
+export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepProps) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+
+  // Simular información del plan basado en los datos del onboarding
+  const plan: PlanInfo = {
+    id: 1,
+    type: data.businessType || 'app',
+    price: 185, // Precio base
+    features: ['Gestión de Citas', 'Catálogo de Servicios', 'Reportes', 'Notificaciones'],
+    billingPeriod: 'monthly'
+  };
 
   const handlePayment = async () => {
-    setIsProcessing(true)
-    
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 3000))
-    
-    setIsProcessing(false)
-    setIsComplete(true)
-    
-    // Complete after showing success
-    setTimeout(() => {
-      onComplete()
-    }, 2000)
-  }
+    setIsProcessing(true);
+    setError(null);
 
-  const formatCardNumber = (value: string) => {
-    return value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim()
-  }
+    try {
+      // Preparar datos para el pago
+      const paymentData = {
+        brandId: data.brandId || 1,
+        planId: plan.id,
+        amount: plan.price,
+        currency: 'CRC',
+        description: `Plan ${plan.type} - ${plan.billingPeriod}`,
+        customer: {
+          email: data.email,
+          name: `${data.firstName} ${data.lastName}`,
+          phone: data.brandPhone || ''
+        }
+      };
 
-  const formatExpiry = (value: string) => {
-    return value.replace(/\D/g, '').replace(/(.{2})/, '$1/').substr(0, 5)
-  }
+      // Hacer request al endpoint de pago
+      const response = await fetch('http://localhost:3000/payment/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData)
+      });
 
-  if (isComplete) {
-    return (
-      <div className="text-center space-y-6">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-          <Check className="w-8 h-8 text-green-600" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">¡Pago Procesado!</h2>
-          <p className="mt-2 text-gray-600">
-            Tu aplicación está siendo configurada. Recibirás un email con los detalles de acceso.
-          </p>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <p className="text-sm text-green-800">
-            Tiempo estimado de entrega: <strong>10 días hábiles</strong>
-          </p>
-        </div>
-      </div>
-    )
-  }
+      if (!response.ok) {
+        throw new Error('Error al crear el pago');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.data?.paymentUrl) {
+        setPaymentUrl(result.data.paymentUrl);
+        // Abrir Tilopay en nueva ventana
+        window.open(result.data.paymentUrl, '_blank', 'width=800,height=600');
+        
+        // En producción, esto vendría de un webhook
+        // Por ahora simular que se completó
+        setTimeout(() => {
+          onComplete({
+            ...data,
+            payment: {
+              status: 'completed',
+              reference: result.data.reference,
+              amount: plan.price
+            }
+          });
+        }, 15000); // 15 segundos para completar el pago
+      } else {
+        throw new Error(result.message || 'Error al generar URL de pago');
+      }
+
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      setError(error.message || 'Error al procesar el pago');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSkipPayment = () => {
+    // Para desarrollo, permitir saltar el pago
+    onComplete({
+      ...data,
+      payment: {
+        status: 'pending',
+        amount: plan.price
+      }
+    });
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900">Finalizar Pago</h2>
-        <p className="mt-2 text-gray-600">
-          Ingresa los datos de tu tarjeta para completar la suscripción
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          Finaliza tu Registro
+        </h2>
+        <p className="text-lg text-gray-600">
+          Tu aplicación está casi lista. Solo falta procesar el pago.
         </p>
       </div>
 
-      {/* Order Summary */}
-      <Card className="p-6 bg-gray-50">
-        <h3 className="font-semibold text-gray-900 mb-4">Resumen de la orden</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span>
-              Plan {data.plan.type === 'web' ? 'Solo Web' : 
-                    data.plan.type === 'app' ? 'Solo App Móvil' : 
-                    'Web + App Completa'} - {data.plan.billingPeriod === "monthly" ? "Mensual" : "Anual"}
-            </span>
-            <span>${data.plan.price}{data.plan.billingPeriod === "monthly" ? "/mes" : "/año"}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Funciones adicionales ({data.selectedFeatures.length})</span>
-            <span>Incluidas</span>
-          </div>
-          {data.plan.billingPeriod === "annual" && (
-            <div className="flex justify-between text-green-600">
-              <span>Descuento anual</span>
-              <span>-20%</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Resumen del Plan */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Tu Plan Seleccionado
+            </CardTitle>
+            <CardDescription>
+              Resumen de tu aplicación personalizada
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-medium">Plan {plan.type.charAt(0).toUpperCase() + plan.type.slice(1)}</span>
+              <Badge variant="default" className="text-lg py-1 px-3">
+                ₡{plan.price.toLocaleString()}/mes
+              </Badge>
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h4 className="font-medium mb-3">Características incluidas:</h4>
+              <ul className="space-y-2">
+                {plan.features.map((feature, index) => (
+                  <li key={index} className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span className="text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>₡{plan.price.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>IVA (13%):</span>
+                <span>₡{Math.round(plan.price * 0.13).toLocaleString()}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-bold text-lg">
+                <span>Total:</span>
+                <span>₡{Math.round(plan.price * 1.13).toLocaleString()}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Información del Negocio */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Información de tu Negocio</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Nombre de la Marca</label>
+              <p className="text-lg font-semibold">{data.brandName}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-500">Propietario</label>
+              <p className="text-lg font-semibold">{data.firstName} {data.lastName}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-500">Email</label>
+              <p className="text-lg font-semibold">{data.email}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-500">Tipo de Negocio</label>
+              <p className="text-lg font-semibold capitalize">{data.businessType}</p>
+            </div>
+
+            {data.brandPhone && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Teléfono</label>
+                <p className="text-lg font-semibold">{data.brandPhone}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Métodos de Pago */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Método de Pago
+          </CardTitle>
+          <CardDescription>
+            Procesado de forma segura por Tilopay
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700">{error}</p>
             </div>
           )}
-          <hr className="my-2" />
-          <div className="flex justify-between font-semibold text-lg">
-            <span>Total a pagar hoy:</span>
-            <span>${data.plan.price.toFixed(2)}</span>
+
+          {paymentUrl && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <span className="text-blue-700 font-medium">
+                  Ventana de pago abierta. Complete el pago en la nueva ventana.
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => window.open(paymentUrl, '_blank', 'width=800,height=600')}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Reabrir ventana de pago
+              </Button>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button
+              onClick={handlePayment}
+              disabled={isProcessing}
+              size="lg"
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isProcessing ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <CreditCard className="h-5 w-5 mr-2" />
+              )}
+              {isProcessing ? 'Procesando...' : `Pagar ₡${Math.round(plan.price * 1.13).toLocaleString()}`}
+            </Button>
+            
+            {/* Botón para desarrollo */}
+            <Button
+              onClick={handleSkipPayment}
+              variant="outline"
+              size="lg"
+              className="sm:w-auto"
+            >
+              Saltar Pago (Dev)
+            </Button>
           </div>
-        </div>
+
+          <div className="text-xs text-gray-500 text-center">
+            Al proceder, aceptas nuestros términos y condiciones. 
+            El pago es procesado de forma segura por Tilopay.
+          </div>
+        </CardContent>
       </Card>
 
-      {/* Payment Method */}
-      <div>
-        <Label className="text-base font-medium mb-4 block">Método de pago</Label>
-        <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="card" id="card" />
-              <Label htmlFor="card" className="flex items-center space-x-2 cursor-pointer">
-                <CreditCard className="w-4 h-4" />
-                <span>Tarjeta de crédito/débito</span>
-              </Label>
-            </div>
-          </div>
-        </RadioGroup>
-      </div>
-
-      {/* Card Details */}
-      {paymentMethod === "card" && (
-        <Card className="p-6">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="cardName">Nombre en la tarjeta</Label>
-              <Input
-                id="cardName"
-                value={cardData.name}
-                onChange={handleCardChange("name")}
-                placeholder="Juan Pérez"
-                required
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="cardNumber">Número de tarjeta</Label>
-              <Input
-                id="cardNumber"
-                value={formatCardNumber(cardData.number)}
-                onChange={(e) => setCardData(prev => ({ ...prev, number: e.target.value.replace(/\s/g, '') }))}
-                placeholder="1234 5678 9012 3456"
-                maxLength={19}
-                required
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="expiry">Fecha de vencimiento</Label>
-                <Input
-                  id="expiry"
-                  value={formatExpiry(cardData.expiry)}
-                  onChange={(e) => setCardData(prev => ({ ...prev, expiry: e.target.value.replace(/\D/g, '') }))}
-                  placeholder="MM/AA"
-                  maxLength={5}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="cvv">CVV</Label>
-                <Input
-                  id="cvv"
-                  value={cardData.cvv}
-                  onChange={handleCardChange("cvv")}
-                  placeholder="123"
-                  maxLength={4}
-                  required
-                />
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Security Notice */}
-      <div className="flex items-center space-x-2 text-sm text-gray-600">
-        <Lock className="w-4 h-4" />
-        <span>Tu información está protegida con cifrado SSL de 256 bits</span>
-      </div>
-
+      {/* Navegación */}
       <div className="flex justify-between">
-        <Button onClick={onPrev} variant="outline" className="flex items-center gap-2" disabled={isProcessing}>
-          <ArrowLeft className="w-4 h-4" />
+        <Button 
+          variant="outline" 
+          onClick={onPrev}
+          disabled={isProcessing}
+        >
           Anterior
         </Button>
-        <Button 
-          onClick={handlePayment} 
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
-          disabled={!cardData.number || !cardData.expiry || !cardData.cvv || !cardData.name || isProcessing}
-        >
-          {isProcessing ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Procesando...
-            </>
-          ) : (
-            <>
-              <CreditCard className="w-4 h-4" />
-              Pagar ${data.plan.price}
-            </>
-          )}
-        </Button>
+        
+        <div className="text-sm text-gray-500 flex items-center">
+          Paso 7 de 7
+        </div>
       </div>
     </div>
-  )
+  );
 }

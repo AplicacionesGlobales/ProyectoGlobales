@@ -10,7 +10,8 @@ import { FeaturesStep } from "./steps/features-step"
 import { CustomizationStepNew } from "../customization-step"
 import { PricingStep } from "./steps/pricing-step"
 import { ConfirmationStep } from "./steps/confirmation-step"
-import { PaymentStep } from "./steps/payment-step"
+import PaymentStep from "./steps/payment-step"
+import { SuccessStep } from "./steps/success-step"
 
 export interface OnboardingData {
   personalInfo: {
@@ -49,6 +50,7 @@ const steps = [
   { id: 5, title: "Plan", description: "Elige tu modalidad" },
   { id: 6, title: "Confirmación", description: "¡Casi listo!" },
   { id: 7, title: "Pago", description: "Procesar suscripción" },
+  { id: 8, title: "¡Listo!", description: "Registro completado" },
 ]
 
 export function OnboardingFlow() {
@@ -143,6 +145,7 @@ export function OnboardingFlow() {
 
   const handleComplete = async () => {
     console.log("Onboarding completed:", data)
+    nextStep() // Ir al paso de éxito
   }
 
   const renderStep = () => {
@@ -228,6 +231,11 @@ export function OnboardingFlow() {
           data={data}
           onComplete={handleComplete}
           onPrev={prevStep}
+        />
+      ),
+      8: (
+        <SuccessStep
+          data={data}
         />
       )
     }
