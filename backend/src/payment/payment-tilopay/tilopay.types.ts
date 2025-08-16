@@ -1,3 +1,5 @@
+// backend\src\payment\payment-tilopay\tilopay.types.ts
+
 export interface TilopayLoginRequest {
   apiuser: string;
   password: string;

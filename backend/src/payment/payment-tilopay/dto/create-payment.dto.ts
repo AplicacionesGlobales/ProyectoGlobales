@@ -1,42 +1,49 @@
-import { IsString, IsEmail, IsOptional, IsEnum, IsArray } from 'class-validator';
-
-export enum PlanType {
-  WEB = 'web',
-  APP = 'app',
-  COMPLETO = 'completo',
-}
-
-export enum BillingCycle {
-  MONTHLY = 'monthly',
-  ANNUAL = 'annual',
-}
+// backend/src/payment/payment-tilopay/dto/create-payment.dto.ts
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsEmail, IsNotEmpty, IsArray, IsOptional } from 'class-validator';
 
 export class CreatePaymentDto {
+  @ApiProperty({ example: 'Mi Negocio SA', description: 'Nombre de la marca o negocio' })
   @IsString()
+  @IsNotEmpty()
   name: string;
 
-  @IsString()
+  @ApiProperty({ example: 'contacto@minegocio.com', description: 'Email de contacto' })
   @IsEmail()
+  @IsNotEmpty()
   email: string;
 
+  @ApiProperty({ example: '88888888', description: 'Teléfono de contacto' })
   @IsString()
+  @IsNotEmpty()
   phone: string;
 
+  @ApiProperty({ example: 'Juan Perez', description: 'Nombre del propietario' })
   @IsString()
+  @IsNotEmpty()
   ownerName: string;
 
+  @ApiProperty({ example: 'San José, Costa Rica', description: 'Ubicación del negocio', required: false })
   @IsString()
   @IsOptional()
   location?: string;
 
-  @IsEnum(PlanType)
-  planType: PlanType;
+  @ApiProperty({ example: 'app', description: 'Tipo de plan (web, app, completo)' })
+  @IsString()
+  @IsNotEmpty()
+  planType: string;
 
-  @IsEnum(BillingCycle)
-  billingCycle: BillingCycle;
+  @ApiProperty({ example: 'monthly', description: 'Ciclo de facturación (monthly, annual)' })
+  @IsString()
+  @IsNotEmpty()
+  billingCycle: string;
 
+  @ApiProperty({ 
+    example: ['citas', 'pagos'], 
+    description: 'Servicios adicionales seleccionados', 
+    required: false 
+  })
   @IsArray()
-  @IsString({ each: true })
   @IsOptional()
   selectedServices?: string[];
 }

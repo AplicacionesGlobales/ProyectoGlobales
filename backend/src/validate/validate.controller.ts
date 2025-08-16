@@ -1,3 +1,4 @@
+// backend\src\validate\validate.controller.ts
 import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { ValidateService } from './validate.service';
@@ -5,7 +6,9 @@ import {
   ValidateEmailDto,
   ValidateUsernameDto,
   EmailValidationResponseDto,
-  UsernameValidationResponseDto
+  UsernameValidationResponseDto,
+  PaymentValidationResponseDto,
+  ValidatePaymentDto
 } from './dto';
 import { BaseResponseDto } from '../common/dto';
 import { Public } from '../common/decorators';
@@ -46,4 +49,21 @@ export class ValidateController {
   ): Promise<BaseResponseDto<UsernameValidationResponseDto>> {
     return this.validateService.validateUsername(validateUsernameDto.username);
   }
+
+ @Public()
+  @Post('payment')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validar estado de pago de un brand' })
+  @ApiBody({ type: ValidatePaymentDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Estado de pago validado',
+    type: BaseResponseDto<PaymentValidationResponseDto>
+  })
+  async validatePayment(
+    @Body(ValidationPipe) validatePaymentDto: ValidatePaymentDto
+  ): Promise<BaseResponseDto<PaymentValidationResponseDto>> {
+    return this.validateService.validatePayment(validatePaymentDto.brandId);
+  }
+
 }

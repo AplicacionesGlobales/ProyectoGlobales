@@ -1,3 +1,5 @@
+// backend\src\payment\payment-tilopay\tilopay.service.ts
+
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
@@ -59,12 +61,24 @@ export class TilopayService {
     try {
       const token = await this.getAuthToken();
 
+      // Validar datos requeridos
+      if (!paymentData.amount || !paymentData.currency || !paymentData.orderNumber) {
+        throw new HttpException(
+          'Datos de pago incompletos',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
       const response: AxiosResponse<TilopayPaymentResponse> = await firstValueFrom(
         this.httpService.post<TilopayPaymentResponse>(
           `${this.baseUrl}/processPayment`,
           {
             ...paymentData,
             key: this.apiKey,
+            platform: 'api',
+            subscription: '0',
+            capture: '1',
+            hashVersion: 'V2'
           },
           {
             headers: {
@@ -72,15 +86,32 @@ export class TilopayService {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
             },
+            timeout: 10000 // 10 segundos de timeout
           },
         ),
       );
 
+      if (!response.data.url) {
+        throw new HttpException(
+          'No se recibió URL de pago de Tilopay',
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+
       return response.data;
     } catch (error) {
+      console.error('Error procesando pago con Tilopay:', error);
+
+      if (error.response?.data) {
+        throw new HttpException(
+          error.response.data.message || 'Error procesando pago con Tilopay',
+          error.response.status || HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+
       throw new HttpException(
-        'Error procesando pago con Tilopay',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        'Error de conexión con Tilopay',
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }

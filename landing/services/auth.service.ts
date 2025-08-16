@@ -1,6 +1,7 @@
 // landing\services\auth.service.ts
 import { apiClient } from '../api';
 import { API_ROUTES } from '../constants/api-routes';
+import { PaymentValidationResponse } from '../api/types';
 
 export interface BrandRegistrationData {
   // User info
@@ -190,6 +191,56 @@ class AuthService {
       };
     }
   }
+
+  async validatePayment(brandId: number): Promise<{
+    success: boolean;
+    data?: PaymentValidationResponse;
+    errors?: Array<{ code: string; description: string; }>;
+  }> {
+    try {
+      console.log('🚀 Validating payment for brand:', brandId);
+      
+      const response = await apiClient.post<PaymentValidationResponse>(
+        '/validate/payment',
+        { brandId }
+      );
+      
+      console.log('✅ Payment validation response:', response);
+      
+      if (response.success && response.data) {
+        return {
+          success: true,
+          data: response.data
+        };
+      } else {
+        return {
+          success: false,
+          errors: response.errors?.map(error => ({
+            code: String(error.code),
+            description: error.description ?? 'No description provided'
+          })) || [{ code: 'VALIDATION_ERROR', description: 'Error validating payment' }]
+        };
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Payment validation error:', error);
+      
+      return {
+        success: false,
+        errors: [
+          {
+            code: 'PAYMENT_VALIDATION_ERROR',
+            description: error?.response?.data?.errors?.[0]?.description || 
+                        error?.message || 
+                        'Error durante la validación del pago'
+          }
+        ]
+      };
+    }
+  }
+
+
+
 }
 
 export const authService = new AuthService();

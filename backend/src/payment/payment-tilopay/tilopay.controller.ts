@@ -1,9 +1,11 @@
-import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus } from '@nestjs/common';
+// backend\src\payment\payment-tilopay\tilopay.controller.ts
+import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TilopayService } from './tilopay.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { BaseResponseDto } from '../../common/dto';
 import { Public } from '../../common/decorators';
+import { PaymentCallbackQuery } from './tilopay.types';
 
 @ApiTags('Pagos')
 @Controller('payment')
@@ -103,4 +105,47 @@ export class PaymentController {
     // Si es anual, multiplicar por 12
     return billingCycle === 'annual' ? monthlyTotal * 12 : monthlyTotal;
   }
+
+
+
+  @Public()
+  @Get('callback')
+  @ApiOperation({ summary: 'Callback de pago de Tilopay' })
+  @ApiResponse({ status: 200, description: 'Callback procesado correctamente' })
+  async paymentCallback(
+    @Query() query: PaymentCallbackQuery
+  ): Promise<any> {
+    try {
+      // Verificar el código de respuesta
+      if (query.code === '1') {
+        // Pago aprobado
+        const returnData = query.returnData ?
+          JSON.parse(Buffer.from(query.returnData, 'base64').toString()) : null;
+
+        // Aquí puedes actualizar el estado del pago en tu base de datos
+        // y realizar otras acciones necesarias
+
+        return {
+          success: true,
+          message: 'Pago procesado exitosamente',
+          transactionId: query['tilopay-transaction'],
+          orderNumber: query.order
+        };
+      } else {
+        // Pago fallido
+        return {
+          success: false,
+          message: query.description || 'Pago fallido',
+          code: query.code
+        };
+      }
+    } catch (error) {
+      console.error('Error processing payment callback:', error);
+      return {
+        success: false,
+        message: 'Error procesando el callback de pago'
+      };
+    }
+  }
+
 }

@@ -76,6 +76,12 @@ export enum UserRole {
   CLIENT = 'CLIENT',
 }
 
+export interface PaymentValidationResponse {
+  isPaymentComplete: boolean;
+  paymentStatus: string;
+  dueDate?: string;
+}
+
 // Brand registration types
 export interface CreateBrandRequest {
   name: string;
