@@ -1,3 +1,4 @@
+// landing\app\panel\layout.tsx
 import { PanelLayout } from "@/components/panel/panel-layout"
 
 export default function Layout({

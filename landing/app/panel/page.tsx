@@ -1,3 +1,4 @@
+// landing\app\panel\page.tsx
 "use client"
 
 import { useEffect } from "react"

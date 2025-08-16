@@ -1,3 +1,4 @@
+// landing\components\panel\panel-layout.tsx
 "use client"
 
 import { useState } from "react"
@@ -12,9 +13,11 @@ export function PanelLayout({ children }: PanelLayoutProps) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar para escritorio */}
-      <Sidebar />
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar para escritorio - fixed */}
+      <div className="hidden lg:block fixed inset-y-0 left-0 w-64 z-30">
+        <Sidebar />
+      </div>
       
       {/* Sidebar para móvil */}
       <Sidebar
@@ -23,10 +26,10 @@ export function PanelLayout({ children }: PanelLayoutProps) {
         onClose={() => setIsMobileSidebarOpen(false)}
       />
 
-      {/* Contenido principal */}
-      <div className="lg:ml-64">
-        {/* Header */}
-        <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/* Contenido principal - con margen para el sidebar */}
+      <div className="flex-1 lg:ml-64">
+        {/* Header - sticky */}
+        <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-14 items-center justify-between px-4 sm:px-6">
             <div className="flex items-center gap-4">
               <MobileSidebarTrigger onOpen={() => setIsMobileSidebarOpen(true)} />
@@ -39,7 +42,7 @@ export function PanelLayout({ children }: PanelLayoutProps) {
         </header>
 
         {/* Contenido de la página */}
-        <main className="p-4 sm:p-6">
+        <main className="p-4 sm:p-6 bg-background">
           {children}
         </main>
       </div>
