@@ -114,104 +114,89 @@ class PaymentService {
   }> {
     try {
       console.log('📞 PaymentService: Processing payment callback');
+      console.log('🔍 All query parameters:');
       
-      // Los parámetros que envía nuestro backend incluyen:
-      // - order_id: ID de la orden
-      // - status: estado del pago (completed, failed, error)
-      // - transaction_id: ID de transacción de Tilopay
-      // - auth_code: código de autorización
-      // - error_code y error_message para errores
+      // Log todos los parámetros para debugging
+      for (const [key, value] of queryParams.entries()) {
+        console.log(`  ${key}: ${value}`);
+      }
       
-      const orderId = queryParams.get('order_id');
-      const status = queryParams.get('status');
-      const transactionId = queryParams.get('transaction_id');
-      const authCode = queryParams.get('auth_code');
-      const errorCode = queryParams.get('error_code');
-      const errorMessage = queryParams.get('error_message');
+      // Tilopay envía directamente estos parámetros:
+      // - code: '1' para éxito, otros códigos para error
+      // - description: descripción del resultado
+      // - order: número de orden
+      // - tilopay-transaction: ID de transacción
+      // - auth: código de autorización
+      // - returnData: datos adicionales en base64
+      
+      const code = queryParams.get('code');
+      const orderId = queryParams.get('order');
       const description = queryParams.get('description');
+      const transactionId = queryParams.get('tilopay-transaction');
+      const authCode = queryParams.get('auth');
       
-      console.log('📋 Callback parameters:', { 
+      console.log('📋 Extracted Tilopay parameters:', { 
+        code, 
         orderId, 
-        status, 
+        description, 
         transactionId, 
-        authCode,
-        errorCode, 
-        errorMessage,
-        description
+        authCode 
       });
       
-      if (!status) {
+      if (!code) {
         return {
           success: false,
           status: 'failed',
-          message: 'Parámetros de callback inválidos - sin estado'
+          message: 'Parámetros de callback inválidos - sin código de respuesta'
         };
       }
       
-      // Manejar diferentes estados
-      switch (status) {
-        case 'completed':
-          return {
-            success: true,
-            status: 'completed',
-            message: `¡Pago completado exitosamente! ${description || 'Tu plan ha sido activado.'}`,
-            orderNumber: orderId || undefined
-          };
-          
-        case 'failed':
-          // Determinar mensaje específico según el código de error
-          let specificMessage = 'El pago no pudo ser procesado.';
-          
-          if (errorCode) {
-            switch (errorCode) {
-              case '51':
-                specificMessage = 'Fondos insuficientes en tu tarjeta. Verifica tu saldo e intenta nuevamente.';
-                break;
-              case '82':
-                specificMessage = 'Código de seguridad (CVV) inválido. Verifica los datos de tu tarjeta.';
-                break;
-              case '43':
-                specificMessage = 'Tu tarjeta fue rechazada. Contacta a tu banco para más información.';
-                break;
-              case '12':
-                specificMessage = 'Datos de la tarjeta incorrectos. Verifica la información e intenta nuevamente.';
-                break;
-              case '05':
-              case '41':
-                specificMessage = 'Tu tarjeta fue rechazada por el banco. Intenta con otra tarjeta.';
-                break;
-              case '54':
-                specificMessage = 'Tu tarjeta ha expirado. Usa una tarjeta vigente.';
-                break;
-              default:
-                specificMessage = errorMessage || 'El pago no pudo ser procesado. Por favor, inténtalo de nuevo.';
-            }
-          } else {
-            specificMessage = errorMessage || specificMessage;
-          }
-          
-          return {
-            success: false,
-            status: 'failed',
-            message: specificMessage,
-            orderNumber: orderId || undefined
-          };
-          
-        case 'error':
-          return {
-            success: false,
-            status: 'failed',
-            message: errorMessage || 'Ocurrió un error procesando el pago. Intenta nuevamente.',
-            orderNumber: orderId || undefined
-          };
-          
-        default:
-          return {
-            success: false,
-            status: 'failed',
-            message: 'Estado de pago desconocido',
-            orderNumber: orderId || undefined
-          };
+      // Manejar códigos de Tilopay
+      if (code === '1') {
+        // Pago exitoso
+        return {
+          success: true,
+          status: 'completed',
+          message: `¡Pago completado exitosamente! ${description || 'Tu plan ha sido activado.'}`,
+          orderNumber: orderId || undefined
+        };
+      } else {
+        // Pago fallido - mapear códigos comunes de Tilopay
+        let errorMessage = description || 'El pago no pudo ser procesado';
+        
+        switch (code) {
+          case '51':
+            errorMessage = 'Fondos insuficientes en tu tarjeta. Verifica tu saldo e intenta nuevamente.';
+            break;
+          case '82':
+            errorMessage = 'Código de seguridad (CVV) inválido. Verifica los datos de tu tarjeta.';
+            break;
+          case '43':
+            errorMessage = 'Tu tarjeta fue rechazada. Contacta a tu banco para más información.';
+            break;
+          case '12':
+            errorMessage = 'Datos de la tarjeta incorrectos. Verifica la información e intenta nuevamente.';
+            break;
+          case '05':
+          case '41':
+            errorMessage = 'Tu tarjeta fue rechazada por el banco. Intenta con otra tarjeta.';
+            break;
+          case '54':
+            errorMessage = 'Tu tarjeta ha expirado. Usa una tarjeta vigente.';
+            break;
+          case '0':
+            errorMessage = 'Pago cancelado por el usuario.';
+            break;
+          default:
+            errorMessage = description || 'Error procesando el pago. Intenta nuevamente.';
+        }
+        
+        return {
+          success: false,
+          status: 'failed',
+          message: errorMessage,
+          orderNumber: orderId || undefined
+        };
       }
       
     } catch (error: any) {
