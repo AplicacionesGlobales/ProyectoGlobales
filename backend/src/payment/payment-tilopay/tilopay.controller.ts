@@ -42,12 +42,12 @@ export class PaymentController {
         capture: '1',
         billToFirstName: createPaymentDto.ownerName.split(' ')[0] || 'Cliente',
         billToLastName: createPaymentDto.ownerName.split(' ').slice(1).join(' ') || 'Empresa',
-        billToAddress: createPaymentDto.location || 'San José, Costa Rica',
+        billToAddress: 'San José Centro',
         billToAddress2: 'N/A',
         billToCity: 'San José',
         billToState: 'San José',
         billToZipPostCode: '10101',
-        billToCountry: 'CR', // Costa Rica por defecto
+        billToCountry: 'CR',
         billToTelephone: createPaymentDto.phone || '25001000',
         billToEmail: createPaymentDto.email,
         subscription: '0',
@@ -55,6 +55,7 @@ export class PaymentController {
         returnData: Buffer.from(JSON.stringify({
           brandData: createPaymentDto,
           amount: totalAmount,
+          timestamp: new Date().toISOString()
         })).toString('base64'),
       };
 
@@ -127,29 +128,35 @@ export class PaymentController {
       // URL base del frontend
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
       
+      // Tilopay envía:
+      // - code: '1' para éxito, otros códigos para error
+      // - description: descripción del resultado
+      // - order: número de orden
+      // - tilopay-transaction: ID de transacción
+      // - auth: código de autorización
+      
+      const callbackUrl = new URL(`${frontendUrl}/payment/callback`);
+      
       // Verificar el código de respuesta
       if (query.code === '1') {
         // Pago aprobado
-        const returnData = query.returnData ?
-          JSON.parse(Buffer.from(query.returnData, 'base64').toString()) : null;
-
         console.log('✅ Payment approved:', {
           transactionId: query['tilopay-transaction'],
           orderNumber: query.order,
-          returnData
+          authCode: query.auth,
+          description: query.description
         });
 
-        // Aquí puedes actualizar el estado del pago en tu base de datos
-        // y realizar otras acciones necesarias
+        // TODO: Aquí deberías actualizar el estado del pago en tu base de datos
+        // await this.updatePaymentStatus(query.order, 'completed', query['tilopay-transaction']);
 
-        // Redirigir al frontend con parámetros de éxito
-        const callbackUrl = new URL(`${frontendUrl}/payment/callback`);
+        // Enviar parámetros de éxito al frontend
         callbackUrl.searchParams.set('status', 'completed');
         callbackUrl.searchParams.set('order_id', query.order || '');
         callbackUrl.searchParams.set('transaction_id', query['tilopay-transaction'] || '');
-        callbackUrl.searchParams.set('reference', query['tilopay-transaction'] || '');
+        callbackUrl.searchParams.set('auth_code', query.auth || '');
+        callbackUrl.searchParams.set('description', query.description || 'Pago completado');
         
-        res.redirect(callbackUrl.toString());
       } else {
         // Pago fallido
         console.log('❌ Payment failed:', {
@@ -158,15 +165,19 @@ export class PaymentController {
           orderNumber: query.order
         });
 
-        // Redirigir al frontend con parámetros de fallo
-        const callbackUrl = new URL(`${frontendUrl}/payment/callback`);
+        // TODO: Aquí deberías actualizar el estado del pago en tu base de datos
+        // await this.updatePaymentStatus(query.order, 'failed', null, query.code, query.description);
+
+        // Enviar parámetros de error al frontend
         callbackUrl.searchParams.set('status', 'failed');
         callbackUrl.searchParams.set('order_id', query.order || '');
         callbackUrl.searchParams.set('error_code', query.code || '');
         callbackUrl.searchParams.set('error_message', query.description || 'Pago fallido');
-        
-        res.redirect(callbackUrl.toString());
       }
+      
+      console.log('🔀 Redirecting to:', callbackUrl.toString());
+      res.redirect(callbackUrl.toString());
+      
     } catch (error) {
       console.error('💥 Error processing payment callback:', error);
       
