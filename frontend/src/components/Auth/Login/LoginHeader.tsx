@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styled } from 'nativewind';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 const StyledView = styled(View);
 const StyledText = styled(Text);
@@ -13,7 +13,7 @@ interface LoginHeaderProps {
 }
 
 const LoginHeader: React.FC<LoginHeaderProps> = ({ logoComponent }) => {
-  const { colors, appConfig } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <StyledView style={styles.container}>
@@ -24,7 +24,7 @@ const LoginHeader: React.FC<LoginHeaderProps> = ({ logoComponent }) => {
           { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
         ]}
       >
-        {logoComponent || (
+        {/* {logoComponent || (
           appConfig?.logo ? (
             <img 
               src={appConfig.logo.uri} 
@@ -37,17 +37,27 @@ const LoginHeader: React.FC<LoginHeaderProps> = ({ logoComponent }) => {
           ) : (
             <Ionicons name="calendar" size={45} color="#ffffff" />
           )
-        )}
+        )} */}
+        <Ionicons name="calendar" size={45} color="#ffffff" />
       </StyledView>
 
       {/* App Name */}
-      <StyledText style={styles.appName}>
+      {/* <StyledText style={styles.appName}>
         {appConfig?.branding.appName || 'Agenda Pro'}
+      </StyledText> */}
+
+      {/* App Name */}
+      <StyledText style={styles.appName}>
+        {'Agenda Pro'}
       </StyledText>
 
       {/* Company Name/Subtitle */}
-      <StyledText style={styles.subtitle}>
+      {/* <StyledText style={styles.subtitle}>
         {appConfig?.branding.companyName || 'Manage your business professionally'}
+      </StyledText> */}
+
+      <StyledText style={styles.subtitle}>
+        {'Manage your business professionally'}
       </StyledText>
     </StyledView>
   );

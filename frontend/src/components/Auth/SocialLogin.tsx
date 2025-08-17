@@ -1,4 +1,4 @@
-// components/login/SocialLogin.tsx
+// components/ui/SocialLogin.tsx (versión actualizada)
 import React from 'react';
 import { View, Text } from 'react-native';
 import { styled } from 'nativewind';
@@ -9,20 +9,32 @@ const StyledView = styled(View);
 const StyledText = styled(Text);
 
 interface SocialLoginProps {
+  title?: string;
   onGoogleLogin?: () => void;
   onAppleLogin?: () => void;
   onFacebookLogin?: () => void;
+  showGoogle?: boolean;
+  showApple?: boolean;
+  showFacebook?: boolean;
 }
 
 const SocialLogin: React.FC<SocialLoginProps> = ({
+  title = 'Or continue with',
   onGoogleLogin,
   onAppleLogin,
   onFacebookLogin,
+  showGoogle = true,
+  showApple = false,
+  showFacebook = false,
 }) => {
   const { colors } = useTheme();
 
+  // No mostrar nada si no hay providers habilitados
+  const hasProviders = showGoogle || showApple || showFacebook;
+  if (!hasProviders) return null;
+
   return (
-    <StyledView style={{ marginTop: 32 }}>
+    <StyledView style={{ marginTop: 30 }}>
       {/* Divider */}
       <StyledView style={{
         flexDirection: 'row',
@@ -40,7 +52,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
           fontSize: 14,
           color: colors.textSecondary,
         }}>
-          Or continue with
+          {title}
         </StyledText>
         <StyledView style={{
           flex: 1,
@@ -51,10 +63,14 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
       </StyledView>
 
       {/* Social Buttons */}
-      <StyledView style={{ flexDirection: 'row', gap: 12 }}>
+      <StyledView style={{ 
+        flexDirection: 'row', 
+        gap: 12,
+        justifyContent: 'center' 
+      }}>
         {/* Google Login */}
-        {onGoogleLogin && (
-          <StyledView style={{ flex: 1 }}>
+        {showGoogle && onGoogleLogin && (
+          <StyledView style={{ flex: 1, maxWidth: showApple || showFacebook ? undefined : 200 }}>
             <ThemedButton
               title="Google"
               variant="outline"
@@ -63,7 +79,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
               onPress={onGoogleLogin}
               style={{
                 backgroundColor: colors.surface,
-                borderColor: colors.textSecondary,
+                borderColor: colors.textSecondary + '40',
                 borderWidth: 1,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },
@@ -76,8 +92,8 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
         )}
 
         {/* Apple Login */}
-        {onAppleLogin && (
-          <StyledView style={{ flex: 1 }}>
+        {showApple && onAppleLogin && (
+          <StyledView style={{ flex: 1, maxWidth: showGoogle || showFacebook ? undefined : 200 }}>
             <ThemedButton
               title="Apple"
               variant="outline"
@@ -86,7 +102,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
               onPress={onAppleLogin}
               style={{
                 backgroundColor: colors.surface,
-                borderColor: colors.textSecondary,
+                borderColor: colors.textSecondary + '40',
                 borderWidth: 1,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },
@@ -99,8 +115,8 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
         )}
 
         {/* Facebook Login */}
-        {onFacebookLogin && (
-          <StyledView style={{ flex: 1 }}>
+        {showFacebook && onFacebookLogin && (
+          <StyledView style={{ flex: 1, maxWidth: showGoogle || showApple ? undefined : 200 }}>
             <ThemedButton
               title="Facebook"
               variant="outline"
@@ -109,7 +125,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({
               onPress={onFacebookLogin}
               style={{
                 backgroundColor: colors.surface,
-                borderColor: colors.textSecondary,
+                borderColor: colors.textSecondary + '40',
                 borderWidth: 1,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },

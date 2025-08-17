@@ -12,9 +12,9 @@ import { useError, ErrorUtils } from '@/components/ui/errors';
 import { useTheme } from '@/contexts/ThemeContext';
 
 // Componentes
-import LoginHeader from '@/components/Login/LoginHeader';
-import LoginForm from '@/components/Login/LoginForm';
-import SocialLogin from '@/components/Login/SocialLogin';
+import LoginHeader from '@/components/Auth/Login/LoginHeader';
+import LoginForm from '@/components/Auth/Login/LoginForm';
+import SocialLogin from '@/components/Auth/Login/SocialLogin';
 import ThemedButton from '@/components/ui/ThemedButton';
 
 const StyledView = styled(View);
@@ -25,7 +25,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export default function LoginScreen() {
   // Theme and app config
-  const { colors, appConfig, isConfigLoaded } = useTheme();
+  const { colors, isConfigLoaded } = useTheme();
   
   // Form states
   const [email, setEmail] = useState('');
@@ -161,7 +161,7 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    router.push('/(auth)/forgot-password/ForgotPassword');
+    router.push('/(auth)/ForgotPassword');
   };
 
   const handleGoogleLogin = () => {

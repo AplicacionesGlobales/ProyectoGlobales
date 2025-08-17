@@ -13,7 +13,7 @@ interface AppBootstrapProps {
 const { width, height } = Dimensions.get('window');
 
 const AppBootstrap: React.FC<AppBootstrapProps> = ({ children }) => {
-  const { colors, appConfig, isConfigLoaded, reloadConfig } = useTheme();
+  const { colors, isConfigLoaded, reloadConfig } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -101,7 +101,7 @@ const AppBootstrap: React.FC<AppBootstrapProps> = ({ children }) => {
           ]}
         >
           {/* Logo */}
-          <View style={styles.logoContainer}>
+          {/* <View style={styles.logoContainer}>
             {appConfig?.logo ? (
               <Animated.Image
                 source={{ uri: appConfig.logo.uri }}
@@ -119,16 +119,16 @@ const AppBootstrap: React.FC<AppBootstrapProps> = ({ children }) => {
                 <Ionicons name="calendar" size={45} color="#ffffff" />
               </View>
             )}
-          </View>
+          </View> */}
 
           {/* App Name */}
-          <Text style={styles.appName}>
+          {/* <Text style={styles.appName}>
             {appConfig?.branding.appName || 'Cargando...'}
           </Text>
           
           <Text style={styles.companyName}>
             {appConfig?.branding.companyName || 'Mi Empresa'}
-          </Text>
+          </Text> */}
 
           {/* Loading indicator */}
           <View style={styles.loadingContainer}>

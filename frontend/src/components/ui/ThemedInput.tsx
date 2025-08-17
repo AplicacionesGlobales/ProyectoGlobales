@@ -1,6 +1,14 @@
-// components/ui/ThemedInput.tsx
+// components/ui/ThemedInput.tsx (versión mejorada)
 import React, { forwardRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Platform, Animated, TextInputProps } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  Platform, 
+  Animated,
+  TextInputProps 
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styled } from 'nativewind';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -23,6 +31,9 @@ interface ThemedInputProps extends TextInputProps {
   showToggle?: boolean;
   isToggleVisible?: boolean;
   onToggle?: () => void;
+  isValid?: boolean;
+  validationComponent?: React.ReactNode;
+  containerStyle?: any;
 }
 
 const ThemedInput = forwardRef<TextInput, ThemedInputProps>(({
@@ -37,16 +48,21 @@ const ThemedInput = forwardRef<TextInput, ThemedInputProps>(({
   showToggle,
   isToggleVisible,
   onToggle,
+  isValid,
   value,
+  validationComponent,
+  containerStyle,
   ...textInputProps
 }, ref) => {
   const { colors } = useTheme();
-  const isValid = value && !hasError && !isFocused;
+  
+  // Determinar si el campo es válido
+  const fieldIsValid = isValid !== undefined ? isValid : (value && !hasError && !isFocused);
 
   const getBorderColor = () => {
     if (hasError) return colors.error;
     if (isFocused) return colors.primary;
-    if (isValid) return colors.success;
+    if (fieldIsValid) return colors.success;
     return '#e5e7eb';
   };
 
@@ -57,12 +73,12 @@ const ThemedInput = forwardRef<TextInput, ThemedInputProps>(({
   };
 
   return (
-    <Animated.View style={{
+    <Animated.View style={[{
       marginBottom: 16,
       transform: [{
         scale: isFocused ? 1.02 : 1
       }]
-    }}>
+    }, containerStyle]}>
       {/* Label */}
       {label && (
         <StyledText style={{
@@ -130,7 +146,7 @@ const ThemedInput = forwardRef<TextInput, ThemedInputProps>(({
         )}
 
         {/* Valid Checkmark */}
-        {isValid && (
+        {fieldIsValid && (
           <Ionicons name="checkmark-circle" size={20} color={colors.success} />
         )}
       </StyledView>
@@ -144,6 +160,9 @@ const ThemedInput = forwardRef<TextInput, ThemedInputProps>(({
         showIcon={true}
         dismissible={false}
       />
+
+      {/* Validation Component (para email, username, password strength) */}
+      {validationComponent}
     </Animated.View>
   );
 });

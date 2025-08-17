@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PasswordValidation } from '../hooks/usePasswordValidation';
+import { PasswordValidation } from '../../hooks/usePasswordValidation';
 
 interface PasswordStrengthIndicatorProps {
   validation: PasswordValidation;

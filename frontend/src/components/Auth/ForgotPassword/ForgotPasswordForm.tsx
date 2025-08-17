@@ -1,6 +1,7 @@
 // components/Auth/ForgotPassword/ForgotPasswordForm.tsx
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { StepIndicator } from './StepIndicator';
 import { StepOne } from './StepOne';
 import { StepTwo } from './StepTwo';
@@ -15,6 +16,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
   onSuccess,
   onBackToLogin,
 }) => {
+  const { colors } = useTheme();
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState('');
   const [validatedCode, setValidatedCode] = useState('');

@@ -1,6 +1,6 @@
+// contexts/ThemeContext.tsx
 import React, { createContext, ReactNode, useContext, useState, useEffect } from 'react';
-import AppConfigService from '../services/AppConfigService';
-import { AppConfigData } from '../api/types';
+import AppConfigService, { ColorPaletteConfig } from '../services/AppConfigService';
 
 export interface ThemeColors {
   primary: string;
@@ -17,7 +17,7 @@ export interface ThemeColors {
 
 interface ThemeContextType {
   colors: ThemeColors;
-  appConfig: AppConfigData | null;
+  colorPalette: ColorPaletteConfig | null;
   isConfigLoaded: boolean;
   updateColors: (newColors: Partial<ThemeColors>) => void;
   resetToDefault: () => void;
@@ -45,54 +45,54 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [colors, setColors] = useState<ThemeColors>(defaultColors);
-  const [appConfig, setAppConfig] = useState<AppConfigData | null>(null);
+  const [colorPalette, setColorPalette] = useState<ColorPaletteConfig | null>(null);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
 
   useEffect(() => {
-    loadAppConfig();
+    loadColorPalette();
   }, []);
 
-  const loadAppConfig = async () => {
+  const loadColorPalette = async () => {
     try {
       const configService = AppConfigService.getInstance();
       
       // Si la configuración ya está cargada, usarla
       if (configService.isConfigLoaded()) {
-        const config = configService.getConfig();
-        if (config) {
-          updateFromConfig(config);
+        const palette = configService.getColorPalette();
+        if (palette) {
+          updateFromPalette(palette);
           return;
         }
       }
 
-      // Cargar configuración fresca
-      const config = await configService.loadConfig();
-      updateFromConfig(config);
+      // Cargar paleta de colores fresca
+      const palette = await configService.loadColorPalette();
+      updateFromPalette(palette);
     } catch (error) {
-      console.error('Error loading app config in ThemeProvider:', error);
+      console.error('Error loading color palette in ThemeProvider:', error);
       // Mantener colores por defecto si falla
       setIsConfigLoaded(true);
     }
   };
 
-  const updateFromConfig = (config: AppConfigData) => {
-    console.log('Updating theme from config:', config);
+  const updateFromPalette = (palette: ColorPaletteConfig) => {
+    console.log('Updating theme from color palette:', palette);
     
     const newColors: ThemeColors = {
-      primary: config.colorPalette.primary,
-      secondary: config.colorPalette.secondary,
-      accent: config.colorPalette.accent,
+      primary: palette.primary,
+      secondary: palette.secondary,
+      accent: palette.accent,
       background: '#FAFAFA',
       surface: '#FFFFFF',
       text: '#111827',
       textSecondary: '#6B7280',
-      success: config.colorPalette.success,
+      success: palette.success,
       warning: '#D97706',
       error: '#DC2626',
     };
 
     setColors(newColors);
-    setAppConfig(config);
+    setColorPalette(palette);
     setIsConfigLoaded(true);
     
     console.log('Theme updated with colors:', newColors);
@@ -104,17 +104,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const resetToDefault = () => {
     setColors(defaultColors);
+    setColorPalette(null);
   };
 
   const reloadConfig = async () => {
     setIsConfigLoaded(false);
-    await loadAppConfig();
+    await loadColorPalette();
   };
 
   return (
     <ThemeContext.Provider value={{ 
       colors, 
-      appConfig, 
+      colorPalette, 
       isConfigLoaded, 
       updateColors, 
       resetToDefault,
@@ -133,8 +134,8 @@ export const useTheme = () => {
   return context;
 };
 
-// Hook adicional para acceso rápido a la configuración de la app
-export const useAppConfig = () => {
-  const { appConfig, isConfigLoaded, reloadConfig } = useTheme();
-  return { appConfig, isConfigLoaded, reloadConfig };
+// Hook adicional para acceso rápido a la paleta de colores
+export const useColorPalette = () => {
+  const { colorPalette, isConfigLoaded, reloadConfig } = useTheme();
+  return { colorPalette, isConfigLoaded, reloadConfig };
 };
