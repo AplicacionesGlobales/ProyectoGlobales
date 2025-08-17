@@ -30,4 +30,23 @@ export class PaymentValidationResponseDto {
     required: false
   })
   dueDate?: string;
+
+  @ApiProperty({
+    description: 'Información del brand para facilitar el pago',
+    required: false
+  })
+  brandInfo?: {
+    id: number;
+    name: string;
+    phone?: string;
+    owner?: {
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+    plan?: {
+      type: string;
+      billingCycle: string;
+    };
+  };
 }

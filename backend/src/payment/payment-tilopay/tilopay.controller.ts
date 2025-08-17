@@ -1,11 +1,12 @@
 // backend\src\payment\payment-tilopay\tilopay.controller.ts
-import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, Query, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TilopayService } from './tilopay.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { BaseResponseDto } from '../../common/dto';
 import { Public } from '../../common/decorators';
 import { PaymentCallbackQuery } from './tilopay.types';
+import { Response } from 'express';
 
 @ApiTags('Pagos')
 @Controller('payment')
@@ -22,6 +23,8 @@ export class PaymentController {
     @Body(ValidationPipe) createPaymentDto: CreatePaymentDto
   ): Promise<BaseResponseDto<any>> {
     try {
+      console.log('💳 Payment request received:', createPaymentDto);
+      
       // Calcular monto total según el plan
       const totalAmount = this.calculateTotalAmount(
         createPaymentDto.planType,
@@ -29,21 +32,23 @@ export class PaymentController {
         createPaymentDto.selectedServices || []
       );
 
+      console.log('💰 Calculated amount:', totalAmount);
+
       const paymentData = {
-        redirect: `${process.env.BASE_URL}/payment/callback`,
+        redirect: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/payment/callback`,
         amount: totalAmount.toFixed(2),
         currency: 'USD',
         orderNumber: `ORDER-${Date.now()}`,
         capture: '1',
-        billToFirstName: createPaymentDto.ownerName.split(' ')[0],
-        billToLastName: createPaymentDto.ownerName.split(' ').slice(1).join(' ') || 'N/A',
-        billToAddress: createPaymentDto.location || 'N/A',
+        billToFirstName: createPaymentDto.ownerName.split(' ')[0] || 'Cliente',
+        billToLastName: createPaymentDto.ownerName.split(' ').slice(1).join(' ') || 'Empresa',
+        billToAddress: createPaymentDto.location || 'San José, Costa Rica',
         billToAddress2: 'N/A',
-        billToCity: 'N/A',
-        billToState: 'N/A',
-        billToZipPostCode: '00000',
+        billToCity: 'San José',
+        billToState: 'San José',
+        billToZipPostCode: '10101',
         billToCountry: 'CR', // Costa Rica por defecto
-        billToTelephone: createPaymentDto.phone,
+        billToTelephone: createPaymentDto.phone || '25001000',
         billToEmail: createPaymentDto.email,
         subscription: '0',
         platform: 'api',
@@ -113,38 +118,65 @@ export class PaymentController {
   @ApiOperation({ summary: 'Callback de pago de Tilopay' })
   @ApiResponse({ status: 200, description: 'Callback procesado correctamente' })
   async paymentCallback(
-    @Query() query: PaymentCallbackQuery
-  ): Promise<any> {
+    @Query() query: PaymentCallbackQuery,
+    @Res() res: Response
+  ): Promise<void> {
     try {
+      console.log('📞 Processing payment callback:', query);
+      
+      // URL base del frontend
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      
       // Verificar el código de respuesta
       if (query.code === '1') {
         // Pago aprobado
         const returnData = query.returnData ?
           JSON.parse(Buffer.from(query.returnData, 'base64').toString()) : null;
 
+        console.log('✅ Payment approved:', {
+          transactionId: query['tilopay-transaction'],
+          orderNumber: query.order,
+          returnData
+        });
+
         // Aquí puedes actualizar el estado del pago en tu base de datos
         // y realizar otras acciones necesarias
 
-        return {
-          success: true,
-          message: 'Pago procesado exitosamente',
-          transactionId: query['tilopay-transaction'],
-          orderNumber: query.order
-        };
+        // Redirigir al frontend con parámetros de éxito
+        const callbackUrl = new URL(`${frontendUrl}/payment/callback`);
+        callbackUrl.searchParams.set('status', 'completed');
+        callbackUrl.searchParams.set('order_id', query.order || '');
+        callbackUrl.searchParams.set('transaction_id', query['tilopay-transaction'] || '');
+        callbackUrl.searchParams.set('reference', query['tilopay-transaction'] || '');
+        
+        res.redirect(callbackUrl.toString());
       } else {
         // Pago fallido
-        return {
-          success: false,
-          message: query.description || 'Pago fallido',
-          code: query.code
-        };
+        console.log('❌ Payment failed:', {
+          code: query.code,
+          description: query.description,
+          orderNumber: query.order
+        });
+
+        // Redirigir al frontend con parámetros de fallo
+        const callbackUrl = new URL(`${frontendUrl}/payment/callback`);
+        callbackUrl.searchParams.set('status', 'failed');
+        callbackUrl.searchParams.set('order_id', query.order || '');
+        callbackUrl.searchParams.set('error_code', query.code || '');
+        callbackUrl.searchParams.set('error_message', query.description || 'Pago fallido');
+        
+        res.redirect(callbackUrl.toString());
       }
     } catch (error) {
-      console.error('Error processing payment callback:', error);
-      return {
-        success: false,
-        message: 'Error procesando el callback de pago'
-      };
+      console.error('💥 Error processing payment callback:', error);
+      
+      // Redirigir al frontend con error
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      const callbackUrl = new URL(`${frontendUrl}/payment/callback`);
+      callbackUrl.searchParams.set('status', 'error');
+      callbackUrl.searchParams.set('error_message', 'Error procesando el callback de pago');
+      
+      res.redirect(callbackUrl.toString());
     }
   }
 
