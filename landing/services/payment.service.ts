@@ -119,20 +119,25 @@ class PaymentService {
       // - order_id: ID de la orden
       // - status: estado del pago (completed, failed, error)
       // - transaction_id: ID de transacción de Tilopay
+      // - auth_code: código de autorización
       // - error_code y error_message para errores
       
       const orderId = queryParams.get('order_id');
       const status = queryParams.get('status');
       const transactionId = queryParams.get('transaction_id');
+      const authCode = queryParams.get('auth_code');
       const errorCode = queryParams.get('error_code');
       const errorMessage = queryParams.get('error_message');
+      const description = queryParams.get('description');
       
       console.log('📋 Callback parameters:', { 
         orderId, 
         status, 
         transactionId, 
+        authCode,
         errorCode, 
-        errorMessage 
+        errorMessage,
+        description
       });
       
       if (!status) {
@@ -149,15 +154,46 @@ class PaymentService {
           return {
             success: true,
             status: 'completed',
-            message: '¡Pago completado exitosamente! Tu plan ha sido activado.',
+            message: `¡Pago completado exitosamente! ${description || 'Tu plan ha sido activado.'}`,
             orderNumber: orderId || undefined
           };
           
         case 'failed':
+          // Determinar mensaje específico según el código de error
+          let specificMessage = 'El pago no pudo ser procesado.';
+          
+          if (errorCode) {
+            switch (errorCode) {
+              case '51':
+                specificMessage = 'Fondos insuficientes en tu tarjeta. Verifica tu saldo e intenta nuevamente.';
+                break;
+              case '82':
+                specificMessage = 'Código de seguridad (CVV) inválido. Verifica los datos de tu tarjeta.';
+                break;
+              case '43':
+                specificMessage = 'Tu tarjeta fue rechazada. Contacta a tu banco para más información.';
+                break;
+              case '12':
+                specificMessage = 'Datos de la tarjeta incorrectos. Verifica la información e intenta nuevamente.';
+                break;
+              case '05':
+              case '41':
+                specificMessage = 'Tu tarjeta fue rechazada por el banco. Intenta con otra tarjeta.';
+                break;
+              case '54':
+                specificMessage = 'Tu tarjeta ha expirado. Usa una tarjeta vigente.';
+                break;
+              default:
+                specificMessage = errorMessage || 'El pago no pudo ser procesado. Por favor, inténtalo de nuevo.';
+            }
+          } else {
+            specificMessage = errorMessage || specificMessage;
+          }
+          
           return {
             success: false,
             status: 'failed',
-            message: errorMessage || 'El pago no pudo ser procesado. Por favor, inténtalo de nuevo.',
+            message: specificMessage,
             orderNumber: orderId || undefined
           };
           
@@ -165,7 +201,7 @@ class PaymentService {
           return {
             success: false,
             status: 'failed',
-            message: errorMessage || 'Ocurrió un error procesando el pago.',
+            message: errorMessage || 'Ocurrió un error procesando el pago. Intenta nuevamente.',
             orderNumber: orderId || undefined
           };
           

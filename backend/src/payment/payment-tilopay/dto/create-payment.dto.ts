@@ -13,10 +13,10 @@ export class CreatePaymentDto {
   @IsNotEmpty()
   email: string;
 
-  @ApiProperty({ example: '88888888', description: 'Teléfono de contacto' })
+  @ApiProperty({ example: '88888888', description: 'Teléfono de contacto', required: false })
   @IsString()
-  @IsNotEmpty()
-  phone: string;
+  @IsOptional()
+  phone?: string;
 
   @ApiProperty({ example: 'Juan Perez', description: 'Nombre del propietario' })
   @IsString()
