@@ -48,6 +48,36 @@ export default function PaymentPendingPage() {
   const [error, setError] = useState<string | null>(null)
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null)
   const [paymentStatus, setPaymentStatus] = useState<string>('pending')
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(0)
+
+  // Función para calcular precio dinámicamente
+  const calculatePrice = (planType: string, features: string[], billingPeriod: string): number => {
+    // Precios base
+    const basePrices = {
+      web: 0,
+      app: 35,
+      completo: 60,
+    };
+
+    // Precios de features
+    const featurePrices: Record<string, number> = {
+      'Gestión de Citas': 35,
+      'Ubicaciones': 15,
+      'Archivos y Documentos': 25,
+      'Pagos': 30,
+      'Reportes': 30,
+      'Catálogo de Servicios': 45,
+      'Notificaciones': 25
+    };
+
+    const basePrice = basePrices[planType as keyof typeof basePrices] || 0;
+    const featuresPrice = features.reduce((total, feature) => {
+      return total + (featurePrices[feature] || 0);
+    }, 0);
+
+    const monthlyTotal = basePrice + featuresPrice;
+    return billingPeriod === 'annual' ? monthlyTotal * 12 : monthlyTotal;
+  }
 
   useEffect(() => {
     // Obtener parámetros de la URL del lado del cliente
@@ -89,7 +119,7 @@ export default function PaymentPendingPage() {
           plan: {
             id: 1,
             type: brandPaymentInfo?.plan?.type || brand.businessType || 'app',
-            price: 185,
+            price: 0, // Se calculará dinámicamente en el backend
             features: ['Gestión de Citas', 'Catálogo de Servicios', 'Reportes', 'Notificaciones'],
             billingPeriod: brandPaymentInfo?.plan?.billingCycle || 'monthly'
           },
@@ -98,7 +128,18 @@ export default function PaymentPendingPage() {
           }
         }
 
+        // Calcular precio dinámicamente
+        const calculatedPrice = calculatePrice(
+          finalUserData.plan.type,
+          finalUserData.plan.features,
+          finalUserData.plan.billingPeriod
+        );
+        
+        finalUserData.plan.price = calculatedPrice;
+        setCalculatedPrice(calculatedPrice);
+
         console.log('📋 Final user data for payment:', finalUserData)
+        console.log('💰 Calculated price:', calculatedPrice)
         setUserData(finalUserData)
       }
     }

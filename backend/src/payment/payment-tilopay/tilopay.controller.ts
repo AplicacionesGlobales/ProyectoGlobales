@@ -7,11 +7,17 @@ import { BaseResponseDto } from '../../common/dto';
 import { Public } from '../../common/decorators';
 import { PaymentCallbackQuery } from './tilopay.types';
 import { Response } from 'express';
+import { PrismaService } from '../../prisma/prisma.service';
+import { PricingService } from '../../common/services/pricing.service';
 
 @ApiTags('Pagos')
 @Controller('payment')
 export class PaymentController {
-  constructor(private readonly tilopayService: TilopayService) { }
+  constructor(
+    private readonly tilopayService: TilopayService,
+    private readonly prisma: PrismaService,
+    private readonly pricingService: PricingService
+  ) { }
 
   @Public()
   @Post('create')
@@ -25,14 +31,14 @@ export class PaymentController {
     try {
       console.log('💳 Payment request received:', createPaymentDto);
       
-      // Calcular monto total según el plan
-      const totalAmount = this.calculateTotalAmount(
+      // Usar PricingService para calcular el monto
+      const totalAmount = this.pricingService.calculateTotalPrice(
         createPaymentDto.planType,
-        createPaymentDto.billingCycle,
-        createPaymentDto.selectedServices || []
+        createPaymentDto.selectedServices || [],
+        createPaymentDto.billingCycle as 'monthly' | 'annual'
       );
 
-      console.log('💰 Calculated amount:', totalAmount);
+      console.log('💰 Calculated amount using PricingService:', totalAmount);
 
       const paymentData = {
         redirect: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/payment/callback`,
@@ -74,46 +80,6 @@ export class PaymentController {
     }
   }
 
-  private calculateTotalAmount(
-    planType: string,
-    billingCycle: string,
-    selectedServices: string[]
-  ): number {
-    if (planType === 'web') {
-      return 0; // Plan web gratuito
-    }
-
-    // Precios base mensuales
-    const basePrices = {
-      app: 59,
-      completo: 60,
-    };
-
-    // Precios de servicios mensuales
-    const servicePrices: Record<string, number> = {
-      citas: 20,
-      ubicaciones: 15,
-      archivos: 25,
-      pagos: 30,
-      reportes: 15,
-    };
-
-    // Calcular costo base
-    const basePrice = basePrices[planType as keyof typeof basePrices] || 0;
-
-    // Calcular costo de servicios
-    const servicesPrice = selectedServices.reduce((total, serviceId) => {
-      return total + (servicePrices[serviceId] || 0);
-    }, 0);
-
-    const monthlyTotal = basePrice + servicesPrice;
-
-    // Si es anual, multiplicar por 12
-    return billingCycle === 'annual' ? monthlyTotal * 12 : monthlyTotal;
-  }
-
-
-
   @Public()
   @Get('callback')
   @ApiOperation({ summary: 'Callback de pago de Tilopay' })
@@ -128,18 +94,19 @@ export class PaymentController {
       // URL base del frontend
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
       
-      // Tilopay envía:
+      // Tilopay envía directamente estos parámetros:
       // - code: '1' para éxito, otros códigos para error
       // - description: descripción del resultado
       // - order: número de orden
       // - tilopay-transaction: ID de transacción
       // - auth: código de autorización
+      // - returnData: datos adicionales en base64
       
       const callbackUrl = new URL(`${frontendUrl}/payment/callback`);
       
       // Verificar el código de respuesta
       if (query.code === '1') {
-        // Pago aprobado
+        // Pago aprobado - procesar returnData
         console.log('✅ Payment approved:', {
           transactionId: query['tilopay-transaction'],
           orderNumber: query.order,
@@ -147,14 +114,31 @@ export class PaymentController {
           description: query.description
         });
 
-        // TODO: Aquí deberías actualizar el estado del pago en tu base de datos
-        // await this.updatePaymentStatus(query.order, 'completed', query['tilopay-transaction']);
+        // Procesar returnData para obtener información del brand
+        let brandData = null;
+        if (query.returnData) {
+          try {
+            const decoded = Buffer.from(query.returnData, 'base64').toString();
+            const parsedData = JSON.parse(decoded);
+            brandData = parsedData.brandData;
+            console.log('📦 Decoded brand data:', brandData);
+          } catch (error) {
+            console.error('❌ Error decoding returnData:', error);
+          }
+        }
 
-        // Enviar parámetros de éxito al frontend
-        callbackUrl.searchParams.set('status', 'completed');
-        callbackUrl.searchParams.set('order_id', query.order || '');
-        callbackUrl.searchParams.set('transaction_id', query['tilopay-transaction'] || '');
-        callbackUrl.searchParams.set('auth_code', query.auth || '');
+        // Actualizar pago en base de datos
+        await this.updatePaymentStatus(
+          query.order || '', 
+          'completed', 
+          query['tilopay-transaction'] || '',
+          query.auth || '',
+          brandData
+        );
+
+        // Redirigir al frontend con parámetros mínimos
+        callbackUrl.searchParams.set('code', '1');
+        callbackUrl.searchParams.set('order', query.order || '');
         callbackUrl.searchParams.set('description', query.description || 'Pago completado');
         
       } else {
@@ -165,17 +149,24 @@ export class PaymentController {
           orderNumber: query.order
         });
 
-        // TODO: Aquí deberías actualizar el estado del pago en tu base de datos
-        // await this.updatePaymentStatus(query.order, 'failed', null, query.code, query.description);
+        // Actualizar pago como fallido
+        await this.updatePaymentStatus(
+          query.order || '', 
+          'failed', 
+          undefined,
+          undefined,
+          undefined,
+          query.code,
+          query.description
+        );
 
-        // Enviar parámetros de error al frontend
-        callbackUrl.searchParams.set('status', 'failed');
-        callbackUrl.searchParams.set('order_id', query.order || '');
-        callbackUrl.searchParams.set('error_code', query.code || '');
-        callbackUrl.searchParams.set('error_message', query.description || 'Pago fallido');
+        // Redirigir al frontend con error
+        callbackUrl.searchParams.set('code', query.code || '0');
+        callbackUrl.searchParams.set('order', query.order || '');
+        callbackUrl.searchParams.set('description', query.description || 'Pago fallido');
       }
       
-      console.log('🔀 Redirecting to:', callbackUrl.toString());
+      console.log('🔄 Redirecting to:', callbackUrl.toString());
       res.redirect(callbackUrl.toString());
       
     } catch (error) {
@@ -184,10 +175,117 @@ export class PaymentController {
       // Redirigir al frontend con error
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
       const callbackUrl = new URL(`${frontendUrl}/payment/callback`);
-      callbackUrl.searchParams.set('status', 'error');
-      callbackUrl.searchParams.set('error_message', 'Error procesando el callback de pago');
+      callbackUrl.searchParams.set('code', '0');
+      callbackUrl.searchParams.set('description', 'Error procesando el callback de pago');
       
       res.redirect(callbackUrl.toString());
+    }
+  }
+
+  private async updatePaymentStatus(
+    orderNumber: string,
+    status: 'completed' | 'failed',
+    tilopayTransactionId?: string,
+    authCode?: string,
+    brandData?: any,
+    errorCode?: string,
+    errorDescription?: string
+  ): Promise<void> {
+    try {
+      console.log('💾 Updating payment status:', {
+        orderNumber,
+        status,
+        tilopayTransactionId,
+        brandData
+      });
+
+      if (status === 'completed' && brandData) {
+        console.log('✅ Processing successful payment...');
+        
+        // Buscar la marca por email del propietario
+        const brand = await this.prisma.brand.findFirst({
+          where: {
+            userBrands: {
+              some: {
+                user: {
+                  email: brandData.email
+                }
+              }
+            }
+          },
+          include: {
+            brandPlans: {
+              where: { isActive: true },
+              include: {
+                plan: true
+              }
+            },
+            userBrands: {
+              include: {
+                user: true
+              }
+            }
+          }
+        });
+
+        if (brand && brand.brandPlans.length > 0) {
+          const brandPlan = brand.brandPlans[0];
+          
+          console.log(`📋 Brand found: ${brand.name} (ID: ${brand.id})`);
+          console.log(`📋 BrandPlan found: ${brandPlan.plan.name} (ID: ${brandPlan.id})`);
+          
+          // Crear registro de pago
+          const payment = await this.prisma.payment.create({
+            data: {
+              brandId: brand.id,
+              brandPlanId: brandPlan.id,
+              amount: parseFloat(brandData.amount || '0'),
+              currency: 'USD',
+              status: 'completed',
+              tilopayTransactionId: tilopayTransactionId,
+              tilopayReference: orderNumber,
+              processedAt: new Date(),
+              metadata: {
+                authCode: authCode,
+                description: 'Pago completado via Tilopay',
+                brandData: brandData,
+                orderNumber: orderNumber,
+                tilopayTransactionId: tilopayTransactionId
+              }
+            }
+          });
+
+          console.log(`✅ Payment record created with ID: ${payment.id}`);
+          
+          // Actualizar el estado del brandPlan si es necesario
+          await this.prisma.brandPlan.update({
+            where: { id: brandPlan.id },
+            data: {
+              endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 días desde ahora
+            }
+          });
+          
+          console.log('✅ BrandPlan updated with new end date');
+          
+        } else {
+          console.error('❌ Brand or active plan not found for email:', brandData.email);
+          
+          // Log adicional para debugging
+          if (!brand) {
+            console.error('❌ No brand found for email:', brandData.email);
+          } else if (brand.brandPlans.length === 0) {
+            console.error('❌ No active brandPlans found for brand:', brand.id);
+          }
+        }
+      } else if (status === 'failed') {
+        console.log('❌ Processing failed payment...');
+        // Para pagos fallidos, podríamos log el intento si es necesario
+        // Por ahora solo loggeamos el error
+        console.log(`❌ Payment failed for order ${orderNumber}: ${errorCode} - ${errorDescription}`);
+      }
+
+    } catch (error) {
+      console.error('💥 Error updating payment status:', error);
     }
   }
 
