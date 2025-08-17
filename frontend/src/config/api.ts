@@ -5,9 +5,6 @@
 // URL base del servidor API
 export const API_BASE_URL = process.env.API_BASE_URL_PROD;
 
-// Para desarrollo local, descomenta esta línea:
-// export const API_BASE_URL = 'http://localhost:3000';
-
 /**
  * Configuración por ambiente
  */
