@@ -27,4 +27,14 @@ export class BaseResponseDto<T = any> {
   static singleError(code: number, description: string): BaseResponseDto {
     return new BaseResponseDto(false, undefined, [{ code, description }]);
   }
+
+  static validationError(validationErrors: string[]): BaseResponseDto {
+    const errors = validationErrors.map((error, index) => ({
+      code: 400,
+      description: error,
+      field: undefined,
+      message: error
+    }));
+    return new BaseResponseDto(false, undefined, errors);
+  }
 }

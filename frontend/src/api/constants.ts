@@ -11,10 +11,19 @@ export const API_ENDPOINTS = {
     VALIDATE_RESET_CODE: '/auth/validate-reset-code',
     RESET_PASSWORD: '/auth/reset-password',
   },
+  COLOR_PALETTES: {
+    BY_BRAND: '/color-palettes/brand',
+    VALIDATE: '/color-palettes/validate',
+    UPSERT: '/color-palettes/brand/{brandId}/upsert',
+  },
   // Validation endpoints
   VALIDATE: {
     EMAIL: '/validate/email',
     USERNAME: '/validate/username',
+  },
+  // Brand endpoints
+  BRANDS: {
+    BY_ID: '/brands',
   },
 } as const;
 
