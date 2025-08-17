@@ -60,7 +60,21 @@ class ApiClient {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Intentar obtener el mensaje de error del backend
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = Array.isArray(errorData.message) 
+              ? errorData.message.join(', ')
+              : errorData.message;
+          } else if (errorData.errors && errorData.errors.length > 0) {
+            errorMessage = errorData.errors.map((e: any) => e.description || e.message).join(', ');
+          }
+        } catch (e) {
+          // Si no puede parsear el JSON, usar el mensaje por defecto
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

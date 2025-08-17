@@ -44,17 +44,24 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
     setPaymentStatus('processing');
 
     try {
+      // Validar que tengamos todos los datos requeridos
+      if (!data.brandName || !data.email || !data.firstName || !data.lastName) {
+        throw new Error('Faltan datos requeridos para procesar el pago');
+      }
+
       // Preparar datos para el pago según el DTO del backend
       const paymentData = {
-        name: data.brandName,
-        email: data.email,
-        phone: data.brandPhone || data.phone || '00000000',
-        ownerName: `${data.firstName} ${data.lastName}`,
+        name: data.brandName.trim(),
+        email: data.email.trim(),
+        phone: (data.brandPhone || data.phone || '00000000').toString(),
+        ownerName: `${data.firstName.trim()} ${data.lastName.trim()}`,
         location: data.location || 'San José, Costa Rica',
         planType: data.businessType || 'app',
         billingCycle: data.billingCycle || 'monthly',
-        selectedServices: data.selectedFeatures || ['basic_features']
+        selectedServices: Array.isArray(data.selectedFeatures) ? data.selectedFeatures : ['basic_features']
       };
+
+      console.log('💳 Payment data to send:', paymentData);
 
       const response = await paymentService.createPayment(paymentData);
 
@@ -66,10 +73,12 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
           checkPaymentStatus(response.data.orderNumber);
         }
       } else {
-        throw new Error(response.errors?.[0]?.description || 'Error al generar URL de pago');
+        const errorMsg = response.errors?.[0]?.description || 'Error al generar URL de pago';
+        console.error('❌ Payment creation failed:', errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (error: any) {
-      console.error('Payment error:', error);
+      console.error('💥 Payment error:', error);
       setError(error.message || 'Error al procesar el pago');
       setPaymentStatus('failed');
       setIsProcessing(false);
@@ -86,7 +95,7 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
           ...data,
           payment: {
             status: 'completed',
-            reference: response.data.reference,
+            reference: response.data.tilopayReference || response.data.orderNumber,
             amount: plan.price
           }
         });

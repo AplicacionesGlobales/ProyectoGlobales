@@ -54,6 +54,11 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
         
         if (paymentValidation.success && paymentValidation.data) {
           if (!paymentValidation.data.isPaymentComplete) {
+            // Guardar información del brand para usar en el pago
+            if (paymentValidation.data.brandInfo) {
+              localStorage.setItem('brand_payment_info', JSON.stringify(paymentValidation.data.brandInfo))
+            }
+            
             // Redirigir a página de pago pendiente
             setTimeout(() => {
               router.push(`/payment/pending?status=${paymentValidation.data?.paymentStatus || 'pending'}`)

@@ -80,6 +80,20 @@ export interface PaymentValidationResponse {
   isPaymentComplete: boolean;
   paymentStatus: string;
   dueDate?: string;
+  brandInfo?: {
+    id: number;
+    name: string;
+    phone?: string;
+    owner?: {
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+    plan?: {
+      type: string;
+      billingCycle: string;
+    };
+  };
 }
 
 // Brand registration types

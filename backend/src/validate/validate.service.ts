@@ -160,26 +160,70 @@ export class ValidateService {
       console.log('\n🔍 === VALIDACIÓN PAGO ===');
       console.log('🏢 Brand ID:', brandId);
 
-      // Obtener el plan activo del brand
-      const brandPlan = await this.prisma.brandPlan.findFirst({
-        where: { 
-          brandId: brandId,
-          isActive: true
-        },
+      // Obtener información completa del brand
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId },
         include: {
-          plan: true,
-          payments: {
-            orderBy: { createdAt: 'desc' },
+          userBrands: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  email: true
+                }
+              }
+            },
+            take: 1 // Solo necesitamos el primer usuario (owner)
+          },
+          brandPlans: {
+            where: { isActive: true },
+            include: {
+              plan: true,
+              payments: {
+                orderBy: { createdAt: 'desc' },
+                take: 1
+              }
+            },
             take: 1
           }
         }
       });
 
+      if (!brand) {
+        console.log('❌ Brand no encontrado');
+        return BaseResponseDto.error([{
+          code: ERROR_CODES.INTERNAL_ERROR,
+          description: 'Brand no encontrado'
+        }]);
+      }
+
+      // Obtener información del owner
+      const owner = brand.userBrands[0]?.user;
+      const brandPlan = brand.brandPlans[0];
+
+      // Preparar información del brand para el frontend
+      const brandInfo = {
+        id: brand.id,
+        name: brand.name,
+        phone: brand.phone || undefined,
+        owner: owner ? {
+          firstName: owner.firstName || '',
+          lastName: owner.lastName || '',
+          email: owner.email
+        } : undefined,
+        plan: brandPlan ? {
+          type: brandPlan.plan.type,
+          billingCycle: brandPlan.billingPeriod
+        } : undefined
+      };
+
       if (!brandPlan) {
         console.log('⚠️ Brand no tiene plan activo');
         return BaseResponseDto.success({
           isPaymentComplete: false,
-          paymentStatus: 'no_plan'
+          paymentStatus: 'no_plan',
+          brandInfo
         });
       }
 
@@ -188,7 +232,8 @@ export class ValidateService {
         console.log('✅ Plan gratuito, no requiere pago');
         return BaseResponseDto.success({
           isPaymentComplete: true,
-          paymentStatus: 'free_plan'
+          paymentStatus: 'free_plan',
+          brandInfo
         });
       }
 
@@ -200,7 +245,8 @@ export class ValidateService {
         return BaseResponseDto.success({
           isPaymentComplete: false,
           paymentStatus: 'pending',
-          dueDate: brandPlan.startDate.toISOString()
+          dueDate: brandPlan.startDate.toISOString(),
+          brandInfo
         });
       }
 
@@ -214,7 +260,8 @@ export class ValidateService {
         console.log('✅ Pago completado');
         return BaseResponseDto.success({
           isPaymentComplete: true,
-          paymentStatus: 'completed'
+          paymentStatus: 'completed',
+          brandInfo
         });
       }
 
@@ -222,7 +269,8 @@ export class ValidateService {
       return BaseResponseDto.success({
         isPaymentComplete: false,
         paymentStatus: lastPayment.status,
-        dueDate: brandPlan.endDate?.toISOString() || undefined
+        dueDate: brandPlan.endDate?.toISOString() || undefined,
+        brandInfo
       });
 
     } catch (error) {

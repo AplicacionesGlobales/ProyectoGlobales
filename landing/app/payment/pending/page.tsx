@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CreditCard, Loader2, ExternalLink, CheckCircle, AlertCircle, Home, LogOut } from "lucide-react"
 import Link from "next/link"
+import { paymentService } from "@/services/payment.service"
 
 interface UserData {
   user: {
@@ -46,31 +47,60 @@ export default function PaymentPendingPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null)
+  const [paymentStatus, setPaymentStatus] = useState<string>('pending')
 
   useEffect(() => {
-    // Cargar datos del usuario desde localStorage
-    const userDataStr = localStorage.getItem('user_data')
-    const brandDataStr = localStorage.getItem('brand_data')
-    
-    if (userDataStr && brandDataStr) {
-      const user = JSON.parse(userDataStr)
-      const brand = JSON.parse(brandDataStr)
-      
-      // Simular datos del plan y pago
-      setUserData({
-        user,
-        brand,
-        plan: {
-          id: 1,
-          type: brand.businessType || 'app',
-          price: 185, // Precio desde el onboarding
-          features: ['Gestión de Citas', 'Catálogo de Servicios', 'Reportes', 'Notificaciones'],
-          billingPeriod: 'monthly'
-        },
-        payment: {
-          status: 'pending'
+    // Obtener parámetros de la URL del lado del cliente
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const status = params.get('status') || 'pending'
+      setPaymentStatus(status)
+
+      // Cargar datos del usuario desde localStorage
+      const userDataStr = localStorage.getItem('user_data')
+      const brandDataStr = localStorage.getItem('brand_data')
+      const brandPaymentInfoStr = localStorage.getItem('brand_payment_info')
+
+      if (userDataStr && brandDataStr) {
+        const user = JSON.parse(userDataStr)
+        const brand = JSON.parse(brandDataStr)
+        let brandPaymentInfo = null
+
+        try {
+          if (brandPaymentInfoStr) {
+            brandPaymentInfo = JSON.parse(brandPaymentInfoStr)
+          }
+        } catch (e) {
+          console.log('Error parsing brand payment info:', e)
         }
-      })
+
+        const finalUserData = {
+          user: brandPaymentInfo?.owner ? {
+            ...user,
+            firstName: brandPaymentInfo.owner.firstName,
+            lastName: brandPaymentInfo.owner.lastName,
+            email: brandPaymentInfo.owner.email
+          } : user,
+          brand: brandPaymentInfo ? {
+            ...brand,
+            name: brandPaymentInfo.name,
+            phone: brandPaymentInfo.phone
+          } : brand,
+          plan: {
+            id: 1,
+            type: brandPaymentInfo?.plan?.type || brand.businessType || 'app',
+            price: 185,
+            features: ['Gestión de Citas', 'Catálogo de Servicios', 'Reportes', 'Notificaciones'],
+            billingPeriod: brandPaymentInfo?.plan?.billingCycle || 'monthly'
+          },
+          payment: {
+            status: status
+          }
+        }
+
+        console.log('📋 Final user data for payment:', finalUserData)
+        setUserData(finalUserData)
+      }
     }
   }, [])
 
@@ -81,73 +111,50 @@ export default function PaymentPendingPage() {
     setError(null)
 
     try {
-      // Preparar datos para el pago
+      // Validar que tengamos todos los datos requeridos
+      if (!userData.brand?.name || !userData.user?.email || !userData.user?.firstName || !userData.user?.lastName) {
+        throw new Error('Faltan datos requeridos para procesar el pago');
+      }
+
+      // Asegurar que tenemos un teléfono válido
+      const phone = userData.brand.phone && userData.brand.phone.trim().length > 0 
+        ? userData.brand.phone.trim()
+        : '25001000'; // Teléfono por defecto de Costa Rica
+      
+      console.log('📞 Using phone number:', phone);
+
+      // Preparar datos para el pago según el formato del backend
       const paymentData = {
-        ownerName: `${userData.user.firstName} ${userData.user.lastName}`,
-        email: userData.user.email,
-        phone: userData.brand.phone || '',
-        location: 'Costa Rica',
+        name: userData.brand.name.trim(),
+        email: userData.user.email.trim(),
+        phone: phone,
+        ownerName: `${userData.user.firstName.trim()} ${userData.user.lastName.trim()}`,
+        location: 'San José, Costa Rica',
         planType: userData.plan.type,
         billingCycle: userData.plan.billingPeriod,
-        selectedServices: userData.plan.features,
-        amount: userData.plan.price
+        selectedServices: userData.plan.features
       }
 
-      // Hacer request al endpoint de pago
-      const response = await fetch('http://localhost:3000/payment/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(paymentData)
-      })
+      console.log('💳 Creating payment with data:', paymentData);
 
-      if (!response.ok) {
-        throw new Error('Error al crear el pago')
-      }
+      // Usar el servicio de pago
+      const response = await paymentService.createPayment(paymentData)
 
-      const result = await response.json()
-      
-      if (result.success && result.data?.paymentUrl) {
-        setPaymentUrl(result.data.paymentUrl)
-        // Abrir Tilopay en nueva ventana
-        window.open(result.data.paymentUrl, '_blank', 'width=800,height=600')
-        
-        // En producción, esto vendría de un webhook
-        // Por ahora simular que se completó
-        setTimeout(() => {
-          // Actualizar el estado del usuario en localStorage
-          if (userData) {
-            const updatedUserData = { 
-              ...userData, 
-              payment: { ...userData.payment, status: 'completed' } 
-            }
-            localStorage.setItem('user_data', JSON.stringify(updatedUserData.user))
-            localStorage.setItem('brand_data', JSON.stringify(updatedUserData.brand))
-            
-            // Guardar datos para el dashboard
-            const dashboardData = {
-              id: userData.user.id?.toString() || '1',
-              email: userData.user.email,
-              name: `${userData.user.firstName} ${userData.user.lastName}`,
-              businessType: 'app', // valor por defecto ya que no está en el tipo
-              brandName: userData.brand.name,
-              plan: userData.plan.type,
-              paymentStatus: 'paid',
-              createdAt: new Date().toISOString()
-            }
-            localStorage.setItem('userData', JSON.stringify(dashboardData))
-          }
-          
-          alert('¡Pago completado! Tu aplicación estará lista pronto.')
-          router.push('/dashboard')
-        }, 15000) // 15 segundos para completar el pago
+      if (response.success && response.data?.paymentUrl) {
+        setPaymentUrl(response.data.paymentUrl)
+        console.log('✅ Payment URL generated:', response.data.paymentUrl);
+
+        // Redirigir a Tilopay en la misma ventana
+        window.location.href = response.data.paymentUrl;
+
       } else {
-        throw new Error(result.message || 'Error al generar URL de pago')
+        const errorMsg = response.errors?.[0]?.description || 'Error al generar URL de pago'
+        console.error('❌ Payment creation failed:', errorMsg);
+        setError(errorMsg)
       }
     } catch (error) {
-      console.error('Payment error:', error)
-      setError('No se pudo procesar el pago. Inténtalo de nuevo.')
+      console.error('💥 Payment error:', error)
+      setError(error instanceof Error ? error.message : 'No se pudo procesar el pago. Inténtalo de nuevo.')
     } finally {
       setIsProcessing(false)
     }
@@ -265,12 +272,12 @@ export default function PaymentPendingPage() {
               <div className="flex justify-between items-center">
                 <span className="font-medium">Plan:</span>
                 <Badge variant="secondary">
-                  {userData.plan.type === 'web' ? 'Solo Web' : 
-                   userData.plan.type === 'app' ? 'Solo App Móvil' : 
-                   'Web + App Completa'}
+                  {userData.plan.type === 'web' ? 'Solo Web' :
+                    userData.plan.type === 'app' ? 'Solo App Móvil' :
+                      'Web + App Completa'}
                 </Badge>
               </div>
-              
+
               <div className="flex justify-between items-center">
                 <span className="font-medium">Facturación:</span>
                 <span>{userData.plan.billingPeriod === 'monthly' ? 'Mensual' : 'Anual'}</span>
@@ -343,8 +350,8 @@ export default function PaymentPendingPage() {
                 </div>
               )}
 
-              <Button 
-                onClick={handlePayment} 
+              <Button
+                onClick={handlePayment}
                 disabled={isProcessing}
                 className="w-full gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50"
                 size="lg"
