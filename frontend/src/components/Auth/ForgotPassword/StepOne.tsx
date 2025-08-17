@@ -1,8 +1,10 @@
 // components/Auth/ForgotPassword/StepOne.tsx
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Input } from '../../ui/Input';
+import { useTheme } from '../../../contexts/ThemeContext';
+import ThemedInput from '../../ui/ThemedInput';
+import ThemedButton from '../../ui/ThemedButton';
 import { useForgotPassword } from '../../../hooks/Auth/useForgotPassword';
 
 interface StepOneProps {
@@ -11,6 +13,7 @@ interface StepOneProps {
 }
 
 export const StepOne: React.FC<StepOneProps> = ({ onNext, onBack }) => {
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   
@@ -50,17 +53,14 @@ export const StepOne: React.FC<StepOneProps> = ({ onNext, onBack }) => {
       const result = await forgotPassword(email);
       console.log('📩 Respuesta del forgot password:', JSON.stringify(result, null, 2));
       
-      // Si llegamos aquí, la respuesta fue exitosa (no se lanzó excepción)
       if (result && result.success === true) {
         console.log('✅ Avanzando al paso 2 - success true');
         onNext(email);
       } else {
-        // Si no hay success explícito pero tampoco error, intentar avanzar
         console.log('⚠️ Avanzando al paso 2 - respuesta sin success explícito');
         onNext(email);
       }
     } catch (error) {
-      // Los errores ya son manejados por el hook useForgotPassword
       console.log('❌ Error capturado en handleSubmit:', error);
     }
   };
@@ -72,7 +72,7 @@ export const StepOne: React.FC<StepOneProps> = ({ onNext, onBack }) => {
         <Text style={{
           fontSize: 24,
           fontWeight: 'bold',
-          color: '#1f2937',
+          color: colors.text,
           marginBottom: 8,
           textAlign: 'center',
         }}>
@@ -80,7 +80,7 @@ export const StepOne: React.FC<StepOneProps> = ({ onNext, onBack }) => {
         </Text>
         <Text style={{
           fontSize: 16,
-          color: '#6b7280',
+          color: colors.textSecondary,
           textAlign: 'center',
           lineHeight: 24,
         }}>
@@ -90,77 +90,43 @@ export const StepOne: React.FC<StepOneProps> = ({ onNext, onBack }) => {
 
       {/* Email Input */}
       <View style={{ marginBottom: 24 }}>
-        <Input
+        <ThemedInput
+          field="email"
           label="Correo Electrónico"
+          required
+          icon="mail-outline"
           placeholder="correo@ejemplo.com"
-          value={email}
-          onChangeText={handleEmailChange}
-          error={emailError || error}
           keyboardType="email-address"
           autoCapitalize="none"
-          autoComplete="email"
-          textContentType="emailAddress"
-          required
+          autoCorrect={false}
+          value={email}
+          onChangeText={handleEmailChange}
+          hasError={emailError || error}
         />
       </View>
 
       {/* Action Buttons */}
       <View>
         {/* Send Code Button */}
-        <TouchableOpacity
-          onPress={handleSubmit}
+        <ThemedButton
+          title={isLoading ? 'Enviando...' : 'Enviar Código'}
+          variant="primary"
+          size="medium"
+          icon={isLoading ? 'hourglass' : 'mail'}
+          loading={isLoading}
           disabled={!email.trim() || isLoading}
-          style={{
-            backgroundColor: !email.trim() || isLoading ? '#9ca3af' : '#3b82f6',
-            borderRadius: 12,
-            paddingVertical: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#3b82f6',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 4,
-            marginBottom: 16,
-          }}
-        >
-          {isLoading ? (
-            <Ionicons name="hourglass" size={22} color="#ffffff" style={{ marginRight: 8 }} />
-          ) : (
-            <Ionicons name="mail" size={22} color="#ffffff" style={{ marginRight: 8 }} />
-          )}
-          <Text style={{
-            color: '#ffffff',
-            fontSize: 17,
-            fontWeight: '600',
-          }}>
-            {isLoading ? 'Enviando...' : 'Enviar Código'}
-          </Text>
-        </TouchableOpacity>
+          onPress={handleSubmit}
+          style={{ marginBottom: 16 }}
+        />
 
         {/* Back to Login Button */}
-        <TouchableOpacity
+        <ThemedButton
+          title="Volver al Login"
+          variant="outline"
+          size="medium"
+          icon="arrow-back"
           onPress={onBack}
-          style={{
-            borderWidth: 2,
-            borderColor: '#3b82f6',
-            borderRadius: 12,
-            paddingVertical: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="arrow-back" size={20} color="#3b82f6" style={{ marginRight: 8 }} />
-          <Text style={{
-            color: '#3b82f6',
-            fontSize: 17,
-            fontWeight: '600',
-          }}>
-            Volver al Login
-          </Text>
-        </TouchableOpacity>
+        />
       </View>
     </View>
   );

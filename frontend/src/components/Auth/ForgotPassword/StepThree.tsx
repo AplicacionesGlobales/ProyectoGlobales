@@ -1,8 +1,10 @@
 // components/Auth/ForgotPassword/StepThree.tsx
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Input } from '../../ui/Input';
+import { useTheme } from '../../../contexts/ThemeContext';
+import ThemedInput from '../../ui/ThemedInput';
+import ThemedButton from '../../ui/ThemedButton';
 import { useResetPassword } from '../../../hooks/Auth/useResetPassword';
 
 interface StepThreeProps {
@@ -13,6 +15,7 @@ interface StepThreeProps {
 }
 
 export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, onBack }) => {
+  const { colors } = useTheme();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -89,6 +92,27 @@ export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, on
     }
   };
 
+  // Componente de requisito de contraseña
+  const PasswordRequirement: React.FC<{ 
+    met: boolean; 
+    text: string; 
+  }> = ({ met, text }) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+      <Ionicons 
+        name={met ? "checkmark-circle" : "ellipse-outline"} 
+        size={16} 
+        color={met ? colors.success : colors.textSecondary} 
+        style={{ marginRight: 8 }} 
+      />
+      <Text style={{ 
+        fontSize: 12, 
+        color: met ? colors.success : colors.textSecondary 
+      }}>
+        {text}
+      </Text>
+    </View>
+  );
+
   if (isSuccess) {
     return (
       <View>
@@ -98,7 +122,7 @@ export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, on
             width: 100,
             height: 100,
             borderRadius: 50,
-            backgroundColor: '#10b981',
+            backgroundColor: colors.success,
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 20,
@@ -108,7 +132,7 @@ export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, on
           <Text style={{
             fontSize: 28,
             fontWeight: 'bold',
-            color: '#1f2937',
+            color: colors.text,
             marginBottom: 8,
             textAlign: 'center',
           }}>
@@ -116,7 +140,7 @@ export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, on
           </Text>
           <Text style={{
             fontSize: 16,
-            color: '#6b7280',
+            color: colors.textSecondary,
             textAlign: 'center',
             lineHeight: 24,
           }}>
@@ -127,38 +151,20 @@ export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, on
         <View style={{ marginBottom: 16 }}>
           <Text style={{
             fontSize: 14,
-            color: '#9ca3af',
+            color: colors.textSecondary,
             textAlign: 'center',
             marginBottom: 24,
           }}>
             Te hemos enviado un email de confirmación con un código de emergencia por si necesitas ayuda adicional.
           </Text>
           
-          <TouchableOpacity
+          <ThemedButton
+            title="Ir al Login"
+            variant="primary"
+            size="medium"
+            icon="log-in"
             onPress={onSuccess}
-            style={{
-              backgroundColor: '#3b82f6',
-              borderRadius: 12,
-              paddingVertical: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#3b82f6',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 4,
-            }}
-          >
-            <Ionicons name="log-in" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-            <Text style={{
-              color: '#ffffff',
-              fontSize: 17,
-              fontWeight: '600',
-            }}>
-              Ir al Login
-            </Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
     );
@@ -171,7 +177,7 @@ export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, on
         <Text style={{
           fontSize: 24,
           fontWeight: 'bold',
-          color: '#1f2937',
+          color: colors.text,
           marginBottom: 8,
           textAlign: 'center',
         }}>
@@ -179,7 +185,7 @@ export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, on
         </Text>
         <Text style={{
           fontSize: 16,
-          color: '#6b7280',
+          color: colors.textSecondary,
           textAlign: 'center',
           lineHeight: 24,
         }}>
@@ -189,136 +195,89 @@ export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, on
 
       {/* Password Requirements */}
       <View style={{
-        backgroundColor: '#f3f4f6',
+        backgroundColor: colors.surface,
         borderRadius: 12,
         padding: 16,
         marginBottom: 24,
+        borderWidth: 1,
+        borderColor: colors.textSecondary + '20',
       }}>
         <Text style={{
           fontSize: 14,
           fontWeight: '600',
-          color: '#374151',
+          color: colors.text,
           marginBottom: 8,
         }}>
           La contraseña debe contener:
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <Ionicons 
-            name={password.length >= 8 ? "checkmark-circle" : "ellipse-outline"} 
-            size={16} 
-            color={password.length >= 8 ? "#10b981" : "#9ca3af"} 
-            style={{ marginRight: 8 }} 
-          />
-          <Text style={{ 
-            fontSize: 12, 
-            color: password.length >= 8 ? "#10b981" : "#6b7280" 
-          }}>
-            Al menos 8 caracteres
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <Ionicons 
-            name={/(?=.*[a-z])/.test(password) ? "checkmark-circle" : "ellipse-outline"} 
-            size={16} 
-            color={/(?=.*[a-z])/.test(password) ? "#10b981" : "#9ca3af"} 
-            style={{ marginRight: 8 }} 
-          />
-          <Text style={{ 
-            fontSize: 12, 
-            color: /(?=.*[a-z])/.test(password) ? "#10b981" : "#6b7280" 
-          }}>
-            Una letra minúscula
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <Ionicons 
-            name={/(?=.*[A-Z])/.test(password) ? "checkmark-circle" : "ellipse-outline"} 
-            size={16} 
-            color={/(?=.*[A-Z])/.test(password) ? "#10b981" : "#9ca3af"} 
-            style={{ marginRight: 8 }} 
-          />
-          <Text style={{ 
-            fontSize: 12, 
-            color: /(?=.*[A-Z])/.test(password) ? "#10b981" : "#6b7280" 
-          }}>
-            Una letra mayúscula
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons 
-            name={/(?=.*\d)/.test(password) ? "checkmark-circle" : "ellipse-outline"} 
-            size={16} 
-            color={/(?=.*\d)/.test(password) ? "#10b981" : "#9ca3af"} 
-            style={{ marginRight: 8 }} 
-          />
-          <Text style={{ 
-            fontSize: 12, 
-            color: /(?=.*\d)/.test(password) ? "#10b981" : "#6b7280" 
-          }}>
-            Al menos un número
-          </Text>
-        </View>
+        
+        <PasswordRequirement
+          met={password.length >= 8}
+          text="Al menos 8 caracteres"
+        />
+        <PasswordRequirement
+          met={/(?=.*[a-z])/.test(password)}
+          text="Una letra minúscula"
+        />
+        <PasswordRequirement
+          met={/(?=.*[A-Z])/.test(password)}
+          text="Una letra mayúscula"
+        />
+        <PasswordRequirement
+          met={/(?=.*\d)/.test(password)}
+          text="Al menos un número"
+        />
       </View>
 
       {/* Password Inputs */}
       <View style={{ marginBottom: 24 }}>
-        <Input
+        <ThemedInput
+          field="password"
           label="Nueva Contraseña"
+          required
+          icon="lock-closed-outline"
           placeholder="Ingresa tu nueva contraseña"
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
           value={password}
           onChangeText={handlePasswordChange}
-          error={passwordError}
-          secureTextEntry={!showPassword}
-          textContentType="newPassword"
-          autoCapitalize="none"
-          required
-          rightIcon={
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons 
-                name={showPassword ? "eye-off" : "eye"} 
-                size={20} 
-                color="#6b7280" 
-              />
-            </TouchableOpacity>
-          }
+          hasError={passwordError}
+          showToggle
+          isToggleVisible={showPassword}
+          onToggle={() => setShowPassword(!showPassword)}
         />
       </View>
 
       <View style={{ marginBottom: 32 }}>
-        <Input
+        <ThemedInput
+          field="confirmPassword"
           label="Confirmar Contraseña"
+          required
+          icon="lock-closed-outline"
           placeholder="Confirma tu nueva contraseña"
+          secureTextEntry={!showConfirmPassword}
+          autoCapitalize="none"
           value={confirmPassword}
           onChangeText={handleConfirmPasswordChange}
-          error={confirmPasswordError}
-          secureTextEntry={!showConfirmPassword}
-          textContentType="newPassword"
-          autoCapitalize="none"
-          required
-          rightIcon={
-            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-              <Ionicons 
-                name={showConfirmPassword ? "eye-off" : "eye"} 
-                size={20} 
-                color="#6b7280" 
-              />
-            </TouchableOpacity>
-          }
+          hasError={confirmPasswordError}
+          showToggle
+          isToggleVisible={showConfirmPassword}
+          onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
         />
       </View>
 
       {/* Error Message */}
       {error && (
         <View style={{
-          backgroundColor: '#fef2f2',
-          borderColor: '#fecaca',
+          backgroundColor: colors.error + '10',
+          borderColor: colors.error + '40',
           borderWidth: 1,
           borderRadius: 8,
           padding: 12,
           marginBottom: 16,
         }}>
           <Text style={{
-            color: '#ef4444',
+            color: colors.error,
             fontSize: 14,
             textAlign: 'center',
           }}>
@@ -330,60 +289,25 @@ export const StepThree: React.FC<StepThreeProps> = ({ email, code, onSuccess, on
       {/* Action Buttons */}
       <View>
         {/* Update Password Button */}
-        <TouchableOpacity
-          onPress={handleSubmit}
+        <ThemedButton
+          title={isLoading ? 'Actualizando...' : 'Actualizar Contraseña'}
+          variant="primary"
+          size="medium"
+          icon={isLoading ? 'hourglass' : 'shield-checkmark'}
+          loading={isLoading}
           disabled={!password || !confirmPassword || isLoading}
-          style={{
-            backgroundColor: !password || !confirmPassword || isLoading ? '#9ca3af' : '#3b82f6',
-            borderRadius: 12,
-            paddingVertical: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#3b82f6',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 4,
-            marginBottom: 16,
-          }}
-        >
-          {isLoading ? (
-            <Ionicons name="hourglass" size={22} color="#ffffff" style={{ marginRight: 8 }} />
-          ) : (
-            <Ionicons name="shield-checkmark" size={22} color="#ffffff" style={{ marginRight: 8 }} />
-          )}
-          <Text style={{
-            color: '#ffffff',
-            fontSize: 17,
-            fontWeight: '600',
-          }}>
-            {isLoading ? 'Actualizando...' : 'Actualizar Contraseña'}
-          </Text>
-        </TouchableOpacity>
+          onPress={handleSubmit}
+          style={{ marginBottom: 16 }}
+        />
 
         {/* Back Button */}
-        <TouchableOpacity
+        <ThemedButton
+          title="Volver"
+          variant="ghost"
+          size="medium"
+          icon="arrow-back"
           onPress={onBack}
-          style={{
-            borderWidth: 2,
-            borderColor: '#6b7280',
-            borderRadius: 12,
-            paddingVertical: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="arrow-back" size={20} color="#6b7280" style={{ marginRight: 8 }} />
-          <Text style={{
-            color: '#6b7280',
-            fontSize: 17,
-            fontWeight: '600',
-          }}>
-            Volver
-          </Text>
-        </TouchableOpacity>
+        />
       </View>
     </View>
   );

@@ -1,17 +1,21 @@
-// screens/auth/forgot-password.tsx (Actualizado)
+// screens/auth/forgot-password.tsx
 import React from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, Text } from 'react-native';
 import { styled } from 'nativewind';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ForgotPasswordHeader } from '../../../components/Auth/ForgotPassword/ForgotPasswordHeader';
-import { ForgotPasswordForm } from '../../../components/Auth/ForgotPassword/ForgotPasswordForm';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../contexts/ThemeContext';
+import { ForgotPasswordHeader } from '../../components/Auth/ForgotPassword/ForgotPasswordHeader';
+import { ForgotPasswordForm } from '../../components/Auth/ForgotPassword/ForgotPasswordForm';
 
 const StyledView = styled(View);
 const StyledScrollView = styled(ScrollView);
 const StyledKeyboardAvoidingView = styled(KeyboardAvoidingView);
 
 export default function ForgotPasswordScreen() {
+  const { colors, isConfigLoaded } = useTheme();
+
   const handleBackToLogin = () => {
     router.back();
   };
@@ -21,21 +25,37 @@ export default function ForgotPasswordScreen() {
     router.push('/(auth)/login');
   };
 
+  // Show loading state while config loads
+  if (!isConfigLoaded) {
+    return (
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: colors.background 
+      }}>
+        {/* Loading spinner while theme loads */}
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-      {/* Gradient Background */}
-      <View
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Dynamic Gradient Background */}
+      <LinearGradient
+        colors={[colors.primary, colors.accent, colors.secondary]}
         style={{
           position: 'absolute',
           left: 0,
           right: 0,
           top: 0,
           height: 400,
-          backgroundColor: '#3b82f6',
           borderBottomLeftRadius: 40,
           borderBottomRightRadius: 40,
         }}
       />
+      
+      {/* Overlay for softer gradient */}
       <View
         style={{
           position: 'absolute',
@@ -43,7 +63,7 @@ export default function ForgotPasswordScreen() {
           right: 0,
           top: 0,
           height: 400,
-          backgroundColor: 'rgba(96, 165, 250, 0.3)',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
           borderBottomLeftRadius: 40,
           borderBottomRightRadius: 40,
         }}
@@ -85,7 +105,7 @@ export default function ForgotPasswordScreen() {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                  <Ionicons name="key" size={45} color="#3b82f6" />
+                  <Ionicons name="key" size={45} color={colors.primary} />
                 </View>
               </View>
               <Text style={{
@@ -108,7 +128,7 @@ export default function ForgotPasswordScreen() {
 
             {/* Form Card */}
             <View style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.surface,
               borderRadius: 24,
               padding: 24,
               shadowColor: '#000',

@@ -1,17 +1,19 @@
-// components/Auth/ForgotPassword/StepTwo.tsx (Actualizado)
+// components/Auth/ForgotPassword/StepTwo.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TextInput, Alert } from 'react-native';
+import { useTheme } from '../../../contexts/ThemeContext';
+import ThemedButton from '../../ui/ThemedButton';
 import { useForgotPassword } from '../../../hooks/Auth/useForgotPassword';
-import { useValidateResetCode} from '../../../hooks/Auth/useValidateResetCode';
+import { useValidateResetCode } from '../../../hooks/Auth/useValidateResetCode';
 
 interface StepTwoProps {
   email: string;
-  onNext: (code: string) => void; // Ahora pasa el código validado
+  onNext: (code: string) => void;
   onBack: () => void;
 }
 
 export const StepTwo: React.FC<StepTwoProps> = ({ email, onNext, onBack }) => {
+  const { colors } = useTheme();
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState<string | null>(null);
   const [timer, setTimer] = useState(900); // 15 minutos en segundos
@@ -90,7 +92,6 @@ export const StepTwo: React.FC<StepTwoProps> = ({ email, onNext, onBack }) => {
     const result = await validateCode(fullCode, email);
     
     if (result && result.valid) {
-      // Pasar el código validado al siguiente paso
       onNext(fullCode);
     } else {
       const errorMessage = result?.message || validateError || 'Código inválido';
@@ -120,7 +121,7 @@ export const StepTwo: React.FC<StepTwoProps> = ({ email, onNext, onBack }) => {
         <Text style={{
           fontSize: 24,
           fontWeight: 'bold',
-          color: '#1f2937',
+          color: colors.text,
           marginBottom: 8,
           textAlign: 'center',
         }}>
@@ -128,12 +129,12 @@ export const StepTwo: React.FC<StepTwoProps> = ({ email, onNext, onBack }) => {
         </Text>
         <Text style={{
           fontSize: 16,
-          color: '#6b7280',
+          color: colors.textSecondary,
           textAlign: 'center',
           lineHeight: 24,
         }}>
           Hemos enviado un código de 6 dígitos a{' '}
-          <Text style={{ fontWeight: '600', color: '#3b82f6' }}>{email}</Text>
+          <Text style={{ fontWeight: '600', color: colors.primary }}>{email}</Text>
         </Text>
       </View>
 
@@ -154,12 +155,13 @@ export const StepTwo: React.FC<StepTwoProps> = ({ email, onNext, onBack }) => {
                 width: 45,
                 height: 55,
                 borderWidth: 2,
-                borderColor: error ? '#ef4444' : (digit ? '#3b82f6' : '#e5e7eb'),
+                borderColor: error ? colors.error : (digit ? colors.primary : colors.textSecondary + '40'),
                 borderRadius: 12,
                 textAlign: 'center',
                 fontSize: 24,
                 fontWeight: 'bold',
-                backgroundColor: '#ffffff',
+                backgroundColor: colors.surface,
+                color: colors.text,
               }}
               value={digit}
               onChangeText={(value) => handleCodeChange(value, index)}
@@ -174,7 +176,7 @@ export const StepTwo: React.FC<StepTwoProps> = ({ email, onNext, onBack }) => {
         {/* Error Message */}
         {(error || validateError) && (
           <Text style={{
-            color: '#ef4444',
+            color: colors.error,
             fontSize: 14,
             textAlign: 'center',
             marginBottom: 16,
@@ -186,7 +188,7 @@ export const StepTwo: React.FC<StepTwoProps> = ({ email, onNext, onBack }) => {
         {/* Timer */}
         <Text style={{
           fontSize: 14,
-          color: timer > 0 ? '#6b7280' : '#ef4444',
+          color: timer > 0 ? colors.textSecondary : colors.error,
           textAlign: 'center',
           marginBottom: 16,
         }}>
@@ -200,89 +202,40 @@ export const StepTwo: React.FC<StepTwoProps> = ({ email, onNext, onBack }) => {
       {/* Action Buttons */}
       <View>
         {/* Validate Button */}
-        <TouchableOpacity
-          onPress={() => handleValidateCode()}
+        <ThemedButton
+          title={isLoading ? 'Verificando...' : 'Verificar Código'}
+          variant="primary"
+          size="medium"
+          icon={isLoading ? 'hourglass' : 'checkmark-circle'}
+          loading={isLoading}
           disabled={code.join('').length !== 6 || isLoading}
-          style={{
-            backgroundColor: code.join('').length !== 6 || isLoading ? '#9ca3af' : '#3b82f6',
-            borderRadius: 12,
-            paddingVertical: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#3b82f6',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 4,
-            marginBottom: 16,
-          }}
-        >
-          {isLoading ? (
-            <Ionicons name="hourglass" size={22} color="#ffffff" style={{ marginRight: 8 }} />
-          ) : (
-            <Ionicons name="checkmark-circle" size={22} color="#ffffff" style={{ marginRight: 8 }} />
-          )}
-          <Text style={{
-            color: '#ffffff',
-            fontSize: 17,
-            fontWeight: '600',
-          }}>
-            {isLoading ? 'Verificando...' : 'Verificar Código'}
-          </Text>
-        </TouchableOpacity>
+          onPress={() => handleValidateCode()}
+          style={{ marginBottom: 16 }}
+        />
 
         {/* Resend Code Button */}
-        <TouchableOpacity
+        <ThemedButton
+          title={isResending ? 'Enviando...' : 'Reenviar Código'}
+          variant="outline"
+          size="medium"
+          icon={isResending ? 'hourglass' : 'refresh'}
+          loading={isResending}
+          disabled={isResending || timer > 840}
           onPress={handleResendCode}
-          disabled={isResending || timer > 840} // Solo permitir reenvío después de 1 minuto
-          style={{
-            borderWidth: 2,
-            borderColor: isResending || timer > 840 ? '#9ca3af' : '#10b981',
-            borderRadius: 12,
-            paddingVertical: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
+          style={{ 
             marginBottom: 16,
+            borderColor: isResending || timer > 840 ? colors.textSecondary : colors.success,
           }}
-        >
-          {isResending ? (
-            <Ionicons name="hourglass" size={20} color="#9ca3af" style={{ marginRight: 8 }} />
-          ) : (
-            <Ionicons name="refresh" size={20} color={timer > 840 ? '#9ca3af' : '#10b981'} style={{ marginRight: 8 }} />
-          )}
-          <Text style={{
-            color: isResending || timer > 840 ? '#9ca3af' : '#10b981',
-            fontSize: 17,
-            fontWeight: '600',
-          }}>
-            {isResending ? 'Enviando...' : 'Reenviar Código'}
-          </Text>
-        </TouchableOpacity>
+        />
 
         {/* Back Button */}
-        <TouchableOpacity
+        <ThemedButton
+          title="Cambiar Email"
+          variant="ghost"
+          size="medium"
+          icon="arrow-back"
           onPress={onBack}
-          style={{
-            borderWidth: 2,
-            borderColor: '#6b7280',
-            borderRadius: 12,
-            paddingVertical: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="arrow-back" size={20} color="#6b7280" style={{ marginRight: 8 }} />
-          <Text style={{
-            color: '#6b7280',
-            fontSize: 17,
-            fontWeight: '600',
-          }}>
-            Cambiar Email
-          </Text>
-        </TouchableOpacity>
+        />
       </View>
     </View>
   );

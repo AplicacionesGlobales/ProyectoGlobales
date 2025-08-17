@@ -1,11 +1,19 @@
 // services/AppConfigService.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getColorPaletteByBrand, getBrandById } from '../api';
-import { AppConfigData, ColorPaletteData, BrandData } from '../api/types';
+import { getColorPaletteByBrand } from '../api';
+import { ColorPaletteData } from '../api/types';
+
+export interface ColorPaletteConfig {
+  primary: string;
+  secondary: string;
+  accent: string;
+  neutral: string;
+  success: string;
+}
 
 class AppConfigService {
   private static instance: AppConfigService;
-  private config: AppConfigData | null = null;
+  private colorPalette: ColorPaletteConfig | null = null;
   private configLoaded: boolean = false;
 
   private constructor() {}
@@ -18,12 +26,12 @@ class AppConfigService {
   }
 
   /**
-   * Obtiene el brandId desde AsyncStorage o configuración
+   * Obtiene el brandId desde variable de entorno
    * Este será configurado al momento de generar la APK específica para cada cliente
    */
   private async getBrandId(): Promise<number> {
     try {
-      // Opción 2: Desde variable de entorno (configurada al compilar)
+      // Desde variable de entorno (configurada al compilar)
       const BUILD_BRAND_ID = process.env.EXPO_PUBLIC_BRAND_ID;
       if (BUILD_BRAND_ID) {
         console.log('Brand ID from env:', BUILD_BRAND_ID);
@@ -40,153 +48,113 @@ class AppConfigService {
   }
 
   /**
-   * Carga la configuración desde el backend
+   * Carga la paleta de colores desde el backend
    */
-  async loadConfig(): Promise<AppConfigData> {
+  async loadColorPalette(): Promise<ColorPaletteConfig> {
     try {
       const brandId = await this.getBrandId();
-      console.log(`Loading config for brand: ${brandId}`);
+      console.log(`Loading color palette for brand: ${brandId}`);
       
       // Intentar cargar desde cache primero
-      const cachedConfig = await this.getCachedConfig();
-      if (cachedConfig && this.isCacheValid(cachedConfig) && cachedConfig.data.brandId === brandId) {
-        console.log('Using cached config');
-        this.config = cachedConfig.data;
+      const cachedPalette = await this.getCachedPalette();
+      if (cachedPalette && this.isCacheValid(cachedPalette) && cachedPalette.brandId === brandId) {
+        console.log('Using cached color palette');
+        this.colorPalette = cachedPalette.data;
         this.configLoaded = true;
-        return this.config!;
+        return this.colorPalette || this.getDefaultColors();
       }
 
-      console.log('Loading fresh config from API');
+      console.log('Loading fresh color palette from API');
       
-      // Cargar desde el backend en paralelo
-      const [colorResponse, brandResponse] = await Promise.allSettled([
-        getColorPaletteByBrand(brandId),
-        getBrandById(brandId)
-      ]);
+      // Cargar desde el backend
+      const colorResponse = await getColorPaletteByBrand(brandId);
 
       let colorPalette: ColorPaletteData | null = null;
-      let brandData: BrandData | null = null;
 
       // Procesar respuesta de colores
-      if (colorResponse.status === 'fulfilled' && colorResponse.value.success) {
-        colorPalette = colorResponse.value.data!;
-        console.log('Color palette loaded successfully');
+      if (colorResponse.success && colorResponse.data) {
+        colorPalette = colorResponse.data;
+        console.log('Color palette loaded successfully:', colorPalette);
       } else {
-        console.warn('Failed to load color palette, using defaults');
+        console.warn('Failed to load color palette from API, using defaults');
       }
 
-      // Procesar respuesta de marca
-      if (brandResponse.status === 'fulfilled' && brandResponse.value.success) {
-        brandData = brandResponse.value.data!;
-        console.log('Brand data loaded successfully');
-      } else {
-        console.warn('Failed to load brand data, using defaults');
-      }
-
-      // Construir la configuración
-      this.config = this.buildConfig(brandId, colorPalette, brandData);
+      // Construir la configuración de colores
+      this.colorPalette = this.buildColorConfig(colorPalette);
 
       // Guardar en cache
-      await this.cacheConfig(this.config);
+      await this.cachePalette(this.colorPalette, brandId);
       this.configLoaded = true;
 
-      console.log('Config loaded successfully:', this.config);
-      return this.config;
+      console.log('Color palette configured:', this.colorPalette);
+      return this.colorPalette;
     } catch (error) {
-      console.error('Error loading app config:', error);
+      console.error('Error loading color palette:', error);
       
       // Usar configuración por defecto en caso de error
-      this.config = this.getDefaultConfig();
+      this.colorPalette = this.getDefaultColors();
       this.configLoaded = true;
-      return this.config;
+      return this.colorPalette;
     }
   }
 
   /**
-   * Construye la configuración final
+   * Construye la configuración de colores
    */
-  private buildConfig(
-    brandId: number, 
-    colorPalette: ColorPaletteData | null, 
-    brandData: BrandData | null
-  ): AppConfigData {
-    const defaultColors = {
+  private buildColorConfig(colorPalette: ColorPaletteData | null): ColorPaletteConfig {
+    const defaultColors = this.getDefaultColors();
+
+    if (!colorPalette) {
+      return defaultColors;
+    }
+
+    return {
+      primary: colorPalette.primary,
+      secondary: colorPalette.secondary,
+      accent: colorPalette.accent,
+      neutral: colorPalette.neutral,
+      success: colorPalette.success,
+    };
+  }
+
+  /**
+   * Configuración de colores por defecto
+   */
+  private getDefaultColors(): ColorPaletteConfig {
+    return {
       primary: '#2563EB',
       secondary: '#6B7280',
       accent: '#06B6D4',
       neutral: '#6B7280',
       success: '#059669',
     };
-
-    const colors = colorPalette ? {
-      primary: colorPalette.primary,
-      secondary: colorPalette.secondary,
-      accent: colorPalette.accent,
-      neutral: colorPalette.neutral,
-      success: colorPalette.success,
-    } : defaultColors;
-
-    return {
-      brandId,
-      colorPalette: colors,
-      branding: {
-        appName: brandData?.appName || 'Agenda Pro',
-        companyName: brandData?.companyName || brandData?.name || 'Mi Empresa',
-        primaryColor: colors.primary,
-      },
-      logo: brandData?.logo ? {
-        uri: brandData.logo.url,
-        width: brandData.logo.width,
-        height: brandData.logo.height,
-      } : undefined,
-    };
-  }
-
-  /**
-   * Configuración por defecto si falla la carga
-   */
-  private getDefaultConfig(): AppConfigData {
-    return {
-      brandId: 0,
-      colorPalette: {
-        primary: '#2563EB',
-        secondary: '#6B7280',
-        accent: '#06B6D4',
-        neutral: '#6B7280',
-        success: '#059669',
-      },
-      branding: {
-        appName: 'Agenda Pro',
-        companyName: 'Mi Empresa',
-        primaryColor: '#2563EB',
-      },
-    };
   }
 
   /**
    * Cache management
    */
-  private async cacheConfig(config: AppConfigData): Promise<void> {
+  private async cachePalette(palette: ColorPaletteConfig, brandId: number): Promise<void> {
     try {
       const cacheData = {
-        data: config,
+        data: palette,
+        brandId,
         timestamp: Date.now(),
         version: '1.0',
       };
       
-      await AsyncStorage.setItem('appConfig', JSON.stringify(cacheData));
-      console.log('Config cached successfully');
+      await AsyncStorage.setItem('colorPalette', JSON.stringify(cacheData));
+      console.log('Color palette cached successfully');
     } catch (error) {
-      console.warn('Failed to cache config:', error);
+      console.warn('Failed to cache color palette:', error);
     }
   }
 
-  private async getCachedConfig(): Promise<any> {
+  private async getCachedPalette(): Promise<any> {
     try {
-      const cached = await AsyncStorage.getItem('appConfig');
+      const cached = await AsyncStorage.getItem('colorPalette');
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.warn('Failed to get cached config:', error);
+      console.warn('Failed to get cached color palette:', error);
       return null;
     }
   }
@@ -204,49 +172,45 @@ class AppConfigService {
   /**
    * Getters públicos
    */
-  getConfig(): AppConfigData | null {
-    return this.config;
+  getColorPalette(): ColorPaletteConfig | null {
+    return this.colorPalette;
   }
 
   isConfigLoaded(): boolean {
     return this.configLoaded;
   }
 
-  getColorPalette() {
-    return this.config?.colorPalette || this.getDefaultConfig().colorPalette;
-  }
-
   getPrimaryColor(): string {
-    return this.config?.colorPalette.primary || '#2563EB';
+    return this.colorPalette?.primary || '#2563EB';
   }
 
   getSecondaryColor(): string {
-    return this.config?.colorPalette.secondary || '#6B7280';
+    return this.colorPalette?.secondary || '#6B7280';
   }
 
-  getAppName(): string {
-    return this.config?.branding.appName || 'Agenda Pro';
+  getAccentColor(): string {
+    return this.colorPalette?.accent || '#06B6D4';
   }
 
-  getCompanyName(): string {
-    return this.config?.branding.companyName || 'Mi Empresa';
+  getSuccessColor(): string {
+    return this.colorPalette?.success || '#059669';
   }
 
   /**
-   * Fuerza una recarga de la configuración
+   * Fuerza una recarga de la paleta de colores
    */
-  async reloadConfig(): Promise<AppConfigData> {
-    await AsyncStorage.removeItem('appConfig');
+  async reloadColorPalette(): Promise<ColorPaletteConfig> {
+    await AsyncStorage.removeItem('colorPalette');
     this.configLoaded = false;
-    this.config = null;
-    return await this.loadConfig();
+    this.colorPalette = null;
+    return await this.loadColorPalette();
   }
 
   /**
-   * Convierte los colores al formato de tu ThemeColors existente
+   * Convierte los colores al formato ThemeColors
    */
   getThemeColors() {
-    const palette = this.getColorPalette();
+    const palette = this.colorPalette || this.getDefaultColors();
     return {
       primary: palette.primary,
       secondary: palette.secondary,

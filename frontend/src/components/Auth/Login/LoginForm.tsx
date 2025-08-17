@@ -2,9 +2,9 @@
 import React, { useRef } from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { styled } from 'nativewind';
-import { useTheme } from '../../contexts/ThemeContext';
-import ThemedInput from '../ui/ThemedInput';
-import ThemedButton from '../ui/ThemedButton';
+import { useTheme } from '../../../contexts/ThemeContext';
+import ThemedInput from '../../ui/ThemedInput';
+import ThemedButton from '../../ui/ThemedButton';
 import RememberMeCheckbox from './RememberMeCheckbox';
 
 const StyledView = styled(View);

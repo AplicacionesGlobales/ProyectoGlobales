@@ -1,7 +1,9 @@
+// components/Auth/ForgotPassword/ForgotPasswordHeader.tsx
 import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { styled } from 'nativewind';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 const StyledView = styled(View);
 const StyledTouchableOpacity = styled(TouchableOpacity);
@@ -11,6 +13,8 @@ interface ForgotPasswordHeaderProps {
 }
 
 export const ForgotPasswordHeader: React.FC<ForgotPasswordHeaderProps> = ({ onBack }) => {
+  const { colors } = useTheme();
+
   return (
     <StyledView className="flex-row items-center justify-between px-6 pt-12 pb-4">
       {onBack && (
