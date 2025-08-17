@@ -126,3 +126,57 @@ export interface ResetPasswordResponse {
 
 // Wrapped response from backend
 export interface ResetPasswordApiResponse extends BaseResponseDto<ResetPasswordResponse> { }
+
+
+export interface ColorPaletteData {
+  id: number;
+  primary: string;
+  secondary: string;
+  accent: string;
+  neutral: string;
+  success: string;
+  brandId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ColorPaletteResponse extends BaseResponseDto<ColorPaletteData> {
+}
+
+// NEW: Brand Configuration Types
+export interface BrandData {
+  id: number;
+  name: string;
+  appName?: string;
+  companyName?: string;
+  logo?: {
+    url: string;
+    width: number;
+    height: number;
+  };
+}
+
+export interface BrandResponse extends BaseResponseDto<BrandData> {
+}
+
+// NEW: App Configuration (combinación de marca y colores)
+export interface AppConfigData {
+  brandId: number;
+  colorPalette: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    neutral: string;
+    success: string;
+  };
+  branding: {
+    appName: string;
+    companyName: string;
+    primaryColor: string;
+  };
+  logo?: {
+    uri: string;
+    width: number;
+    height: number;
+  };
+}

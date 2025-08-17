@@ -8,6 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { PaymentModule } from './payment/payment.module';
 import { LandingDataModule } from './landing-data/landing-data.module';
 import { ValidateModule } from './validate/validate.module';
+import { ColorPaletteModule } from './color-palette/color-palette.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BrandModule } from './brand/brand.module';
 import { ScheduleModule } from './schedule/schedule.module';
@@ -24,6 +25,7 @@ import { ScheduleModule } from './schedule/schedule.module';
     LandingDataModule,
     ValidateModule,
     ScheduleModule,
+    ColorPaletteModule
   ],
   controllers: [],
   providers: [

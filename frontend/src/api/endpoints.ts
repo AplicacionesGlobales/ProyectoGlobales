@@ -12,7 +12,9 @@ import {
   ValidateResetCodeResponse,
   ResetPasswordRequest,
   ResetPasswordResponse,
-  BaseResponseDto
+  BaseResponseDto,
+  ColorPaletteResponse,
+  BrandResponse
 } from './types';
 
 // Función helper para hacer requests
@@ -138,4 +140,20 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
     const errorMessage = apiResponse.errors?.[0]?.description || 'Error al restablecer contraseña';
     throw new Error(errorMessage);
   }
+};
+
+// NEW: Color Palette Endpoints
+export const getColorPaletteByBrand = async (brandId: number): Promise<ColorPaletteResponse> => {
+  return apiRequest<ColorPaletteResponse>(
+    `${API_ENDPOINTS.COLOR_PALETTES.BY_BRAND}/${brandId}`,
+    'GET'
+  );
+};
+
+// NEW: Brand Endpoints
+export const getBrandById = async (brandId: number): Promise<BrandResponse> => {
+  return apiRequest<BrandResponse>(
+    `${API_ENDPOINTS.BRANDS.BY_ID}/${brandId}`,
+    'GET'
+  );
 };
