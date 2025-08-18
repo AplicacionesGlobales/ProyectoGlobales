@@ -129,7 +129,7 @@ export class BrandService {
         address: brand.address ?? undefined,
         phone: brand.phone ?? undefined,
         logoUrl: brand.logoUrl ?? undefined,
-        isotopoUrl: brand.isotopoUrl ?? undefined,
+        isotipoUrl: brand.isotipoUrl ?? undefined,
         imagotipoUrl: brand.imagotipoUrl ?? undefined,
         isActive: brand.isActive,
         createdAt: brand.createdAt.toISOString(),
@@ -260,10 +260,10 @@ export class BrandService {
         }
       }
 
-      if (updateData.isotopoImage) {
-        const isotopoResult = await this.fileService.uploadBase64Image(brandId, updateData.isotopoImage, 'isotopo');
-        if (isotopoResult.success) {
-          imageUpdates.isotopoUrl = isotopoResult.url;
+      if (updateData.isotipoImage) {
+        const isotipoResult = await this.fileService.uploadBase64Image(brandId, updateData.isotipoImage, 'isotipo');
+        if (isotipoResult.success) {
+          imageUpdates.isotipoUrl = isotipoResult.url;
         }
       }
 

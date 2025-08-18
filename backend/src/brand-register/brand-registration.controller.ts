@@ -43,7 +43,7 @@ export class BrandRegistrationController {
       businessTypeId: createBrandDto.businessTypeId,
       planId: createBrandDto.planId,
       hasLogo: !!createBrandDto.logoImage,
-      hasIsotopo: !!createBrandDto.isotopoImage,
+      hasIsotipo: !!createBrandDto.isotipoImage,
       hasImagotipo: !!createBrandDto.imagotipoImage,
       selectedFeatures: createBrandDto.selectedFeatureIds.length
     });

@@ -27,7 +27,7 @@ export class FileService {
   async uploadBase64Image(
     brandId: number, 
     base64String: string, 
-    imageType: 'logo' | 'isotopo' | 'imagotipo'
+    imageType: 'logo' | 'isotipo' | 'imagotipo'
   ): Promise<{ success: boolean; url?: string; error?: string }> {
     try {
       console.log(`🔄 Uploading ${imageType} for brand ${brandId}...`);
