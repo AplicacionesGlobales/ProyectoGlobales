@@ -33,7 +33,7 @@ class ApiClient {
       baseUrl: this.baseURL,
       endpoint
     });
-    
+
     const config: RequestInit = {
       ...API_CONFIG,
       ...options,
@@ -65,7 +65,7 @@ class ApiClient {
         try {
           const errorData = await response.json();
           if (errorData.message) {
-            errorMessage = Array.isArray(errorData.message) 
+            errorMessage = Array.isArray(errorData.message)
               ? errorData.message.join(', ')
               : errorData.message;
           } else if (errorData.errors && errorData.errors.length > 0) {
@@ -83,7 +83,7 @@ class ApiClient {
         hasData: !!data.data,
         dataType: typeof data.data
       });
-      
+
       return data;
     } catch (error) {
       console.error('🚨 API request failed:', {
@@ -100,37 +100,21 @@ class ApiClient {
   }
 
   async post<T>(endpoint: string, data?: any, options?: RequestInit): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
+    const isFormData = data instanceof FormData;
+
+    const config: RequestInit = {
       ...options,
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
-    });
+      body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
+      headers: {
+        ...(!isFormData && { 'Content-Type': 'application/json' }), // Solo para JSON
+        ...(options?.headers || {}),
+      },
+    };
+
+    return this.request<T>(endpoint, config);
   }
 
-  async postFormData<T>(endpoint: string, formData: FormData, options?: RequestInit): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`;
-    
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          // Don't set Content-Type for FormData - browser will set it automatically with boundary
-          ...(options?.headers || {}),
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('API FormData request failed:', error);
-      throw error;
-    }
-  }
 
   async put<T>(endpoint: string, data?: any, options?: RequestInit): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
@@ -228,14 +212,14 @@ export const landingService = {
     try {
       const endpoint = API_ENDPOINTS.LANDING.CONFIG;
       console.log('📍 Making request to:', endpoint);
-      
+
       const response = await apiClient.get<LandingConfig>(endpoint);
       console.log('✅ landingService response received:', {
         success: response.success,
         hasData: !!response.data,
         errors: response.errors
       });
-      
+
       return response;
     } catch (error) {
       console.error('❌ landingService.getLandingConfig() failed:', error);

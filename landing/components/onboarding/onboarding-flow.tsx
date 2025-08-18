@@ -1,3 +1,4 @@
+// landing\components\onboarding\onboarding-flow.tsx
 "use client"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -31,7 +32,7 @@ export interface OnboardingData {
     colorPalette: string
     customColors: string[]
     logoUrl?: File
-    isotopoUrl?: File
+    isotipoUrl?: File
     imagotipoUrl?: File
   }
   plan: {
@@ -116,7 +117,7 @@ export function OnboardingFlow() {
     } else {
       const fieldMapping: { [key: string]: string } = {
         'logotipo': 'logoUrl',
-        'isotipo': 'isotopoUrl', 
+        'isotipo': 'isotipoUrl', 
         'imagotipo': 'imagotipoUrl'
       }
       
@@ -187,7 +188,7 @@ export function OnboardingFlow() {
               paletaColores: data.customization.colorPalette,
               coloresPersonalizados: data.customization.customColors,
               logotipo: data.customization.logoUrl || null,
-              isotipo: data.customization.isotopoUrl || null,
+              isotipo: data.customization.isotipoUrl || null,
               imagotipo: data.customization.imagotipoUrl || null,
             }}
             onInputChange={handleCustomizationChange}

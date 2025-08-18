@@ -1,3 +1,4 @@
+// landing\components\onboarding\steps\confirmation-step.tsx
 "use client"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -7,7 +8,7 @@ import { ArrowLeft, Check, User, Mail, Phone, Building, Palette, CreditCard, Loa
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { authService, BrandRegistrationData } from "@/services/auth.service"
 import { useLandingData } from "@/hooks/use-landing-data"
-import { convertFilesForRegistration } from "@/utils/file-utils"
+import { prepareFilesForUpload, validateImageFile } from "@/utils/file-utils"
 import { Icon } from "@/lib/icons"
 
 interface ConfirmationStepProps {
@@ -29,7 +30,7 @@ interface ConfirmationStepProps {
       colorPalette: string
       customColors: string[]
       logoUrl?: File
-      isotopoUrl?: File
+      isotipoUrl?: File
       imagotipoUrl?: File
     }
     plan: {
@@ -47,7 +48,7 @@ interface ConfirmationStepProps {
 const colorPalettes: { [key: string]: any } = {
   "modern": {
     primary: "#8B5CF6",
-    secondary: "#EC4899", 
+    secondary: "#EC4899",
     accent: "#5c4343",
     neutral: "#10B981",
     success: "#3B82F6"
@@ -85,18 +86,18 @@ const colorPalettes: { [key: string]: any } = {
 export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps) {
   const [isRegistering, setIsRegistering] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  const { 
-    businessTypes, 
-    features, 
+
+  const {
+    businessTypes,
+    features,
     plans,
-    loading, 
+    loading,
     error: apiError,
-    getBusinessTypeByKey 
+    getBusinessTypeByKey
   } = useLandingData();
 
   const businessTypeInfo = getBusinessTypeByKey(data.businessType)
-  
+
   // Get business type ID and plan ID
   const getBusinessTypeId = () => {
     const businessType = businessTypes.find(bt => bt.key === data.businessType)
@@ -129,21 +130,21 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
       const feature = features.find(f => f.key === featureKey)
       return total + (feature?.price || 0)
     }, 0)
-    
+
     const monthlyTotal = planBasePrice + featuresPrice
-    
+
     // If annual billing, apply 20% discount
     if (data.plan.billingPeriod === 'annual') {
       return monthlyTotal * 12 * 0.8
     }
-    
+
     return monthlyTotal
   }
 
   const getPlanName = () => {
     const planNames = {
       'web': 'Solo Web',
-      'app': 'Solo App Móvil', 
+      'app': 'Solo App Móvil',
       'complete': 'Web + App Completa'
     }
     return planNames[data.plan.type] || data.plan.type
@@ -158,39 +159,23 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
   }
 
   const handleRegister = async () => {
-    setIsRegistering(true)
-    setError(null)
-    
+    setIsRegistering(true);
+    setError(null);
+
     try {
-      // Debug: Verificar que los archivos existen
-      console.log('🔍 Files before conversion:', {
-        logoUrl: !!data.customization.logoUrl,
-        isotopoUrl: !!data.customization.isotopoUrl,
-        imagotipoUrl: !!data.customization.imagotipoUrl,
-        logoFile: data.customization.logoUrl,
-        isotopoFile: data.customization.isotopoUrl,
-        imagotipoFile: data.customization.imagotipoUrl
+      // Validar y preparar archivos primero
+      const uploadedFiles = await prepareFilesForUpload({
+        logoUrl: data.customization.logoUrl || null,
+        isotipoUrl: data.customization.isotipoUrl || null,
+        imagotipoUrl: data.customization.imagotipoUrl || null
       });
 
-      // Convert images to base64
-      const imageFiles = await convertFilesForRegistration({
-        logoUrl: data.customization.logoUrl,
-        isotopoUrl: data.customization.isotopoUrl,
-        imagotipoUrl: data.customization.imagotipoUrl
-      });
-
-      console.log('🖼️ Images converted:', {
-        logoImage: !!imageFiles.logoImage,
-        isotopoImage: !!imageFiles.isotopoImage,
-        imagotipoImage: !!imageFiles.imagotipoImage
-      });
-
-      // Prepare color palette
+      // Preparar paleta de colores
       let finalColorPalette;
       if (data.customization.colorPalette === 'custom' && data.customization.customColors?.length >= 5) {
         finalColorPalette = {
           primary: data.customization.customColors[0],
-          secondary: data.customization.customColors[1], 
+          secondary: data.customization.customColors[1],
           accent: data.customization.customColors[2],
           neutral: data.customization.customColors[3],
           success: data.customization.customColors[4]
@@ -199,19 +184,19 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         finalColorPalette = colorPalettes[data.customization.colorPalette] || colorPalettes.modern;
       }
 
-      // Get IDs for backend
-      const businessTypeId = getBusinessTypeId()
-      const selectedFeatureIds = getSelectedFeatureIds()
-      const planId = getPlanId()
+      // Obtener IDs para el backend
+      const businessTypeId = getBusinessTypeId();
+      const selectedFeatureIds = getSelectedFeatureIds();
+      const planId = getPlanId();
 
       if (!businessTypeId || !planId) {
-        throw new Error('Error obteniendo IDs de negocio o plan')
+        throw new Error('Error obteniendo IDs de negocio o plan');
       }
 
-      // Calculate total price for validation
-      const totalPrice = calculateTotalPrice()
+      // Calcular el precio total
+      const totalPrice = calculateTotalPrice();
 
-      // Prepare registration data with ONLY IDs and base64 images
+      // Preparar datos de registro
       const registrationData: BrandRegistrationData = {
         // User info
         email: data.personalInfo.email,
@@ -219,65 +204,55 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         password: data.personalInfo.password,
         firstName: data.personalInfo.firstName,
         lastName: data.personalInfo.lastName,
-        
+
         // Brand info
         brandName: data.personalInfo.businessName,
         brandDescription: data.personalInfo.description || undefined,
         brandPhone: data.personalInfo.phone || undefined,
-        
-        // Business details - ONLY NUMERIC IDs
+
+        // Business details
         businessTypeId: businessTypeId,
         selectedFeatureIds: selectedFeatureIds.filter((id): id is number => id !== undefined),
-        
+
         // Customization
         colorPalette: finalColorPalette,
-        
-        // Images as base64 strings
-        logoImage: imageFiles.logoImage,
-        isotopoImage: imageFiles.isotopoImage,
-        imagotipoImage: imageFiles.imagotipoImage,
-        
-        // Plan information - ONLY NUMERIC ID
+
+        // Images (ahora como File)
+        logoImage: uploadedFiles.logoImage,
+        isotipoImage: uploadedFiles.isotipoImage,
+        imagotipoImage: uploadedFiles.imagotipoImage,
+
+        // Plan information
         planId: planId,
         planBillingPeriod: data.plan.billingPeriod || 'monthly',
         totalPrice: totalPrice,
-        
+
         // Metadata
         registrationDate: new Date().toISOString(),
         source: 'landing_onboarding'
-      }
+      };
 
-      console.log('📤 SENDING TO BACKEND (IDs ONLY):')
-      console.log('Business Type ID:', businessTypeId)
-      console.log('Selected Feature IDs:', selectedFeatureIds)
-      console.log('Plan ID (numeric):', planId)
-      console.log('Total Price (calculated):', totalPrice)
-      console.log('Images included:', {
-        logo: !!registrationData.logoImage,
-        isotopo: !!registrationData.isotopoImage,
-        imagotipo: !!registrationData.imagotipoImage
-      })
-      console.log('Full Registration Data:', registrationData)
+      console.log('+++++++++++++++++++++++++++++++++++++++++++++++:', registrationData);
 
-      const result = await authService.registerBrand(registrationData)
-      
+      const result = await authService.registerBrand(registrationData);
+
       if (result.success && result.data) {
-        // Store auth data
-        localStorage.setItem('auth_token', result.data.token)
-        localStorage.setItem('user_data', JSON.stringify(result.data.user))
-        localStorage.setItem('brand_data', JSON.stringify(result.data.brand))
-        
-        onNext()
+        // Almacenar datos de autenticación
+        localStorage.setItem('auth_token', result.data.token);
+        localStorage.setItem('user_data', JSON.stringify(result.data.user));
+        localStorage.setItem('brand_data', JSON.stringify(result.data.brand));
+
+        onNext();
       } else {
-        setError(result.errors?.map(e => e.description).join(', ') || 'Error en el registro')
+        setError(result.errors?.map(e => e.description).join(', ') || 'Error en el registro');
       }
     } catch (error) {
-      console.error('Registration failed:', error)
-      setError('No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.')
+      console.error('Registration failed:', error);
+      setError(error instanceof Error ? error.message : 'No se pudo completar el registro');
     } finally {
-      setIsRegistering(false)
+      setIsRegistering(false);
     }
-  }
+  };
 
   // Handle loading/error states
   if (loading) {
@@ -401,7 +376,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <CreditCard className="w-5 h-5 text-orange-500" />
             <h3 className="font-semibold text-gray-900">Plan Seleccionado</h3>
           </div>
-          
+
           <div className="mb-4">
             <p className="font-medium text-lg">
               {getPlanName()} - {data.plan.billingPeriod === 'monthly' ? 'Mensual' : 'Anual'}
@@ -413,35 +388,35 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             <div className="flex justify-between text-sm">
               <span>Plan base:</span>
               <span>
-                {data.plan.type === 'web' ? '$0/mes' : 
-                 data.plan.billingPeriod === 'annual' ? 
-                 `$${planBasePrice} × 12 × 0.8 = $${(planBasePrice * 12 * 0.8).toFixed(0)}/año` :
-                 `$${planBasePrice}/mes`}
+                {data.plan.type === 'web' ? '$0/mes' :
+                  data.plan.billingPeriod === 'annual' ?
+                    `$${planBasePrice} × 12 × 0.8 = $${(planBasePrice * 12 * 0.8).toFixed(0)}/año` :
+                    `$${planBasePrice}/mes`}
               </span>
             </div>
-            
+
             {data.selectedFeatures.length > 0 && (
               <>
                 <div className="text-sm font-medium text-gray-700 pt-2 border-t">Funciones adicionales:</div>
                 {data.selectedFeatures.map(featureKey => {
                   const feature = features.find(f => f.key === featureKey);
                   if (!feature) return null;
-                  
+
                   const monthlyPrice = feature.price;
                   const yearlyPrice = data.plan.billingPeriod === 'annual' ? monthlyPrice * 12 * 0.8 : monthlyPrice;
-                  
+
                   return (
                     <div key={featureKey} className="flex justify-between text-sm">
                       <span>• {feature.title}</span>
                       <span>
-                        {data.plan.billingPeriod === 'annual' 
+                        {data.plan.billingPeriod === 'annual'
                           ? `$${monthlyPrice} × 12 × 0.8 = $${yearlyPrice.toFixed(2)}/año`
                           : `$${monthlyPrice}/mes`}
                       </span>
                     </div>
                   );
                 })}
-                
+
                 {data.plan.billingPeriod === 'annual' && (
                   <div className="flex justify-between text-sm text-green-600 pt-1 border-t">
                     <span>Descuento anual (20%):</span>
@@ -450,7 +425,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
                 )}
               </>
             )}
-            
+
             <div className="flex justify-between font-semibold text-lg pt-2 border-t">
               <span>Total:</span>
               <span>${calculateTotalPrice().toFixed(2)}{data.plan.billingPeriod === 'monthly' ? '/mes' : '/año'}</span>
@@ -465,9 +440,9 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
           <ArrowLeft className="w-4 h-4" />
           Anterior
         </Button>
-        
-        <Button 
-          onClick={handleRegister} 
+
+        <Button
+          onClick={handleRegister}
           disabled={isRegistering}
           className="gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50"
         >

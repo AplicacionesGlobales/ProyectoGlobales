@@ -32,7 +32,7 @@ success   String   // Color de éxito (hex) - Para mensajes de confirmación
 #### Tipos de Logo del Schema:
 ```typescript
 logoUrl      String? // Logotipo: nombre de la marca en texto
-isotopoUrl   String? // Isotipo: solo símbolo/ícono sin texto  
+isotipoUrl   String? // Isotipo: solo símbolo/ícono sin texto  
 imagotipoUrl String? // Imagotipo: símbolo + nombre juntos
 ```
 
@@ -76,7 +76,7 @@ interface CustomizationData {
   
   // Logos (corresponden al schema de Prisma)
   logotipo: File | null     // → logoUrl
-  isotipo: File | null      // → isotopoUrl  
+  isotipo: File | null      // → isotipoUrl  
   imagotipo: File | null    // → imagotipoUrl
 }
 ```
@@ -122,7 +122,7 @@ success   String
 
 -- Logos (3 campos)
 logoUrl      String?
-isotopoUrl   String?
+isotipoUrl   String?
 imagotipoUrl String?
 ```
 

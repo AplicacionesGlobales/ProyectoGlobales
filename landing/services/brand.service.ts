@@ -10,7 +10,7 @@ export interface BrandAdminData {
   address?: string;
   phone?: string;
   logoUrl?: string;
-  isotopoUrl?: string;
+  isotipoUrl?: string;
   imagotipoUrl?: string;
   isActive: boolean;
   createdAt: string;
@@ -120,7 +120,7 @@ export interface UpdateBrandData {
   };
   selectedFeatureIds?: number[];
   logoImage?: string;
-  isotopoImage?: string;
+  isotipoImage?: string;
   imagotipoImage?: string;
 }
 

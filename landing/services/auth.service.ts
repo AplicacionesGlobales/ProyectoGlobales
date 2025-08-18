@@ -10,16 +10,16 @@ export interface BrandRegistrationData {
   password: string;
   firstName: string;
   lastName: string;
-  
+
   // Brand info
   brandName: string;
   brandDescription?: string;
   brandPhone?: string;
-  
-  // Business details - ONLY IDs
+
+  // Business details
   businessTypeId: number;
   selectedFeatureIds: number[];
-  
+
   // Customization
   colorPalette: {
     primary: string;
@@ -28,17 +28,17 @@ export interface BrandRegistrationData {
     neutral: string;
     success: string;
   };
-  
-  // Images as base64 strings
-  logoImage?: string;
-  isotopoImage?: string;
-  imagotipoImage?: string;
-  
-  // Plan information - ONLY NUMERIC ID
+
+  // Images como File en lugar de base64
+  logoImage?: File;
+  isotipoImage?: File;
+  imagotipoImage?: File;
+
+  // Plan information
   planId: number;
   planBillingPeriod: 'monthly' | 'annual';
   totalPrice: number;
-  
+
   // Metadata
   registrationDate: string;
   source: string;
@@ -63,7 +63,7 @@ export interface BrandRegistrationResponse {
       businessType?: string;
       features?: string[];
       logoUrl?: string;
-      isotopoUrl?: string;
+      isotipoUrl?: string;
       imagotipoUrl?: string;
     };
     colorPalette: {
@@ -97,19 +97,44 @@ export interface BrandRegistrationResponse {
 }
 
 class AuthService {
+
   async registerBrand(data: BrandRegistrationData): Promise<BrandRegistrationResponse> {
     try {
-      console.log('🚀 Sending registration data:', JSON.stringify(data, null, 2));
-      
-      const response = await apiClient.post<BrandRegistrationResponse>(
-        API_ROUTES.AUTH.REGISTER_BRAND,
-        data
-      );
-      
-      console.log('✅ Registration response:', response);
-      
-      // El response del apiClient ya es del tipo ApiResponse<BrandRegistrationResponse>
-      // Si la respuesta es exitosa, debería tener success: true y data
+      const formData = new FormData();
+
+      // Agregar archivos
+      if (data.logoImage) formData.append('logoImage', data.logoImage);
+      if (data.isotipoImage) formData.append('isotipoImage', data.isotipoImage);
+      if (data.imagotipoImage) formData.append('imagotipoImage', data.imagotipoImage);
+
+      // Agregar datos JSON
+      const jsonData = {
+        email: data.email,
+        username: data.username,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        brandName: data.brandName,
+        brandDescription: data.brandDescription,
+        brandPhone: data.brandPhone,
+        businessTypeId: data.businessTypeId,
+        selectedFeatureIds: data.selectedFeatureIds,
+        colorPalette: data.colorPalette,
+        planId: data.planId,
+        planBillingPeriod: data.planBillingPeriod,
+        totalPrice: data.totalPrice,
+        registrationDate: data.registrationDate,
+        source: data.source
+      };
+
+      formData.append('data', JSON.stringify(jsonData));
+
+    // Usar apiClient.post directamente
+    const response = await apiClient.post<BrandRegistrationResponse>(
+      API_ROUTES.AUTH.REGISTER_BRAND,
+      formData
+    );
+
       if (response.success && response.data) {
         return response as BrandRegistrationResponse;
       } else {
@@ -121,18 +146,16 @@ class AuthService {
           })) || [{ code: 'NO_DATA', description: 'No data received' }]
         };
       }
-      
     } catch (error: any) {
       console.error('❌ Registration error:', error);
-      
       return {
         success: false,
         errors: [
           {
             code: 'REGISTRATION_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error durante el registro'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error durante el registro'
           }
         ]
       };
@@ -151,7 +174,7 @@ class AuthService {
   async login(email: string, password: string, rememberMe: boolean = false): Promise<BrandRegistrationResponse> {
     try {
       console.log('🚀 Sending login data:', { email, rememberMe });
-      
+
       const response = await apiClient.post<BrandRegistrationResponse>(
         '/auth/login',
         {
@@ -160,9 +183,9 @@ class AuthService {
           rememberMe
         }
       );
-      
+
       console.log('✅ Login response:', response);
-      
+
       if (response.success && response.data) {
         return response as BrandRegistrationResponse;
       } else {
@@ -174,18 +197,18 @@ class AuthService {
           })) || [{ code: 'LOGIN_ERROR', description: 'Error en el login' }]
         };
       }
-      
+
     } catch (error: any) {
       console.error('❌ Login error:', error);
-      
+
       return {
         success: false,
         errors: [
           {
             code: 'LOGIN_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error durante el login'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error durante el login'
           }
         ]
       };
@@ -199,14 +222,14 @@ class AuthService {
   }> {
     try {
       console.log('🚀 Validating payment for brand:', brandId);
-      
+
       const response = await apiClient.post<PaymentValidationResponse>(
         '/validate/payment',
         { brandId }
       );
-      
+
       console.log('✅ Payment validation response:', response);
-      
+
       if (response.success && response.data) {
         return {
           success: true,
@@ -221,18 +244,18 @@ class AuthService {
           })) || [{ code: 'VALIDATION_ERROR', description: 'Error validating payment' }]
         };
       }
-      
+
     } catch (error: any) {
       console.error('❌ Payment validation error:', error);
-      
+
       return {
         success: false,
         errors: [
           {
             code: 'PAYMENT_VALIDATION_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error durante la validación del pago'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error durante la validación del pago'
           }
         ]
       };

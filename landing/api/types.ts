@@ -112,7 +112,7 @@ export interface CreateBrandRequest {
   planType: PlanType;
   billingCycle: BillingCycle;
   logoUrl?: string;
-  isotopoUrl?: string;
+  isotipoUrl?: string;
   imagotipoUrl?: string;
 }
 
