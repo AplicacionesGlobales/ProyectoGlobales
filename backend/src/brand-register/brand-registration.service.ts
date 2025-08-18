@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { FileService } from '../common/services/file.service';
+import { MinioService } from '../files/files.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { ERROR_CODES, ERROR_MESSAGES } from '../common/constants';
 import { UserRole } from '../../generated/prisma';
+import { CreateFileDto, EntityType, FileType } from '../files/dto/file.dto';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { createAccessToken } from '../lib/crypto';
@@ -28,7 +29,7 @@ interface BrandRegistrationResponse {
     businessType?: string;
     features?: string[];
     logoUrl?: string;
-    isotopoUrl?: string;
+    isotipoUrl?: string;
     imagotipoUrl?: string;
   };
   colorPalette: {
@@ -59,7 +60,7 @@ export class BrandRegistrationService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
-    private fileService: FileService
+    private minioService: MinioService
   ) {}
 
   async registerBrand(createBrandDto: CreateBrandDto): Promise<BaseResponseDto<BrandRegistrationResponse>> {
@@ -175,39 +176,48 @@ export class BrandRegistrationService {
 
         // 3. Procesar imágenes base64 si existen
         let logoUrl: string | undefined;
-        let isotopoUrl: string | undefined;
+        let isotipoUrl: string | undefined;
         let imagotipoUrl: string | undefined;
 
         if (createBrandDto.logoImage) {
-          const logoResult = await this.fileService.uploadBase64Image(
-            brand.id, 
-            createBrandDto.logoImage, 
-            'logo'
-          );
-          if (logoResult.success) {
-            logoUrl = logoResult.url;
+          const logoDto: CreateFileDto = {
+            name: `logo-${brand.name}`,
+            base64Data: createBrandDto.logoImage,
+            fileType: FileType.LOGO,
+            entityType: EntityType.BRAND,
+            entityId: brand.id
+          };
+          const logoResult = await this.minioService.uploadFile(logoDto, user.id);
+          if (logoResult.success && logoResult.file) {
+            logoUrl = logoResult.file.url;
           }
         }
 
-        if (createBrandDto.isotopoImage) {
-          const isotopoResult = await this.fileService.uploadBase64Image(
-            brand.id, 
-            createBrandDto.isotopoImage, 
-            'isotopo'
-          );
-          if (isotopoResult.success) {
-            isotopoUrl = isotopoResult.url;
+        if (createBrandDto.isotipoImage) {
+          const isotipoDto: CreateFileDto = {
+            name: `isotipo-${brand.name}`,
+            base64Data: createBrandDto.isotipoImage,
+            fileType: FileType.ISOTOPO,
+            entityType: EntityType.BRAND,
+            entityId: brand.id
+          };
+          const isotipoResult = await this.minioService.uploadFile(isotipoDto, user.id);
+          if (isotipoResult.success && isotipoResult.file) {
+            isotipoUrl = isotipoResult.file.url;
           }
         }
 
         if (createBrandDto.imagotipoImage) {
-          const imagotipoResult = await this.fileService.uploadBase64Image(
-            brand.id, 
-            createBrandDto.imagotipoImage, 
-            'imagotipo'
-          );
-          if (imagotipoResult.success) {
-            imagotipoUrl = imagotipoResult.url;
+          const imagotipoDto: CreateFileDto = {
+            name: `imagotipo-${brand.name}`,
+            base64Data: createBrandDto.imagotipoImage,
+            fileType: FileType.IMAGOTIPO,
+            entityType: EntityType.BRAND,
+            entityId: brand.id
+          };
+          const imagotipoResult = await this.minioService.uploadFile(imagotipoDto, user.id);
+          if (imagotipoResult.success && imagotipoResult.file) {
+            imagotipoUrl = imagotipoResult.file.url;
           }
         }
 
@@ -216,7 +226,7 @@ export class BrandRegistrationService {
           where: { id: brand.id },
           data: {
             logoUrl,
-            isotopoUrl,
+            isotipoUrl,
             imagotipoUrl
           }
         });
@@ -326,7 +336,7 @@ export class BrandRegistrationService {
           businessType: result.brand.businessType || undefined,
           features: result.features.map(f => f.key),
           logoUrl: result.brand.logoUrl || undefined,
-          isotopoUrl: result.brand.isotopoUrl || undefined,
+          isotipoUrl: result.brand.isotipoUrl || undefined,
           imagotipoUrl: result.brand.imagotipoUrl || undefined
         },
         colorPalette: {

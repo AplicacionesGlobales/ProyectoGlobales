@@ -21,6 +21,7 @@ model User {
   brands             Brand[]
   passwordResetCodes PasswordResetCode[]
   userBrands         UserBrand[]
+  uploadedFiles File[] @relation("UploadedFiles")
 
   @@map("users")
 }
@@ -38,7 +39,7 @@ model Brand {
   businessType        String?
   selectedFeatures    String[]
   imagotipoUrl        String?
-  isotopoUrl          String?
+  isotipoUrl          String?
   logoUrl             String?
   appointmentSettings AppointmentSettings?
   brandFeatures       BrandFeature[]
@@ -250,6 +251,25 @@ model AppointmentSettings {
   brand                  Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@map("appointment_settings")
+}
+
+model File {
+  id          Int      @id @default(autoincrement())
+  name        String   // Nombre original del archivo
+  url         String   // URL completa de MinIO
+  key         String   @unique // Key único en MinIO (path completo)
+  contentType String   // MIME type (image/jpeg, application/pdf, etc.)
+  fileType    String   // Tipo lógico (logo, isotipo, imagotipo, document, etc.)
+  size        Int?     // Tamaño en bytes
+  entityId    Int      // ID de la entidad relacionada
+  entityType  String   // Tipo de entidad (brand, user, etc.)
+  uploadedBy  Int?     // ID del usuario que subió el archivo
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  uploader    User?    @relation("UploadedFiles", fields: [uploadedBy], references: [id])
+  @@map("files")
 }
 
 enum UserRole {

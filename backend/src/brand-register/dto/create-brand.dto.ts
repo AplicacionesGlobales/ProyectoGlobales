@@ -113,7 +113,7 @@ export class CreateBrandDto {
   @ApiPropertyOptional({ example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...' })
   @IsString()
   @IsOptional()
-  isotopoImage?: string;
+  isotipoImage?: string;
 
   @ApiPropertyOptional({ example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...' })
   @IsString()

@@ -81,11 +81,11 @@ export class UpdateBrandDto {
 
   @ApiPropertyOptional({ 
     example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
-    description: 'Nueva imagen de isotopo en base64' 
+    description: 'Nueva imagen de isotipo en base64' 
   })
   @IsString()
   @IsOptional()
-  isotopoImage?: string;
+  isotipoImage?: string;
 
   @ApiPropertyOptional({ 
     example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',

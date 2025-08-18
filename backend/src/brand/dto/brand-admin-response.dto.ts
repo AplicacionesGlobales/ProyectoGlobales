@@ -216,8 +216,8 @@ export class BrandAdminResponseDto {
   @ApiPropertyOptional({ example: 'https://storage.com/brands/456/logo.jpg' })
   logoUrl?: string;
 
-  @ApiPropertyOptional({ example: 'https://storage.com/brands/456/isotopo.jpg' })
-  isotopoUrl?: string;
+  @ApiPropertyOptional({ example: 'https://storage.com/brands/456/isotipo.jpg' })
+  isotipoUrl?: string;
 
   @ApiPropertyOptional({ example: 'https://storage.com/brands/456/imagotipo.jpg' })
   imagotipoUrl?: string;

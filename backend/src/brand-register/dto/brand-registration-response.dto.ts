@@ -31,7 +31,7 @@ export class BrandRegistrationResponseDto {
       businessType: 'restaurant',
       features: ['online_orders', 'reservations'],
       logoUrl: '/uploads/brands/1/logo_1692123456789.png',
-      isotopoUrl: '/uploads/brands/1/isotopo_1692123456789.png',
+      isotipoUrl: '/uploads/brands/1/isotipo_1692123456789.png',
       imagotipoUrl: '/uploads/brands/1/imagotipo_1692123456789.png'
     }
   })
@@ -43,7 +43,7 @@ export class BrandRegistrationResponseDto {
     businessType?: string;
     features?: string[];
     logoUrl?: string;
-    isotopoUrl?: string;
+    isotipoUrl?: string;
     imagotipoUrl?: string;
   };
 

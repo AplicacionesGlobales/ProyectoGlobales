@@ -3,17 +3,17 @@ import { ConfigModule } from '@nestjs/config';
 import { BrandRegistrationController } from './brand-registration.controller';
 import { BrandRegistrationService } from './brand-registration.service';
 import { PrismaModule } from '../prisma/prisma.module';
-import { FileService } from '../common/services/file.service';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
     ConfigModule,
     PrismaModule,
+    FilesModule,
   ],
   controllers: [BrandRegistrationController],
   providers: [
     BrandRegistrationService,
-    FileService,
   ],
   exports: [BrandRegistrationService],
 })
