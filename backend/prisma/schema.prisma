@@ -277,8 +277,8 @@ model File {
 model Appointment {
   id          Int              @id @default(autoincrement())
   brandId     Int
-  clientId    Int
-  serviceId   Int
+  clientId    Int?
+  createdById Int
   startTime   DateTime
   endTime     DateTime
   duration    Int              // en minutos
@@ -288,12 +288,12 @@ model Appointment {
   updatedAt   DateTime         @updatedAt
   
   brand       Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  client      User             @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  service     Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  client      User?            @relation("ClientAppointments", fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy   User             @relation("CreatedAppointments", fields: [createdById], references: [id], onDelete: Cascade)
   
   @@index([brandId, startTime])
   @@index([clientId])
-  @@index([serviceId])
+  @@index([createdById])
   @@index([status])
 }
 

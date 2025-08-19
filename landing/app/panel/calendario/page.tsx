@@ -1,13 +1,13 @@
 // landing\app\panel\calendario\page.tsx
 "use client"
-
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Calendar, Plus, Users, Clock, TrendingUp, AlertCircle, Zap } from "lucide-react"
 import { CalendarView } from "@/components/panel/calendar/CalendarView"
-import { appointmentsService, Appointment, AppointmentStatus } from "@/services/appointment.service"
+import { AppointmentModal } from "@/components/panel/calendar/AppointmentModal"
+import { appointmentsService, Appointment, AppointmentStatus, CalendarEvent } from "@/services/appointment.service"
 import { format, isToday, isTomorrow, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -37,6 +37,13 @@ export default function CalendarioPage() {
   })
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([])
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
+  
+  // Estados para modal de citas
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalInitialDate, setModalInitialDate] = useState<Date>()
+  const [modalInitialTime, setModalInitialTime] = useState<string>()
+  const [editingAppointment, setEditingAppointment] = useState<CalendarEvent>()
 
   useEffect(() => {
     loadInitialData()
@@ -46,20 +53,22 @@ export default function CalendarioPage() {
     try {
       setLoading(true)
       setError(null)
-
+      
       // Obtener datos del brand
       const brandDataStr = localStorage.getItem('brand_data')
       if (!brandDataStr) {
         setError('No se encontraron datos del brand')
         return
       }
-
+      
       const brand = JSON.parse(brandDataStr)
       setBrandData(brand)
-
-      // Cargar citas de hoy y próximos días
-      await loadTodayData(brand.id)
-
+      
+      // Cargar datos del calendario
+      await Promise.all([
+        loadTodayData(brand.id),
+        loadCalendarEvents(brand.id)
+      ])
     } catch (error) {
       console.error('Error loading initial data:', error)
       setError('Error cargando datos del calendario')
@@ -87,7 +96,7 @@ export default function CalendarioPage() {
       if (todayResponse.success && todayResponse.data) {
         const appointments = todayResponse.data
         setTodayAppointments(appointments)
-
+        
         // Calcular estadísticas
         const stats: TodayStats = {
           totalAppointments: appointments.length,
@@ -97,22 +106,74 @@ export default function CalendarioPage() {
           ).length,
           totalRevenue: appointments
             .filter(a => a.status === AppointmentStatus.COMPLETED)
-            .reduce((sum, a) => sum + a.price, 0),
+            .reduce((sum, a) => {
+              // Usar un precio por defecto si no está disponible
+              const price = (a as any).price || 0
+              return sum + price
+            }, 0),
           nextAppointment: appointments
             .filter(a => a.status !== AppointmentStatus.CANCELLED)
             .sort((a, b) => a.startTime.localeCompare(b.startTime))[0]
         }
-
         setTodayStats(stats)
+      } else {
+        console.error('❌ Day appointments error:', todayResponse.errors || 'No data')
+        setTodayAppointments([])
       }
 
       // Procesar próximas citas
       if (upcomingResponse.success && upcomingResponse.data) {
-        setUpcomingAppointments(upcomingResponse.data.slice(0, 5))
+        const appointmentsData = upcomingResponse.data as any
+        const appointments = Array.isArray(appointmentsData) ? appointmentsData : (appointmentsData.appointments || [])
+        setUpcomingAppointments(appointments.slice(0, 5))
+      } else {
+        console.error('❌ Upcoming appointments error:', upcomingResponse.errors || 'No data')
+        setUpcomingAppointments([])
       }
-
     } catch (error) {
       console.error('Error loading today data:', error)
+      setTodayAppointments([])
+      setUpcomingAppointments([])
+    }
+  }
+
+  const loadCalendarEvents = async (brandId: number) => {
+    try {
+      const today = new Date()
+      const startDate = format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd')
+      const endDate = format(new Date(today.getFullYear(), today.getMonth() + 2, 0), 'yyyy-MM-dd')
+      
+      const response = await appointmentsService.getCalendarAppointments(brandId, startDate, endDate)
+      
+      if (response.success && response.data) {
+        setCalendarEvents(response.data)
+      } else {
+        console.error('❌ Calendar appointments error:', response.errors || 'No data')
+        setCalendarEvents([])
+      }
+    } catch (error) {
+      console.error('❌ Calendar appointments error:', error)
+      setCalendarEvents([])
+    }
+  }
+
+  const handleCreateAppointment = (date: Date, time: string) => {
+    setModalInitialDate(date)
+    setModalInitialTime(time)
+    setEditingAppointment(undefined)
+    setIsModalOpen(true)
+  }
+
+  const handleEditAppointment = (appointment: CalendarEvent) => {
+    setEditingAppointment(appointment)
+    setIsModalOpen(true)
+  }
+
+  const handleModalSuccess = () => {
+    // Recargar datos después de crear/editar cita
+    if (brandData) {
+      loadTodayData(brandData.id)
+      loadCalendarEvents(brandData.id)
     }
   }
 
@@ -201,6 +262,10 @@ export default function CalendarioPage() {
             Gestiona tus citas y horarios disponibles.
           </p>
         </div>
+        <Button onClick={() => handleCreateAppointment(new Date(), "09:00")}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nueva Cita
+        </Button>
       </div>
 
       {error && (
@@ -226,7 +291,7 @@ export default function CalendarioPage() {
             </p>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -241,7 +306,7 @@ export default function CalendarioPage() {
             </p>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -259,7 +324,7 @@ export default function CalendarioPage() {
             </p>
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -271,10 +336,10 @@ export default function CalendarioPage() {
             {todayStats.nextAppointment ? (
               <>
                 <div className="text-2xl font-bold">
-                  {todayStats.nextAppointment.startTime}
+                  {format(new Date(todayStats.nextAppointment.startTime), 'HH:mm')}
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
-                  {todayStats.nextAppointment.client.firstName} {todayStats.nextAppointment.client.lastName}
+                  {todayStats.nextAppointment.client?.firstName || 'Cliente'} {todayStats.nextAppointment.client?.lastName || ''}
                 </p>
               </>
             ) : (
@@ -288,7 +353,11 @@ export default function CalendarioPage() {
       </div>
 
       {/* Componente principal del calendario */}
-      <CalendarView />
+      <CalendarView 
+        appointments={calendarEvents || []}
+        onCreateAppointment={handleCreateAppointment}
+        onAppointmentClick={handleEditAppointment}
+      />
 
       {/* Panel lateral con citas del día y próximas */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -310,7 +379,7 @@ export default function CalendarioPage() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">
-                        {appointment.client.firstName} {appointment.client.lastName}
+                        {appointment.client?.firstName || 'Cliente'} {appointment.client?.lastName || ''}
                       </span>
                       <span className="text-sm font-medium">
                         {getStatusText(appointment.status)}
@@ -319,11 +388,11 @@ export default function CalendarioPage() {
                     <div className="text-sm space-y-1">
                       <div className="flex items-center gap-2">
                         <Zap className="h-3 w-3" />
-                        {appointment.service.title}
+                        Cita programada
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="h-3 w-3" />
-                        {appointment.startTime} - {appointment.endTime}
+                        {format(new Date(appointment.startTime), 'HH:mm')} - {format(new Date(appointment.endTime), 'HH:mm')}
                       </div>
                     </div>
                   </div>
@@ -359,7 +428,7 @@ export default function CalendarioPage() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">
-                        {appointment.client.firstName} {appointment.client.lastName}
+                        {appointment.client?.firstName || 'Cliente'} {appointment.client?.lastName || ''}
                       </span>
                       <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}>
                         {getStatusText(appointment.status)}
@@ -368,11 +437,15 @@ export default function CalendarioPage() {
                     <div className="text-sm space-y-1">
                       <div className="flex items-center gap-2">
                         <Zap className="h-3 w-3 text-muted-foreground" />
-                        {appointment.service.title}
+                        Cita programada
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="h-3 w-3 text-muted-foreground" />
-                        {formatAppointmentTime(appointment.date, appointment.startTime, appointment.endTime)}
+                        {formatAppointmentTime(
+                          format(new Date(appointment.startTime), 'yyyy-MM-dd'),
+                          format(new Date(appointment.startTime), 'HH:mm'),
+                          format(new Date(appointment.endTime), 'HH:mm')
+                        )}
                       </div>
                     </div>
                   </div>
@@ -390,6 +463,19 @@ export default function CalendarioPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal de citas */}
+      {brandData && (
+        <AppointmentModal
+          brandId={brandData.id}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={handleModalSuccess}
+          initialDate={modalInitialDate}
+          initialTime={modalInitialTime}
+          editingAppointment={editingAppointment}
+        />
+      )}
     </div>
   )
 }

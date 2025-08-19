@@ -199,13 +199,12 @@ export class AppointmentsService {
         data: {
           brandId,
           clientId,
+          createdById: clientId,
           startTime,
           endTime,
           duration,
-          description: createData.description,
-          clientNotes: createData.clientNotes,
-          createdBy: clientId,
-          status: AppointmentStatus.SCHEDULED
+          notes: createData.notes,
+          status: AppointmentStatus.PENDING
         },
         include: {
           client: {
@@ -216,7 +215,7 @@ export class AppointmentsService {
               email: true
             }
           },
-          creator: {
+          createdBy: {
             select: {
               id: true,
               firstName: true,
@@ -268,25 +267,23 @@ export class AppointmentsService {
         data: {
           brandId,
           clientId: createData.clientId,
+          createdById: rootUserId,
           startTime,
           endTime,
           duration,
-          description: createData.description,
-          clientNotes: createData.clientNotes,
           notes: createData.notes,
-          createdBy: rootUserId,
-          status: AppointmentStatus.SCHEDULED
+          status: AppointmentStatus.PENDING
         },
         include: {
-          client: {
+          client: createData.clientId ? {
             select: {
               id: true,
               firstName: true,
               lastName: true,
               email: true
             }
-          },
-          creator: {
+          } : false,
+          createdBy: {
             select: {
               id: true,
               firstName: true,
@@ -367,7 +364,7 @@ export class AppointmentsService {
                 email: true
               }
             },
-            creator: {
+            createdBy: {
               select: {
                 id: true,
                 firstName: true,
@@ -446,9 +443,7 @@ export class AppointmentsService {
             )
           }),
           ...(updateData.status && { status: updateData.status }),
-          ...(updateData.description !== undefined && { description: updateData.description }),
-          ...(updateData.clientNotes !== undefined && { clientNotes: updateData.clientNotes }),
-          ...(updateData.notes !== undefined && isRoot && { notes: updateData.notes }),
+          ...(updateData.notes !== undefined && { notes: updateData.notes }),
           ...(updateData.clientId !== undefined && isRoot && { clientId: updateData.clientId })
         },
         include: {
@@ -460,7 +455,7 @@ export class AppointmentsService {
               email: true
             }
           },
-          creator: {
+          createdBy: {
             select: {
               id: true,
               firstName: true,
@@ -580,14 +575,12 @@ export class AppointmentsService {
       endTime: appointment.endTime.toISOString(),
       duration: appointment.duration,
       status: appointment.status,
-      description: appointment.description,
       notes: appointment.notes,
-      clientNotes: appointment.clientNotes,
-      createdBy: appointment.createdBy,
+      createdBy: appointment.createdById,
       createdAt: appointment.createdAt.toISOString(),
       updatedAt: appointment.updatedAt.toISOString(),
       client: appointment.client,
-      creator: appointment.creator
+      creator: appointment.createdBy
     };
   }
 }
