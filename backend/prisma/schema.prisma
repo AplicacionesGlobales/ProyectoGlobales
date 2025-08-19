@@ -23,6 +23,9 @@ model User {
   userBrands         UserBrand[]
   uploadedFiles File[] @relation("UploadedFiles")
 
+  clientAppointments  Appointment[] @relation("ClientAppointments")
+  createdAppointments Appointment[] @relation("CreatedAppointments")
+
   @@map("users")
 }
 
@@ -47,6 +50,8 @@ model Brand {
   payments            Payment[]
   specialHours        SpecialHours[]
   userBrands          UserBrand[]
+
+  appointments        Appointment[]
 
   @@map("brands")
 }
@@ -269,6 +274,29 @@ model File {
   @@map("files")
 }
 
+model Appointment {
+  id          Int              @id @default(autoincrement())
+  brandId     Int
+  clientId    Int
+  serviceId   Int
+  startTime   DateTime
+  endTime     DateTime
+  duration    Int              // en minutos
+  status      AppointmentStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  
+  brand       Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  client      User             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  service     Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  @@index([brandId, startTime])
+  @@index([clientId])
+  @@index([serviceId])
+  @@index([status])
+}
+
 enum UserRole {
   ROOT
   CLIENT
@@ -298,4 +326,13 @@ enum FeatureCategory {
   ESSENTIAL
   BUSINESS
   ADVANCED
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }
