@@ -13,6 +13,7 @@ import { FilesModule } from './files/files.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BrandModule } from './brand/brand.module';
 import { ScheduleModule } from './schedule/schedule.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { ScheduleModule } from './schedule/schedule.module';
     ValidateModule,
     ScheduleModule,
     ColorPaletteModule,
-    FilesModule
+    FilesModule,
+    AppointmentsModule,
   ],
   controllers: [],
   providers: [

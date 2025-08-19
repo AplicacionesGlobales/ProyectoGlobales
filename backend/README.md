@@ -66,3 +66,12 @@ curl -X POST http://localhost:3000/auth/register/client \
     "branchId": 1
   }'
 ```
+
+
+### Users
+   - ROOT: barbershop_owner (owner@barbershop.com)
+   - CLIENT: juan_perez (Juan Pérez)
+   - CLIENT: maria_gonzalez (María González)
+   - ADMIN: admin_user (Admin User)
+
+   - Password: password123

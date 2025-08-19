@@ -2,7 +2,7 @@ import { IsString, IsOptional, ValidateNested, IsObject, IsArray, IsNumber, IsBo
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-export class UpdateColorPaletteDto {
+export class UpdateColorsPaletteDto {
   @ApiPropertyOptional({ example: '#1E3A8A' })
   @IsString()
   @IsOptional()
@@ -64,12 +64,12 @@ export class UpdateBrandDto {
   @IsOptional()
   selectedFeatureIds?: number[];
 
-  @ApiPropertyOptional({ type: UpdateColorPaletteDto })
+  @ApiPropertyOptional({ type: UpdateColorsPaletteDto })
   @ValidateNested()
-  @Type(() => UpdateColorPaletteDto)
+  @Type(() => UpdateColorsPaletteDto)
   @IsObject()
   @IsOptional()
-  colorPalette?: UpdateColorPaletteDto;
+  colorPalette?: UpdateColorsPaletteDto;
 
   @ApiPropertyOptional({ example: true })
   @IsBoolean()
