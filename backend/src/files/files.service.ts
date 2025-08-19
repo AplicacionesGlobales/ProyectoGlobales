@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as Minio from 'minio';
 import { randomUUID } from 'crypto';
 import { CreateFileDto, FileResponseDto, EntityType, FileType } from './dto/file.dto';
+import { BrandImageType } from './dto/brand-image.dto';
 
 export interface UploadResult {
   success: boolean;
@@ -23,19 +24,20 @@ export class MinioService implements OnModuleInit {
     private prisma: PrismaService
   ) {
     this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME', 'brand-assets');
-    this.publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL', 'http://localhost:9000');
+    this.publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL', 'https://jmvserver.mooo.com/minio/');
     
     this.minioClient = new Minio.Client({
-      endPoint: this.configService.get<string>('MINIO_ENDPOINT', 'localhost'),
+      endPoint: this.configService.get<string>('MINIO_ENDPOINT', 'jmvserver.mooo.'),
       port: parseInt(this.configService.get<string>('MINIO_PORT', '9000')),
       useSSL: this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true',
-      accessKey: this.configService.get<string>('MINIO_ACCESS_KEY', 'minioadmin'),
-      secretKey: this.configService.get<string>('MINIO_SECRET_KEY', 'minioadmin'),
+      accessKey: this.configService.get<string>('MINIO_ACCESS_KEY', 'chambeador'),
+      secretKey: this.configService.get<string>('MINIO_SECRET_KEY', 'M4racuya3nL3ch3!2005$'),
     });
   }
 
   async onModuleInit() {
-    await this.createBucketIfNotExists();
+    // await this.createBucketIfNotExists();
+    this.logger.log('MinioService initialized (bucket creation skipped)');
   }
 
   private async createBucketIfNotExists(): Promise<void> {
@@ -74,24 +76,23 @@ export class MinioService implements OnModuleInit {
   }
 
   async uploadFile(
+    file: any,
     createFileDto: CreateFileDto,
     uploadedBy?: number
   ): Promise<UploadResult> {
     try {
-      // Extract MIME type and data from base64 string
-      const matches = createFileDto.base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (!matches || matches.length !== 3) {
+      if (!file) {
         return {
           success: false,
-          error: 'Invalid base64 format',
+          error: 'No file provided',
         };
       }
 
-      const contentType = matches[1];
-      const data = matches[2];
-      const buffer = Buffer.from(data, 'base64');
+      const buffer = file.buffer;
+      const contentType = file.mimetype;
+      const originalName = file.originalname;
 
-      // Determine file extension from MIME type
+      // Determine file extension from MIME type or original filename
       const extensions: { [key: string]: string } = {
         'image/jpeg': 'jpg',
         'image/jpg': 'jpg',
@@ -104,7 +105,7 @@ export class MinioService implements OnModuleInit {
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
       };
 
-      const extension = extensions[contentType] || 'bin';
+      const extension = extensions[contentType] || originalName.split('.').pop() || 'bin';
       const folder = createFileDto.folder || this.getDefaultFolder(createFileDto.fileType);
       const fileName = `${createFileDto.fileType}-${randomUUID()}.${extension}`;
       const key = `${createFileDto.entityType}s/${createFileDto.entityId}/${folder}/${fileName}`;
@@ -114,7 +115,7 @@ export class MinioService implements OnModuleInit {
         'x-amz-meta-entity-type': createFileDto.entityType,
         'x-amz-meta-entity-id': createFileDto.entityId.toString(),
         'x-amz-meta-file-type': createFileDto.fileType,
-        'x-amz-meta-original-name': createFileDto.name,
+        'x-amz-meta-original-name': originalName,
         'x-amz-meta-uploaded-by': uploadedBy?.toString() || 'system',
         'x-amz-meta-uploaded-at': new Date().toISOString(),
       };
@@ -133,7 +134,7 @@ export class MinioService implements OnModuleInit {
       // Save to database
       const fileRecord = await this.prisma.file.create({
         data: {
-          name: createFileDto.name,
+          name: originalName,
           url,
           key,
           contentType,
@@ -173,6 +174,212 @@ export class MinioService implements OnModuleInit {
         success: false,
         error: error.message,
       };
+    }
+  }
+
+  async uploadBrandImage(
+    file: any,
+    brandId: number,
+    imageType: BrandImageType,
+    userId: number
+  ): Promise<UploadResult> {
+    try {
+      if (!file) {
+        return {
+          success: false,
+          error: 'No file provided',
+        };
+      }
+
+      // Verificar que la marca existe y el usuario tiene acceso
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: {
+          userId,
+          brandId,
+        },
+        include: {
+          brand: true,
+        }
+      });
+
+      if (!userBrand) {
+        return {
+          success: false,
+          error: 'User does not have access to this brand',
+        };
+      }
+
+      const buffer = file.buffer;
+      const contentType = file.mimetype;
+      const originalName = file.originalname;
+
+      // Validar que sea una imagen
+      if (!contentType.startsWith('image/')) {
+        return {
+          success: false,
+          error: 'File must be an image',
+        };
+      }
+
+      // Determine file extension from MIME type
+      const extensions: { [key: string]: string } = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'image/svg+xml': 'svg',
+      };
+
+      const extension = extensions[contentType] || 'jpg';
+      const fileName = `${imageType.toLowerCase()}-${randomUUID()}.${extension}`;
+      const key = `brands/${brandId}/images/${fileName}`;
+
+      const metadata = {
+        'Content-Type': contentType,
+        'x-amz-meta-entity-type': 'brand',
+        'x-amz-meta-entity-id': brandId.toString(),
+        'x-amz-meta-file-type': imageType.toLowerCase(),
+        'x-amz-meta-original-name': originalName,
+        'x-amz-meta-uploaded-by': userId.toString(),
+        'x-amz-meta-uploaded-at': new Date().toISOString(),
+        'x-amz-meta-image-type': imageType,
+      };
+
+      // Upload to MinIO
+      await this.minioClient.putObject(
+        this.bucketName,
+        key,
+        buffer,
+        buffer.length,
+        metadata
+      );
+
+      const url = `${this.publicUrl}/${this.bucketName}/${key}`;
+
+      // Reemplazar imagen existente del mismo tipo si existe
+      const existingFile = await this.prisma.file.findFirst({
+        where: {
+          entityType: 'brand',
+          entityId: brandId,
+          fileType: imageType.toLowerCase(),
+          isActive: true,
+        },
+      });
+
+      if (existingFile) {
+        // Desactivar archivo anterior
+        await this.prisma.file.update({
+          where: { id: existingFile.id },
+          data: { isActive: false },
+        });
+
+        // Eliminar de MinIO
+        try {
+          await this.minioClient.removeObject(this.bucketName, existingFile.key);
+        } catch (error) {
+          this.logger.warn(`Could not delete old file from MinIO: ${existingFile.key}`);
+        }
+      }
+
+      // Guardar en base de datos
+      const fileRecord = await this.prisma.file.create({
+        data: {
+          name: originalName,
+          url,
+          key,
+          contentType,
+          fileType: imageType.toLowerCase(),
+          size: buffer.length,
+          entityId: brandId,
+          entityType: 'brand',
+          uploadedBy: userId,
+          isActive: true,
+        },
+      });
+
+      const fileResponse: FileResponseDto = {
+        id: fileRecord.id,
+        name: fileRecord.name,
+        url: fileRecord.url,
+        key: fileRecord.key,
+        contentType: fileRecord.contentType,
+        fileType: fileRecord.fileType,
+        size: fileRecord.size ?? undefined,
+        entityId: fileRecord.entityId,
+        entityType: fileRecord.entityType,
+        uploadedBy: fileRecord.uploadedBy ?? undefined,
+        isActive: fileRecord.isActive,
+        createdAt: fileRecord.createdAt.toISOString(),
+        updatedAt: fileRecord.updatedAt.toISOString(),
+      };
+
+      this.logger.log(`Brand ${imageType} uploaded successfully: ${key} for brand ${brandId} by user ${userId}`);
+      return {
+        success: true,
+        file: fileResponse,
+      };
+    } catch (error) {
+      this.logger.error('Error uploading brand image:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  async getBrandImages(brandId: number): Promise<{
+    logo: FileResponseDto | null;
+    isotipo: FileResponseDto | null;
+    imagotipo: FileResponseDto | null;
+  }> {
+    try {
+      const files = await this.prisma.file.findMany({
+        where: {
+          entityType: 'brand',
+          entityId: brandId,
+          fileType: { in: ['logo', 'isotipo', 'imagotipo'] },
+          isActive: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const result = {
+        logo: null as FileResponseDto | null,
+        isotipo: null as FileResponseDto | null,
+        imagotipo: null as FileResponseDto | null,
+      };
+
+      files.forEach(file => {
+        const fileResponse: FileResponseDto = {
+          id: file.id,
+          name: file.name,
+          url: file.url,
+          key: file.key,
+          contentType: file.contentType,
+          fileType: file.fileType,
+          size: file.size ?? undefined,
+          entityId: file.entityId,
+          entityType: file.entityType,
+          uploadedBy: file.uploadedBy ?? undefined,
+          isActive: file.isActive,
+          createdAt: file.createdAt.toISOString(),
+          updatedAt: file.updatedAt.toISOString(),
+        };
+
+        if (file.fileType === 'logo') {
+          result.logo = fileResponse;
+        } else if (file.fileType === 'isotipo') {
+          result.isotipo = fileResponse;
+        } else if (file.fileType === 'imagotipo') {
+          result.imagotipo = fileResponse;
+        }
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error getting brand images:', error);
+      throw error;
     }
   }
 
@@ -292,6 +499,7 @@ export class MinioService implements OnModuleInit {
     entityType: EntityType,
     entityId: number,
     fileType: FileType,
+    file: any,
     createFileDto: CreateFileDto,
     uploadedBy?: number
   ): Promise<UploadResult> {
@@ -307,7 +515,7 @@ export class MinioService implements OnModuleInit {
       });
 
       // Upload new file
-      const uploadResult = await this.uploadFile(createFileDto, uploadedBy);
+      const uploadResult = await this.uploadFile(file, createFileDto, uploadedBy);
 
       if (uploadResult.success && existingFile) {
         // Deactivate old file

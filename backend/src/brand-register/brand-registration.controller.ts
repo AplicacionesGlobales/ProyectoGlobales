@@ -23,7 +23,7 @@ export class BrandRegistrationController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ 
     summary: 'Registrar nueva marca completa',
-    description: 'Crea una nueva marca con toda la información del flujo de onboarding, incluyendo imágenes base64'
+    description: 'Crea una nueva marca con toda la información del flujo de onboarding. Las imágenes se suben posteriormente mediante el endpoint /files/brand-images'
   })
   @ApiBody({ type: CreateBrandDto })
   @ApiResponse({ 
@@ -42,9 +42,6 @@ export class BrandRegistrationController {
       brandName: createBrandDto.brandName,
       businessTypeId: createBrandDto.businessTypeId,
       planId: createBrandDto.planId,
-      hasLogo: !!createBrandDto.logoImage,
-      hasIsotipo: !!createBrandDto.isotipoImage,
-      hasImagotipo: !!createBrandDto.imagotipoImage,
       selectedFeatures: createBrandDto.selectedFeatureIds.length
     });
     

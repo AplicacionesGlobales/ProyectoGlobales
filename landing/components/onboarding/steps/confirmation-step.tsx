@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle, Sparkles } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { authService, BrandRegistrationData } from "@/services/auth.service"
+import { filesService } from "@/services/files.service"
 import { useLandingData } from "@/hooks/use-landing-data"
-import { convertFilesForRegistration } from "@/utils/file-utils"
 import { Icon } from "@/lib/icons"
+import { ImageUploadProgress } from "../image-upload-progress"
 
 interface ConfirmationStepProps {
   data: {
@@ -85,6 +86,11 @@ const colorPalettes: { [key: string]: any } = {
 export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps) {
   const [isRegistering, setIsRegistering] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<{
+    logo?: { success: boolean; error?: string };
+    isotipo?: { success: boolean; error?: string };
+    imagotipo?: { success: boolean; error?: string };
+  } | undefined>(undefined)
   
   const { 
     businessTypes, 
@@ -162,28 +168,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
     setError(null)
     
     try {
-      // Debug: Verificar que los archivos existen
-      console.log('🔍 Files before conversion:', {
-        logoUrl: !!data.customization.logoUrl,
-        isotopoUrl: !!data.customization.isotopoUrl,
-        imagotipoUrl: !!data.customization.imagotipoUrl,
-        logoFile: data.customization.logoUrl,
-        isotopoFile: data.customization.isotopoUrl,
-        imagotipoFile: data.customization.imagotipoUrl
-      });
-
-      // Convert images to base64
-      const imageFiles = await convertFilesForRegistration({
-        logoUrl: data.customization.logoUrl,
-        isotopoUrl: data.customization.isotopoUrl,
-        imagotipoUrl: data.customization.imagotipoUrl
-      });
-
-      console.log('🖼️ Images converted:', {
-        logoImage: !!imageFiles.logoImage,
-        isotopoImage: !!imageFiles.isotopoImage,
-        imagotipoImage: !!imageFiles.imagotipoImage
-      });
+      console.log('� Starting brand registration...');
 
       // Prepare color palette
       let finalColorPalette;
@@ -211,7 +196,7 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
       // Calculate total price for validation
       const totalPrice = calculateTotalPrice()
 
-      // Prepare registration data with ONLY IDs and base64 images
+      // Prepare registration data WITHOUT images
       const registrationData: BrandRegistrationData = {
         // User info
         email: data.personalInfo.email,
@@ -232,11 +217,6 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         // Customization
         colorPalette: finalColorPalette,
         
-        // Images as base64 strings
-        logoImage: imageFiles.logoImage,
-        isotopoImage: imageFiles.isotopoImage,
-        imagotipoImage: imageFiles.imagotipoImage,
-        
         // Plan information - ONLY NUMERIC ID
         planId: planId,
         planBillingPeriod: data.plan.billingPeriod || 'monthly',
@@ -247,33 +227,62 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         source: 'landing_onboarding'
       }
 
-      console.log('📤 SENDING TO BACKEND (IDs ONLY):')
-      console.log('Business Type ID:', businessTypeId)
-      console.log('Selected Feature IDs:', selectedFeatureIds)
-      console.log('Plan ID (numeric):', planId)
-      console.log('Total Price (calculated):', totalPrice)
-      console.log('Images included:', {
-        logo: !!registrationData.logoImage,
-        isotopo: !!registrationData.isotopoImage,
-        imagotipo: !!registrationData.imagotipoImage
-      })
-      console.log('Full Registration Data:', registrationData)
+      console.log('📤 Registering brand without images...');
+      console.log('Business Type ID:', businessTypeId);
+      console.log('Selected Feature IDs:', selectedFeatureIds);
+      console.log('Plan ID:', planId);
+      console.log('Total Price:', totalPrice);
 
+      // Step 1: Register brand without images
       const result = await authService.registerBrand(registrationData)
       
-      if (result.success && result.data) {
-        // Store auth data
-        localStorage.setItem('auth_token', result.data.token)
-        localStorage.setItem('user_data', JSON.stringify(result.data.user))
-        localStorage.setItem('brand_data', JSON.stringify(result.data.brand))
-        
-        onNext()
-      } else {
-        setError(result.errors?.map(e => e.description).join(', ') || 'Error en el registro')
+      if (!result.success || !result.data) {
+        throw new Error(result.errors?.map(e => e.description).join(', ') || 'Error en el registro')
       }
+
+      console.log('✅ Brand registered successfully:', result.data.brand.id);
+
+      // Store auth data immediately
+      localStorage.setItem('auth_token', result.data.token)
+      localStorage.setItem('user_data', JSON.stringify(result.data.user))
+      localStorage.setItem('brand_data', JSON.stringify(result.data.brand))
+
+      // Step 2: Upload images if they exist
+      const hasImages = data.customization.logoUrl || data.customization.isotopoUrl || data.customization.imagotipoUrl;
+      
+      if (hasImages) {
+        console.log('📤 Uploading brand images...');
+        
+        const imagesToUpload = {
+          logo: data.customization.logoUrl,
+          isotipo: data.customization.isotopoUrl,
+          imagotipo: data.customization.imagotipoUrl
+        };
+
+        const uploadResult = await filesService.uploadMultipleBrandImages(
+          imagesToUpload,
+          result.data.brand.id,
+          result.data.user.id
+        );
+
+        // Update progress state
+        setUploadProgress(uploadResult.results);
+
+        if (!uploadResult.success) {
+          console.warn('⚠️ Some images failed to upload:', uploadResult.errors);
+          // Don't fail the entire registration for image upload errors
+          // The user can upload images later
+        } else {
+          console.log('✅ All images uploaded successfully');
+        }
+      }
+
+      console.log('🎉 Registration completed successfully');
+      onNext()
+      
     } catch (error) {
-      console.error('Registration failed:', error)
-      setError('No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.')
+      console.error('❌ Registration failed:', error)
+      setError(error instanceof Error ? error.message : 'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.')
     } finally {
       setIsRegistering(false)
     }
@@ -458,6 +467,19 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
           </div>
         </Card>
       </div>
+
+      {/* Image Upload Progress */}
+      {isRegistering && (
+        <ImageUploadProgress
+          images={{
+            logo: data.customization.logoUrl,
+            isotipo: data.customization.isotopoUrl,
+            imagotipo: data.customization.imagotipoUrl
+          }}
+          uploadResults={uploadProgress}
+          isUploading={isRegistering}
+        />
+      )}
 
       {/* Actions */}
       <div className="flex justify-between pt-6">

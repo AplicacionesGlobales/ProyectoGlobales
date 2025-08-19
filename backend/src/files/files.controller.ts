@@ -8,11 +8,15 @@ import {
   Query, 
   HttpCode, 
   HttpStatus,
-  ParseIntPipe
+  ParseIntPipe,
+  UseInterceptors,
+  UploadedFile
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiConsumes } from '@nestjs/swagger';
 import { MinioService } from './files.service';
 import { CreateFileDto, FileResponseDto, FilesListResponseDto, UploadResultDto, EntityType, FileType } from './dto/file.dto';
+import { BrandImageType, BrandImagesResponseDto } from './dto/brand-image.dto';
 import { BaseResponseDto } from '../common/dto';
 import { Public } from '../common/decorators/public-auth.decorator';
 
@@ -21,24 +25,128 @@ import { Public } from '../common/decorators/public-auth.decorator';
 export class FilesController {
   constructor(private readonly minioService: MinioService) {}
 
+  @Post('brand-images')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ 
+    summary: 'Subir imagen de marca',
+    description: 'Sube una imagen específica de marca (logo, isotipo o imagotipo) y la asocia con el usuario y la marca'
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+        brandId: {
+          type: 'number',
+          description: 'ID de la marca'
+        },
+        imageType: {
+          type: 'string',
+          enum: Object.values(BrandImageType),
+          description: 'Tipo de imagen de marca'
+        },
+        userId: {
+          type: 'number',
+          description: 'ID del usuario que sube la imagen'
+        }
+      },
+      required: ['file', 'brandId', 'imageType', 'userId'],
+    },
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Imagen de marca subida exitosamente',
+    type: UploadResultDto
+  })
+  async uploadBrandImage(
+    @UploadedFile() file: any,
+    @Body('brandId', ParseIntPipe) brandId: number,
+    @Body('imageType') imageType: BrandImageType,
+    @Body('userId', ParseIntPipe) userId: number
+  ): Promise<UploadResultDto> {
+    try {
+      const result = await this.minioService.uploadBrandImage(
+        file,
+        brandId,
+        imageType,
+        userId
+      );
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  @Get('brand/:brandId/images')
+  @ApiOperation({ 
+    summary: 'Obtener imágenes de marca',
+    description: 'Obtiene todas las imágenes (logo, isotipo, imagotipo) de una marca específica'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Imágenes de la marca',
+    type: BrandImagesResponseDto
+  })
+  async getBrandImages(
+    @Param('brandId', ParseIntPipe) brandId: number
+  ): Promise<BrandImagesResponseDto> {
+    return await this.minioService.getBrandImages(brandId);
+  }
+
   @Post('upload')
   @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ 
     summary: 'Subir archivo a MinIO',
-    description: 'Sube un archivo codificado en base64 a MinIO y guarda los metadatos en la base de datos'
+    description: 'Sube un archivo mediante FormData a MinIO y guarda los metadatos en la base de datos'
   })
-  @ApiBody({ type: CreateFileDto })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+        fileType: {
+          type: 'string',
+          enum: Object.values(FileType),
+        },
+        entityType: {
+          type: 'string',
+          enum: Object.values(EntityType),
+        },
+        entityId: {
+          type: 'number',
+        },
+        folder: {
+          type: 'string',
+        },
+      },
+      required: ['file', 'fileType', 'entityType', 'entityId'],
+    },
+  })
   @ApiResponse({ 
     status: 201, 
     description: 'Archivo subido exitosamente',
     type: UploadResultDto
   })
   async uploadFile(
+    @UploadedFile() file: any,
     @Body() createFileDto: CreateFileDto,
     @Query('uploadedBy') uploadedBy?: number
   ): Promise<UploadResultDto> {
     try {
-      const result = await this.minioService.uploadFile(createFileDto, uploadedBy);
+      const result = await this.minioService.uploadFile(file, createFileDto, uploadedBy);
       return result;
     } catch (error) {
       return {
@@ -123,17 +231,45 @@ export class FilesController {
 
   @Post('replace')
   @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ 
     summary: 'Reemplazar archivo de entidad',
     description: 'Reemplaza un archivo existente del mismo tipo para una entidad específica'
   })
-  @ApiBody({ type: CreateFileDto })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+        fileType: {
+          type: 'string',
+          enum: Object.values(FileType),
+        },
+        entityType: {
+          type: 'string',
+          enum: Object.values(EntityType),
+        },
+        entityId: {
+          type: 'number',
+        },
+        folder: {
+          type: 'string',
+        },
+      },
+      required: ['file', 'fileType', 'entityType', 'entityId'],
+    },
+  })
   @ApiResponse({ 
     status: 201, 
     description: 'Archivo reemplazado exitosamente',
     type: UploadResultDto
   })
   async replaceEntityFile(
+    @UploadedFile() file: any,
     @Body() createFileDto: CreateFileDto,
     @Query('uploadedBy') uploadedBy?: number
   ): Promise<UploadResultDto> {
@@ -142,6 +278,7 @@ export class FilesController {
         createFileDto.entityType,
         createFileDto.entityId,
         createFileDto.fileType,
+        file,
         createFileDto,
         uploadedBy
       );

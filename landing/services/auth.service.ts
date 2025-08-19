@@ -29,11 +29,6 @@ export interface BrandRegistrationData {
     success: string;
   };
   
-  // Images as base64 strings
-  logoImage?: string;
-  isotopoImage?: string;
-  imagotipoImage?: string;
-  
   // Plan information - ONLY NUMERIC ID
   planId: number;
   planBillingPeriod: 'monthly' | 'annual';

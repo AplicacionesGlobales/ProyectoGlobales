@@ -104,22 +104,6 @@ export class CreateBrandDto {
   @IsNumber()
   totalPrice: number;
 
-  // Imágenes como base64 strings
-  @ApiPropertyOptional({ example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...' })
-  @IsString()
-  @IsOptional()
-  logoImage?: string;
-
-  @ApiPropertyOptional({ example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...' })
-  @IsString()
-  @IsOptional()
-  isotipoImage?: string;
-
-  @ApiPropertyOptional({ example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...' })
-  @IsString()
-  @IsOptional()
-  imagotipoImage?: string;
-
   // Metadatos
   @ApiPropertyOptional({ example: '2025-08-10T21:30:00.000Z' })
   @IsString()

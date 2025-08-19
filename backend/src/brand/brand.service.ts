@@ -128,9 +128,6 @@ export class BrandService {
         description: brand.description ?? undefined,
         address: brand.address ?? undefined,
         phone: brand.phone ?? undefined,
-        logoUrl: brand.logoUrl ?? undefined,
-        isotipoUrl: brand.isotipoUrl ?? undefined,
-        imagotipoUrl: brand.imagotipoUrl ?? undefined,
         isActive: brand.isActive,
         createdAt: brand.createdAt.toISOString(),
         updatedAt: brand.updatedAt.toISOString(),
@@ -250,34 +247,8 @@ export class BrandService {
     try {
       await this.validateBrandAccess(brandId, requestingUserId);
 
-      // Procesar imágenes si se proporcionaron
-      const imageUpdates: any = {};
-
-      if (updateData.logoImage) {
-        const logoResult = await this.fileService.uploadBase64Image(brandId, updateData.logoImage, 'logo');
-        if (logoResult.success) {
-          imageUpdates.logoUrl = logoResult.url;
-        }
-      }
-
-      if (updateData.isotipoImage) {
-        const isotipoResult = await this.fileService.uploadBase64Image(brandId, updateData.isotipoImage, 'isotipo');
-        if (isotipoResult.success) {
-          imageUpdates.isotipoUrl = isotipoResult.url;
-        }
-      }
-
-      if (updateData.imagotipoImage) {
-        const imagotipoResult = await this.fileService.uploadBase64Image(brandId, updateData.imagotipoImage, 'imagotipo');
-        if (imagotipoResult.success) {
-          imageUpdates.imagotipoUrl = imagotipoResult.url;
-        }
-      }
-
       // Preparar datos de actualización del brand
-      const brandUpdateData: any = {
-        ...imageUpdates
-      };
+      const brandUpdateData: any = {};
 
       if (updateData.name !== undefined) brandUpdateData.name = updateData.name;
       if (updateData.description !== undefined) brandUpdateData.description = updateData.description;
