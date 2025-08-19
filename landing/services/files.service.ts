@@ -66,9 +66,13 @@ class FilesService {
         formData
       );
 
+      console.log('📤 Upload response:', response);
+
       if (response.success && response.data) {
+        console.log('✅ Upload successful:', response.data);
         return response.data;
       } else {
+        console.error('❌ Upload failed with response:', response);
         return {
           success: false,
           error: response.errors?.map(e => e.description).join(', ') || 'Error uploading image'
@@ -144,11 +148,23 @@ class FilesService {
     const errors: string[] = [];
 
     try {
+      console.log('🚀 Starting multiple brand images upload:', {
+        brandId,
+        userId,
+        hasLogo: !!images.logo,
+        hasIsotipo: !!images.isotipo,
+        hasImagotipo: !!images.imagotipo,
+        logoFile: images.logo ? { name: images.logo.name, size: images.logo.size, type: images.logo.type } : null,
+        isotipoFile: images.isotipo ? { name: images.isotipo.name, size: images.isotipo.size, type: images.isotipo.type } : null,
+        imagotipoFile: images.imagotipo ? { name: images.imagotipo.name, size: images.imagotipo.size, type: images.imagotipo.type } : null
+      });
+
       // Subir logo si existe
       if (images.logo) {
         console.log('📤 Uploading logo...');
         const logoResult = await this.uploadBrandImage(images.logo, brandId, 'LOGO', userId);
         results.logo = logoResult;
+        console.log('📤 Logo upload result:', logoResult);
         if (!logoResult.success) {
           errors.push(`Logo: ${logoResult.error}`);
         }
@@ -159,6 +175,7 @@ class FilesService {
         console.log('📤 Uploading isotipo...');
         const isotipoResult = await this.uploadBrandImage(images.isotipo, brandId, 'ISOTIPO', userId);
         results.isotipo = isotipoResult;
+        console.log('📤 Isotipo upload result:', isotipoResult);
         if (!isotipoResult.success) {
           errors.push(`Isotipo: ${isotipoResult.error}`);
         }
@@ -169,12 +186,19 @@ class FilesService {
         console.log('📤 Uploading imagotipo...');
         const imagotipoResult = await this.uploadBrandImage(images.imagotipo, brandId, 'IMAGOTIPO', userId);
         results.imagotipo = imagotipoResult;
+        console.log('📤 Imagotipo upload result:', imagotipoResult);
         if (!imagotipoResult.success) {
           errors.push(`Imagotipo: ${imagotipoResult.error}`);
         }
       }
 
       const allSuccessful = Object.values(results).every(result => result?.success);
+
+      console.log('📤 Multiple brand images upload completed:', {
+        allSuccessful,
+        results,
+        errors
+      });
 
       return {
         success: allSuccessful && errors.length === 0,
