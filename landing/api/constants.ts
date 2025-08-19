@@ -156,6 +156,15 @@ export const API_ENDPOINTS = {
   },
 
   // File upload endpoints
+  FILES: {
+    UPLOAD: '/files/upload',
+    BRAND_IMAGES: '/files/brand-images',
+    GET_BRAND_IMAGES: (brandId: number) => `/files/brand/${brandId}/images`,
+    DELETE_FILE: (fileId: number) => `/files/${fileId}`,
+    GET_FILE: (fileId: number) => `/files/${fileId}`,
+  },
+
+  // Legacy upload endpoints (deprecated)
   UPLOAD: {
     IMAGE: '/upload/image',
     BRAND_LOGO: (brandId: number) => `/brand/${brandId}/upload/logo`,

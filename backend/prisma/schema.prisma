@@ -38,9 +38,6 @@ model Brand {
   ownerId             Int
   businessType        String?
   selectedFeatures    String[]
-  imagotipoUrl        String?
-  isotipoUrl          String?
-  logoUrl             String?
   appointmentSettings AppointmentSettings?
   brandFeatures       BrandFeature[]
   brandPlans          BrandPlan[]

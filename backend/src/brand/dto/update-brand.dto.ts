@@ -71,30 +71,6 @@ export class UpdateBrandDto {
   @IsOptional()
   colorPalette?: UpdateColorPaletteDto;
 
-  @ApiPropertyOptional({ 
-    example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
-    description: 'Nueva imagen de logo en base64' 
-  })
-  @IsString()
-  @IsOptional()
-  logoImage?: string;
-
-  @ApiPropertyOptional({ 
-    example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
-    description: 'Nueva imagen de isotipo en base64' 
-  })
-  @IsString()
-  @IsOptional()
-  isotipoImage?: string;
-
-  @ApiPropertyOptional({ 
-    example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
-    description: 'Nueva imagen de imagotipo en base64' 
-  })
-  @IsString()
-  @IsOptional()
-  imagotipoImage?: string;
-
   @ApiPropertyOptional({ example: true })
   @IsBoolean()
   @IsOptional()

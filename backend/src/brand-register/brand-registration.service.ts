@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { MinioService } from '../files/files.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { ERROR_CODES, ERROR_MESSAGES } from '../common/constants';
 import { UserRole } from '../../generated/prisma';
-import { CreateFileDto, EntityType, FileType } from '../files/dto/file.dto';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { createAccessToken } from '../lib/crypto';
@@ -28,9 +26,6 @@ interface BrandRegistrationResponse {
     phone?: string;
     businessType?: string;
     features?: string[];
-    logoUrl?: string;
-    isotipoUrl?: string;
-    imagotipoUrl?: string;
   };
   colorPalette: {
     id: number;
@@ -59,8 +54,7 @@ interface BrandRegistrationResponse {
 export class BrandRegistrationService {
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService,
-    private minioService: MinioService
+    private configService: ConfigService
   ) {}
 
   async registerBrand(createBrandDto: CreateBrandDto): Promise<BaseResponseDto<BrandRegistrationResponse>> {
@@ -174,62 +168,8 @@ export class BrandRegistrationService {
         });
         console.log('✅ Brand created:', brand.id);
 
-        // 3. Procesar imágenes base64 si existen
-        let logoUrl: string | undefined;
-        let isotipoUrl: string | undefined;
-        let imagotipoUrl: string | undefined;
-
-        if (createBrandDto.logoImage) {
-          const logoDto: CreateFileDto = {
-            name: `logo-${brand.name}`,
-            base64Data: createBrandDto.logoImage,
-            fileType: FileType.LOGO,
-            entityType: EntityType.BRAND,
-            entityId: brand.id
-          };
-          const logoResult = await this.minioService.uploadFile(logoDto, user.id);
-          if (logoResult.success && logoResult.file) {
-            logoUrl = logoResult.file.url;
-          }
-        }
-
-        if (createBrandDto.isotipoImage) {
-          const isotipoDto: CreateFileDto = {
-            name: `isotipo-${brand.name}`,
-            base64Data: createBrandDto.isotipoImage,
-            fileType: FileType.ISOTOPO,
-            entityType: EntityType.BRAND,
-            entityId: brand.id
-          };
-          const isotipoResult = await this.minioService.uploadFile(isotipoDto, user.id);
-          if (isotipoResult.success && isotipoResult.file) {
-            isotipoUrl = isotipoResult.file.url;
-          }
-        }
-
-        if (createBrandDto.imagotipoImage) {
-          const imagotipoDto: CreateFileDto = {
-            name: `imagotipo-${brand.name}`,
-            base64Data: createBrandDto.imagotipoImage,
-            fileType: FileType.IMAGOTIPO,
-            entityType: EntityType.BRAND,
-            entityId: brand.id
-          };
-          const imagotipoResult = await this.minioService.uploadFile(imagotipoDto, user.id);
-          if (imagotipoResult.success && imagotipoResult.file) {
-            imagotipoUrl = imagotipoResult.file.url;
-          }
-        }
-
-        // Actualizar URLs de imágenes en la marca
-        const updatedBrand = await prisma.brand.update({
-          where: { id: brand.id },
-          data: {
-            logoUrl,
-            isotipoUrl,
-            imagotipoUrl
-          }
-        });
+                // 3. Marca creada sin imágenes (se subirán después mediante endpoint de files)
+        const updatedBrand = brand;
 
         // 4. Crear paleta de colores
         const colorPalette = await prisma.colorPalette.create({
@@ -334,10 +274,7 @@ export class BrandRegistrationService {
           description: result.brand.description || undefined,
           phone: result.brand.phone || undefined,
           businessType: result.brand.businessType || undefined,
-          features: result.features.map(f => f.key),
-          logoUrl: result.brand.logoUrl || undefined,
-          isotipoUrl: result.brand.isotipoUrl || undefined,
-          imagotipoUrl: result.brand.imagotipoUrl || undefined
+          features: result.features.map(f => f.key)
         },
         colorPalette: {
           id: result.colorPalette.id,
