@@ -247,8 +247,26 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
       localStorage.setItem('user_data', JSON.stringify(result.data.user))
       localStorage.setItem('brand_data', JSON.stringify(result.data.brand))
 
+      console.log('🔐 Token saved to localStorage:', {
+        hasToken: !!result.data.token,
+        tokenLength: result.data.token?.length
+      });
+
+      // Wait a moment to ensure localStorage is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Step 2: Upload images if they exist
       const hasImages = data.customization.logoUrl || data.customization.isotopoUrl || data.customization.imagotipoUrl;
+      
+      console.log('🔍 Checking for images to upload:', {
+        hasImages,
+        logoExists: !!data.customization.logoUrl,
+        isotipoExists: !!data.customization.isotopoUrl,
+        imagotipoExists: !!data.customization.imagotipoUrl,
+        logoFile: data.customization.logoUrl ? { name: data.customization.logoUrl.name, size: data.customization.logoUrl.size } : null,
+        isotipoFile: data.customization.isotopoUrl ? { name: data.customization.isotopoUrl.name, size: data.customization.isotopoUrl.size } : null,
+        imagotipoFile: data.customization.imagotipoUrl ? { name: data.customization.imagotipoUrl.name, size: data.customization.imagotipoUrl.size } : null
+      });
       
       if (hasImages) {
         console.log('📤 Uploading brand images...');
@@ -259,11 +277,15 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
           imagotipo: data.customization.imagotipoUrl
         };
 
+        console.log('📤 Images to upload object:', imagesToUpload);
+
         const uploadResult = await filesService.uploadMultipleBrandImages(
           imagesToUpload,
           result.data.brand.id,
           result.data.user.id
         );
+
+        console.log('📤 Upload result:', uploadResult);
 
         // Update progress state
         setUploadProgress(uploadResult.results);
@@ -275,6 +297,8 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         } else {
           console.log('✅ All images uploaded successfully');
         }
+      } else {
+        console.log('ℹ️ No images to upload');
       }
 
       console.log('🎉 Registration completed successfully');

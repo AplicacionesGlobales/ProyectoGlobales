@@ -34,14 +34,23 @@ class ApiClient {
       endpoint
     });
     
+    // Get auth token from localStorage
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    
     const config: RequestInit = {
       ...API_CONFIG,
       ...options,
       headers: {
         ...API_CONFIG.headers,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
         ...options.headers,
       },
     };
+
+    console.log('🔐 Request headers:', {
+      hasToken: !!token,
+      headers: config.headers
+    });
 
     // Add timeout
     const controller = new AbortController();
@@ -110,24 +119,59 @@ class ApiClient {
   async postFormData<T>(endpoint: string, formData: FormData, options?: RequestInit): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
+    // Get auth token from localStorage
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    
+    console.log('📤 PostFormData request:', {
+      url,
+      hasToken: !!token,
+      formDataKeys: Array.from(formData.keys())
+    });
+    
     try {
+      const headers: Record<string, string> = {
+        // Don't set Content-Type for FormData - browser will set it automatically with boundary
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...(options?.headers as Record<string, string> || {}),
+      };
+
+      console.log('📤 FormData headers:', headers);
+
       const response = await fetch(url, {
         method: 'POST',
         body: formData,
-        headers: {
-          // Don't set Content-Type for FormData - browser will set it automatically with boundary
-          ...(options?.headers || {}),
-        },
+        headers,
+      });
+
+      console.log('📤 FormData response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to get error message from backend
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = Array.isArray(errorData.message) 
+              ? errorData.message.join(', ')
+              : errorData.message;
+          } else if (errorData.errors && errorData.errors.length > 0) {
+            errorMessage = errorData.errors.map((e: any) => e.description || e.message).join(', ');
+          }
+        } catch (e) {
+          // If can't parse JSON, use default message
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log('📤 FormData response data:', data);
       return data;
     } catch (error) {
-      console.error('API FormData request failed:', error);
+      console.error('❌ API FormData request failed:', error);
       throw error;
     }
   }

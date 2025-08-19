@@ -97,10 +97,18 @@ export function OnboardingFlow() {
   }
 
   const handleFileChange = (field: string, file: File | null) => {
+    const fieldMapping: { [key: string]: string } = {
+      'logotipo': 'logoUrl',
+      'isotipo': 'isotopoUrl', 
+      'imagotipo': 'imagotipoUrl'
+    }
+    
+    const mappedField = fieldMapping[field] || field
+
     updateData({
       customization: {
         ...data.customization,
-        [field]: file
+        [mappedField]: file
       }
     })
   }

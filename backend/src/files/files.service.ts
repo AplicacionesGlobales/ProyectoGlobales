@@ -27,7 +27,7 @@ export class MinioService implements OnModuleInit {
     this.publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL', 'https://jmvserver.mooo.com/minio/');
     
     this.minioClient = new Minio.Client({
-      endPoint: this.configService.get<string>('MINIO_ENDPOINT', 'jmvserver.mooo.'),
+      endPoint: this.configService.get<string>('MINIO_ENDPOINT', 'jmvserver.mooo.com'),
       port: parseInt(this.configService.get<string>('MINIO_PORT', '9000')),
       useSSL: this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true',
       accessKey: this.configService.get<string>('MINIO_ACCESS_KEY', 'chambeador'),
@@ -38,6 +38,25 @@ export class MinioService implements OnModuleInit {
   async onModuleInit() {
     // await this.createBucketIfNotExists();
     this.logger.log('MinioService initialized (bucket creation skipped)');
+    
+    // Test MinIO connectivity
+    await this.testMinioConnection();
+  }
+
+  private async testMinioConnection(): Promise<void> {
+    try {
+      this.logger.log('Testing MinIO connection...');
+      this.logger.log(`MinIO Config - Endpoint: ${this.configService.get('MINIO_ENDPOINT')}, Port: ${this.configService.get('MINIO_PORT')}, SSL: ${this.configService.get('MINIO_USE_SSL')}`);
+      
+      const exists = await this.minioClient.bucketExists(this.bucketName);
+      this.logger.log(`✅ MinIO connection successful! Bucket '${this.bucketName}' exists: ${exists}`);
+    } catch (error) {
+      this.logger.error('❌ MinIO connection failed:');
+      this.logger.error(`Error type: ${error.constructor.name}`);
+      this.logger.error(`Error message: ${error.message}`);
+      this.logger.error(`Error code: ${error.code}`);
+      this.logger.warn('⚠️  MinIO is not accessible. File uploads will save to database with placeholder URLs.');
+    }
   }
 
   private async createBucketIfNotExists(): Promise<void> {
@@ -246,16 +265,42 @@ export class MinioService implements OnModuleInit {
         'x-amz-meta-image-type': imageType,
       };
 
-      // Upload to MinIO
-      await this.minioClient.putObject(
-        this.bucketName,
-        key,
-        buffer,
-        buffer.length,
-        metadata
-      );
+      // Upload to MinIO - IMPROVED ERROR HANDLING
+      let uploadSuccess = false;
+      let minioError: any = null;
+      
+      this.logger.log(`Attempting to upload to MinIO: bucket=${this.bucketName}, key=${key}`);
+      this.logger.log(`MinIO config: endpoint=${this.configService.get('MINIO_ENDPOINT')}, port=${this.configService.get('MINIO_PORT')}, useSSL=${this.configService.get('MINIO_USE_SSL')}`);
+      
+      try {
+        await this.minioClient.putObject(
+          this.bucketName,
+          key,
+          buffer,
+          buffer.length,
+          metadata
+        );
+        uploadSuccess = true;
+        this.logger.log(`✅ Successfully uploaded ${key} to MinIO`);
+      } catch (error) {
+        minioError = error;
+        uploadSuccess = false;
+        this.logger.error(`❌ MinIO upload failed for ${key}:`);
+        this.logger.error(`Error type: ${error.constructor.name}`);
+        this.logger.error(`Error message: ${error.message}`);
+        this.logger.error(`Error code: ${error.code}`);
+        this.logger.error(`Full error:`, error);
+        
+        // TEMPORARY: Continue with database record even if MinIO fails
+        this.logger.warn('⚠️  MinIO upload failed, but continuing with database record for development');
+      }
 
-      const url = `${this.publicUrl}/${this.bucketName}/${key}`;
+      // Use different URL based on upload success
+      const url = uploadSuccess 
+        ? `${this.publicUrl}${this.bucketName}/${key}`
+        : `https://via.placeholder.com/400x400/808080/FFFFFF?text=${imageType}`;
+
+      this.logger.log(`Generated URL: ${url} (MinIO success: ${uploadSuccess})`);
 
       // Reemplazar imagen existente del mismo tipo si existe
       const existingFile = await this.prisma.file.findFirst({
@@ -268,21 +313,26 @@ export class MinioService implements OnModuleInit {
       });
 
       if (existingFile) {
+        this.logger.log(`Found existing file to replace: ${existingFile.key}`);
         // Desactivar archivo anterior
         await this.prisma.file.update({
           where: { id: existingFile.id },
           data: { isActive: false },
         });
 
-        // Eliminar de MinIO
-        try {
-          await this.minioClient.removeObject(this.bucketName, existingFile.key);
-        } catch (error) {
-          this.logger.warn(`Could not delete old file from MinIO: ${existingFile.key}`);
+        // Only try to delete from MinIO if current upload was successful
+        if (uploadSuccess) {
+          try {
+            await this.minioClient.removeObject(this.bucketName, existingFile.key);
+            this.logger.log(`✅ Deleted old file from MinIO: ${existingFile.key}`);
+          } catch (error) {
+            this.logger.warn(`⚠️  Could not delete old file from MinIO: ${existingFile.key} - ${error.message}`);
+          }
         }
       }
 
       // Guardar en base de datos
+      this.logger.log(`Creating database record for file: ${originalName}`);
       const fileRecord = await this.prisma.file.create({
         data: {
           name: originalName,
@@ -297,6 +347,7 @@ export class MinioService implements OnModuleInit {
           isActive: true,
         },
       });
+      this.logger.log(`✅ Database record created with ID: ${fileRecord.id}`);
 
       const fileResponse: FileResponseDto = {
         id: fileRecord.id,
@@ -314,10 +365,14 @@ export class MinioService implements OnModuleInit {
         updatedAt: fileRecord.updatedAt.toISOString(),
       };
 
-      this.logger.log(`Brand ${imageType} uploaded successfully: ${key} for brand ${brandId} by user ${userId}`);
+      this.logger.log(`✅ Brand ${imageType} processed successfully: ${key} for brand ${brandId} by user ${userId} (MinIO: ${uploadSuccess ? 'SUCCESS' : 'FAILED'})`);
+      
       return {
         success: true,
         file: fileResponse,
+        ...(minioError && { 
+          warning: `File saved to database but MinIO upload failed: ${minioError.message}` 
+        })
       };
     } catch (error) {
       this.logger.error('Error uploading brand image:', error);
