@@ -14,11 +14,12 @@ import {
 import { Transform } from 'class-transformer';
 
 export enum AppointmentStatus {
-  SCHEDULED = 'SCHEDULED',
+  PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
-  NO_SHOW = 'NO_SHOW',
-  COMPLETED = 'COMPLETED'
+  NO_SHOW = 'NO_SHOW'
 }
 
 export class AppointmentDto {
@@ -40,17 +41,11 @@ export class AppointmentDto {
   @ApiProperty({ example: 30, description: 'Duración en minutos' })
   duration: number;
 
-  @ApiProperty({ enum: AppointmentStatus, example: AppointmentStatus.SCHEDULED })
+  @ApiProperty({ enum: AppointmentStatus, example: AppointmentStatus.PENDING })
   status: AppointmentStatus;
 
   @ApiPropertyOptional({ example: 'Consulta general' })
-  description?: string;
-
-  @ApiPropertyOptional({ example: 'Cliente prefiere horario matutino' })
   notes?: string;
-
-  @ApiPropertyOptional({ example: 'Primera vez en el establecimiento' })
-  clientNotes?: string;
 
   @ApiProperty({ example: 1, description: 'Usuario que creó la cita' })
   createdBy: number;
@@ -100,20 +95,12 @@ export class CreateAppointmentDto {
 
   @ApiPropertyOptional({ 
     example: 'Consulta general',
-    description: 'Descripción de la cita'
+    description: 'Notas de la cita'
   })
   @IsString()
   @IsOptional()
   @MinLength(3)
-  description?: string;
-
-  @ApiPropertyOptional({ 
-    example: 'Primera vez visitando',
-    description: 'Notas del cliente'
-  })
-  @IsString()
-  @IsOptional()
-  clientNotes?: string;
+  notes?: string;
 }
 
 export class CreateAppointmentByRootDto extends CreateAppointmentDto {
@@ -124,14 +111,6 @@ export class CreateAppointmentByRootDto extends CreateAppointmentDto {
   @IsNumber()
   @IsOptional()
   clientId?: number;
-
-  @ApiPropertyOptional({ 
-    example: 'Cliente requiere atención especial',
-    description: 'Notas internas del negocio'
-  })
-  @IsString()
-  @IsOptional()
-  notes?: string;
 }
 
 export class UpdateAppointmentDto {
@@ -152,20 +131,10 @@ export class UpdateAppointmentDto {
   @IsOptional()
   status?: AppointmentStatus;
 
-  @ApiPropertyOptional({ example: 'Consulta de seguimiento' })
-  @IsString()
-  @IsOptional()
-  description?: string;
-
   @ApiPropertyOptional({ example: 'Cliente llegó tarde' })
   @IsString()
   @IsOptional()
   notes?: string;
-
-  @ApiPropertyOptional({ example: 'Necesito cambiar la hora' })
-  @IsString()
-  @IsOptional()
-  clientNotes?: string;
 
   @ApiPropertyOptional({ example: 3 })
   @IsNumber()

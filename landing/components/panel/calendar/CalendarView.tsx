@@ -2,14 +2,16 @@
 "use client"
 
 import { useState } from "react"
+import { format } from "date-fns"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar, ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { CalendarEvent } from "@/services/appointment.service"
 
 interface CalendarViewProps {
-  appointments?: any[]
+  appointments?: CalendarEvent[]
   onDateSelect?: (date: Date) => void
-  onAppointmentClick?: (appointment: any) => void
+  onAppointmentClick?: (appointment: CalendarEvent) => void
   onCreateAppointment?: (date: Date, time: string) => void
 }
 
@@ -58,7 +60,10 @@ export function CalendarView({
   const getAppointmentsForDate = (date: Date) => {
     if (!date) return []
     const dateStr = date.toISOString().split('T')[0]
-    return appointments.filter(apt => apt.date === dateStr)
+    return appointments.filter(apt => {
+      const aptDate = new Date(apt.startTime).toISOString().split('T')[0]
+      return aptDate === dateStr
+    })
   }
 
   const handleDateClick = (date: Date) => {
@@ -168,20 +173,27 @@ export function CalendarView({
 
                 {/* Appointments for this day */}
                 <div className="mt-1 space-y-1">
-                  {dayAppointments.slice(0, 2).map(appointment => (
-                    <div
-                      key={appointment.id}
-                      className="text-xs p-1 bg-primary/20 rounded truncate cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (onAppointmentClick) {
-                          onAppointmentClick(appointment)
-                        }
-                      }}
-                    >
-                      {appointment.startTime} - {appointment.client?.name || 'Cliente'}
-                    </div>
-                  ))}
+                  {dayAppointments.slice(0, 2).map(appointment => {
+                    const appointmentTime = format(new Date(appointment.startTime), 'HH:mm')
+                    const clientName = appointment.client 
+                      ? `${appointment.client.firstName || ''} ${appointment.client.lastName || ''}`.trim() || appointment.client.email
+                      : 'Cliente'
+                    
+                    return (
+                      <div
+                        key={appointment.id}
+                        className="text-xs p-1 bg-primary/20 rounded truncate cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (onAppointmentClick) {
+                            onAppointmentClick(appointment)
+                          }
+                        }}
+                      >
+                        {appointmentTime} - {clientName}
+                      </div>
+                    )
+                  })}
                   {dayAppointments.length > 2 && (
                     <div className="text-xs text-muted-foreground">
                       +{dayAppointments.length - 2} más

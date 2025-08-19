@@ -155,13 +155,23 @@ export class AppointmentsController {
   })
   async getAppointments(
     @Param('brandId') brandId: string,
-    @Query(ValidationPipe) query: GetAppointmentsQueryDto,
+    @Query() query: any, // Use any to avoid strict validation
     @Request() req: any
   ): Promise<BaseResponseDto<{ appointments: AppointmentDto[], total: number, pages: number }>> {
+    // Transform query parameters manually
+    const queryDto: GetAppointmentsQueryDto = {
+      startDate: query.startDate,
+      endDate: query.endDate,
+      status: query.status,
+      clientId: query.clientId ? parseInt(query.clientId) : undefined,
+      page: query.page ? parseInt(query.page) : 1,
+      limit: query.limit ? parseInt(query.limit) : 20
+    };
+
     return this.appointmentsService.getAppointments(
       parseInt(brandId),
       req.user.userId,
-      query
+      queryDto
     );
   }
 
@@ -343,5 +353,83 @@ export class AppointmentsController {
       byStatus: {},
       byMonth: {}
     });
+  }
+
+  // Obtener citas para una fecha específica
+  @Get('appointments/date/:date')
+  @ApiOperation({
+    summary: 'Obtener citas por fecha',
+    description: 'Obtiene todas las citas de una fecha específica'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiParam({ name: 'date', description: 'Fecha en formato YYYY-MM-DD', example: '2025-08-19' })
+  @ApiResponse({
+    status: 200,
+    description: 'Citas obtenidas exitosamente',
+    type: BaseResponseDto
+  })
+  async getAppointmentsByDate(
+    @Param('brandId') brandId: string,
+    @Param('date') date: string,
+    @Request() req: any
+  ): Promise<BaseResponseDto<AppointmentDto[]>> {
+    const query: GetAppointmentsQueryDto = {
+      startDate: date,
+      endDate: date,
+      page: 1,
+      limit: 100
+    };
+    
+    const result = await this.appointmentsService.getAppointments(
+      parseInt(brandId),
+      req.user.userId,
+      query
+    );
+    
+    return BaseResponseDto.success(result.data?.appointments || []);
+  }
+
+  // Obtener citas para el calendario
+  @Get('appointments/calendar')
+  @ApiOperation({
+    summary: 'Obtener citas para calendario',
+    description: 'Obtiene todas las citas en un rango de fechas para mostrar en el calendario'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiQuery({ 
+    name: 'startDate', 
+    required: true, 
+    description: 'Fecha de inicio (YYYY-MM-DD)' 
+  })
+  @ApiQuery({ 
+    name: 'endDate', 
+    required: true, 
+    description: 'Fecha de fin (YYYY-MM-DD)' 
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Citas del calendario obtenidas exitosamente',
+    type: BaseResponseDto
+  })
+  async getCalendarAppointments(
+    @Param('brandId') brandId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Request() req: any
+  ): Promise<BaseResponseDto<AppointmentDto[]>> {
+    const query: GetAppointmentsQueryDto = {
+      startDate,
+      endDate,
+      page: 1,
+      limit: 1000 // Allow more appointments for calendar view
+    };
+    
+    const result = await this.appointmentsService.getAppointments(
+      parseInt(brandId),
+      req.user.userId,
+      query
+    );
+    
+    return BaseResponseDto.success(result.data?.appointments || []);
   }
 }

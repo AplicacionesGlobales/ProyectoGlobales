@@ -79,6 +79,7 @@ export const API_ENDPOINTS = {
     GET_ALL: (brandId: number) => `/brand/${brandId}/appointments`,
     GET_BY_ID: (brandId: number, appointmentId: number) => `/brand/${brandId}/appointments/${appointmentId}`,
     CREATE: (brandId: number) => `/brand/${brandId}/appointments`,
+    CREATE_BY_ROOT: (brandId: number) => `/brand/${brandId}/appointments/admin`,
     UPDATE: (brandId: number, appointmentId: number) => `/brand/${brandId}/appointments/${appointmentId}`,
     DELETE: (brandId: number, appointmentId: number) => `/brand/${brandId}/appointments/${appointmentId}`,
     GET_BY_DATE_RANGE: (brandId: number) => `/brand/${brandId}/appointments/calendar`,
@@ -88,6 +89,8 @@ export const API_ENDPOINTS = {
     GET_BY_DATE: (brandId: number, date: string) => `/brand/${brandId}/appointments/date/${date}`,
     CHECK_CONFLICTS: (brandId: number) => `/brand/${brandId}/appointments/check-conflicts`,
     GET_AVAILABILITY: (brandId: number) => `/brand/${brandId}/appointments/availability`,
+    GET_AVAILABLE_SLOTS: (brandId: number) => `/brand/${brandId}/appointments/availability/slots`,
+    GET_STATISTICS: (brandId: number) => `/brand/${brandId}/appointments/statistics/summary`,
   },
 
   // Client management endpoints

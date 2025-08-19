@@ -183,3 +183,92 @@ export interface HealthResponse {
     responseTime: number;
   };
 }
+
+// Appointment types
+export enum AppointmentStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  NO_SHOW = 'NO_SHOW'
+}
+
+export interface Appointment {
+  id: number;
+  brandId: number;
+  clientId?: number;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  status: AppointmentStatus;
+  notes?: string;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+  
+  client?: {
+    id: number;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+  };
+  creator?: {
+    id: number;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+  };
+}
+
+export interface CreateAppointmentRequest {
+  startTime: string;
+  duration?: number;
+  description?: string;
+  notes?: string;
+}
+
+export interface CreateAppointmentByRootRequest {
+  clientId?: number;
+  startTime: string;
+  duration?: number;
+  description?: string;
+  notes?: string;
+}
+
+export interface UpdateAppointmentRequest {
+  startTime?: string;
+  duration?: number;
+  status?: AppointmentStatus;
+  notes?: string;
+  clientId?: number;
+}
+
+export interface AppointmentConflict {
+  hasConflict: boolean;
+  conflictingAppointments: Array<{
+    id: number;
+    startTime: string;
+    endTime: string;
+    clientName: string;
+  }>;
+  suggestedTimes: string[];
+}
+
+export interface AvailableSlot {
+  time: string;
+  available: boolean;
+  reason?: string;
+}
+
+export interface CalendarEvent extends Appointment {
+  title: string;
+  start: Date;
+  end: Date;
+  resource: {
+    appointmentId: number;
+    status: AppointmentStatus;
+    clientName: string;
+    serviceName: string;
+  };
+}

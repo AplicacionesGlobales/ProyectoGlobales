@@ -14,7 +14,7 @@ CREATE TYPE "public"."PaymentStatus" AS ENUM ('pending', 'processing', 'complete
 CREATE TYPE "public"."FeatureCategory" AS ENUM ('ESSENTIAL', 'BUSINESS', 'ADVANCED');
 
 -- CreateEnum
-CREATE TYPE "public"."AppointmentStatus" AS ENUM ('SCHEDULED', 'CONFIRMED', 'CANCELLED', 'NO_SHOW', 'COMPLETED');
+CREATE TYPE "public"."AppointmentStatus" AS ENUM ('PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
 
 -- CreateTable
 CREATE TABLE "public"."users" (
@@ -44,9 +44,6 @@ CREATE TABLE "public"."brands" (
     "ownerId" INTEGER NOT NULL,
     "businessType" TEXT,
     "selectedFeatures" TEXT[],
-    "imagotipoUrl" TEXT,
-    "isotopoUrl" TEXT,
-    "logoUrl" TEXT,
 
     CONSTRAINT "brands_pkey" PRIMARY KEY ("id")
 );
@@ -238,22 +235,39 @@ CREATE TABLE "public"."appointment_settings" (
 );
 
 -- CreateTable
-CREATE TABLE "public"."appointments" (
+CREATE TABLE "public"."files" (
     "id" SERIAL NOT NULL,
-    "brandId" INTEGER NOT NULL,
-    "clientId" INTEGER,
-    "startTime" TIMESTAMP(3) NOT NULL,
-    "endTime" TIMESTAMP(3) NOT NULL,
-    "duration" INTEGER NOT NULL,
-    "status" "public"."AppointmentStatus" NOT NULL DEFAULT 'SCHEDULED',
-    "description" TEXT,
-    "notes" TEXT,
-    "clientNotes" TEXT,
-    "createdBy" INTEGER NOT NULL,
+    "name" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "contentType" TEXT NOT NULL,
+    "fileType" TEXT NOT NULL,
+    "size" INTEGER,
+    "entityId" INTEGER NOT NULL,
+    "entityType" TEXT NOT NULL,
+    "uploadedBy" INTEGER,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "appointments_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "files_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Appointment" (
+    "id" SERIAL NOT NULL,
+    "brandId" INTEGER NOT NULL,
+    "clientId" INTEGER,
+    "createdById" INTEGER NOT NULL,
+    "startTime" TIMESTAMP(3) NOT NULL,
+    "endTime" TIMESTAMP(3) NOT NULL,
+    "duration" INTEGER NOT NULL,
+    "status" "public"."AppointmentStatus" NOT NULL DEFAULT 'PENDING',
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Appointment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -311,16 +325,19 @@ CREATE UNIQUE INDEX "special_hours_brandId_date_key" ON "public"."special_hours"
 CREATE UNIQUE INDEX "appointment_settings_brandId_key" ON "public"."appointment_settings"("brandId");
 
 -- CreateIndex
-CREATE INDEX "appointments_brandId_startTime_idx" ON "public"."appointments"("brandId", "startTime");
+CREATE UNIQUE INDEX "files_key_key" ON "public"."files"("key");
 
 -- CreateIndex
-CREATE INDEX "appointments_clientId_idx" ON "public"."appointments"("clientId");
+CREATE INDEX "Appointment_brandId_startTime_idx" ON "public"."Appointment"("brandId", "startTime");
 
 -- CreateIndex
-CREATE INDEX "appointments_status_idx" ON "public"."appointments"("status");
+CREATE INDEX "Appointment_clientId_idx" ON "public"."Appointment"("clientId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "appointments_brandId_startTime_key" ON "public"."appointments"("brandId", "startTime");
+CREATE INDEX "Appointment_createdById_idx" ON "public"."Appointment"("createdById");
+
+-- CreateIndex
+CREATE INDEX "Appointment_status_idx" ON "public"."Appointment"("status");
 
 -- AddForeignKey
 ALTER TABLE "public"."brands" ADD CONSTRAINT "brands_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -365,10 +382,13 @@ ALTER TABLE "public"."special_hours" ADD CONSTRAINT "special_hours_brandId_fkey"
 ALTER TABLE "public"."appointment_settings" ADD CONSTRAINT "appointment_settings_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "public"."brands"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."appointments" ADD CONSTRAINT "appointments_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "public"."brands"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."files" ADD CONSTRAINT "files_uploadedBy_fkey" FOREIGN KEY ("uploadedBy") REFERENCES "public"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."appointments" ADD CONSTRAINT "appointments_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "public"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."Appointment" ADD CONSTRAINT "Appointment_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "public"."brands"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."appointments" ADD CONSTRAINT "appointments_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "public"."users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."Appointment" ADD CONSTRAINT "Appointment_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Appointment" ADD CONSTRAINT "Appointment_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
