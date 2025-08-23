@@ -12,8 +12,9 @@ model User {
   id                 Int                 @id @default(autoincrement())
   email              String              @unique
   username           String              @unique
-  firstName          String?
-  lastName           String?
+  firstName          String
+  lastName           String
+  phone              String
   role               UserRole            @default(CLIENT)
   isActive           Boolean             @default(true)
   createdAt          DateTime            @default(now())
@@ -25,6 +26,10 @@ model User {
 
   clientAppointments  Appointment[] @relation("ClientAppointments")
   createdAppointments Appointment[] @relation("CreatedAppointments")
+
+  clientNotes         ClientNote[]       @relation("ClientNotes")
+  createdNotes        ClientNote[]       @relation("NoteCreator")
+  clientActivities    ClientActivity[]
 
   @@map("users")
 }
@@ -50,8 +55,9 @@ model Brand {
   payments            Payment[]
   specialHours        SpecialHours[]
   userBrands          UserBrand[]
-
   appointments        Appointment[]
+  clientNotes         ClientNote[]
+  clientActivities    ClientActivity[]
 
   @@map("brands")
 }
@@ -61,6 +67,9 @@ model UserBrand {
   passwordHash String
   salt         String   @unique
   isActive     Boolean  @default(true)
+  notes        String?  @db.Text        // Notas generales del cliente
+  tags         String[] @default([])    // Etiquetas del cliente (VIP, Frecuente, etc.)
+  preferences  Json?                    // Preferencias del cliente (servicios favoritos, horarios, etc.)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   userId       Int
@@ -297,6 +306,84 @@ model Appointment {
   @@index([status])
 }
 
+model ClientNote {
+  id          Int      @id @default(autoincrement())
+  clientId    Int      // ID del cliente (User)
+  brandId     Int      // ID del brand
+  note        String   @db.Text
+  isPrivate   Boolean  @default(false) // Solo visible para admins
+  createdBy   Int      // ID del usuario que creó la nota
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relaciones
+  client      User     @relation("ClientNotes", fields: [clientId], references: [id], onDelete: Cascade)
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  creator     User     @relation("NoteCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  
+  @@index([clientId, brandId])
+  @@index([createdBy])
+  @@map("client_notes")
+}
+
+model ClientActivity {
+  id          Int            @id @default(autoincrement())
+  clientId    Int            // ID del cliente
+  brandId     Int            // ID del brand
+  type        ActivityType   // Tipo de actividad
+  description String         // Descripción de la actividad
+  metadata    Json?          // Datos adicionales
+  ipAddress   String?        // IP del cliente (para tracking)
+  userAgent   String?        // User agent del navegador
+  createdAt   DateTime       @default(now())
+  
+  // Relaciones
+  client      User           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  brand       Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  
+  @@index([clientId, brandId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("client_activities")
+}
+
+enum ActivityType {
+  // Citas
+  APPOINTMENT_CREATED
+  APPOINTMENT_MODIFIED
+  APPOINTMENT_CANCELLED
+  APPOINTMENT_COMPLETED
+  APPOINTMENT_NO_SHOW
+  
+  // Pagos
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  PAYMENT_REFUNDED
+  
+  // Perfil
+  PROFILE_CREATED
+  PROFILE_UPDATED
+  PASSWORD_CHANGED
+  EMAIL_VERIFIED
+  
+  // Interacciones
+  NOTE_ADDED
+  REVIEW_SUBMITTED
+  RATING_GIVEN
+  
+  // Hitos
+  FIRST_VISIT
+  MILESTONE_10_VISITS
+  MILESTONE_25_VISITS
+  MILESTONE_50_VISITS
+  MILESTONE_100_VISITS
+  
+  // Sistema
+  LOGIN
+  LOGOUT
+  ACCOUNT_ACTIVATED
+  ACCOUNT_DEACTIVATED
+}
 enum UserRole {
   ROOT
   CLIENT
