@@ -14,6 +14,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BrandModule } from './brand/brand.module';
 import { ScheduleModule } from './schedule/schedule.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { ClientModule } from './client/client.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
     ColorPaletteModule,
     FilesModule,
     AppointmentsModule,
+    ClientModule,
   ],
   controllers: [],
   providers: [
