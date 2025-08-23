@@ -9,7 +9,7 @@ import { PlanService } from '../common/services/plan.service';
 import { PaymentService } from '../common/services/payment.service';
 import { ColorPaletteService } from './services/color-palette.service';
 import * as bcrypt from 'bcryptjs';
-import { ValidateResetCodeDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto, LoginRequestDto, RefreshRequestDto, RefreshResponseDto } from './dto';
+import { ValidateResetCodeDto,ProfileResponseDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto, LoginRequestDto, RefreshRequestDto, RefreshResponseDto } from './dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole } from '../../generated/prisma';
 import { randomBytes } from 'crypto';
@@ -807,5 +807,67 @@ export class AuthService {
 
     return { isValid: errors.length === 0, errors };
   }
+
+   // ==================== PROFILE METHODS ====================
+
+  async getProfile(userPayload: any): Promise<BaseResponseDto<ProfileResponseDto>> {
+    try {
+      console.log('\n🔍 === OBTENIENDO PERFIL ===');
+      console.log('👤 User ID:', userPayload.userId);
+      console.log('📅 Timestamp:', new Date().toISOString());
+
+      // Obtener usuario con los campos básicos del perfil
+      const user = await this.prisma.user.findUnique({
+        where: { 
+          id: userPayload.userId,
+          isActive: true 
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      if (!user) {
+        console.log('❌ Usuario no encontrado o inactivo');
+        return BaseResponseDto.singleError(
+          ERROR_CODES.USER_NOT_FOUND,
+          'Usuario no encontrado'
+        );
+      }
+
+      console.log('✅ Perfil obtenido exitosamente:', user.email);
+
+      const profileResponse: ProfileResponseDto = {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName || undefined,
+        phone: user.phone || undefined,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      };
+
+      return BaseResponseDto.success(profileResponse);
+
+    } catch (error) {
+      console.error('\n💥 === ERROR OBTENIENDO PERFIL ===');
+      console.error('Error en getProfile:', error);
+      return BaseResponseDto.singleError(
+        ERROR_CODES.INTERNAL_ERROR,
+        ERROR_MESSAGES.INTERNAL_ERROR
+      );
+    }
+  }
+
 
 }

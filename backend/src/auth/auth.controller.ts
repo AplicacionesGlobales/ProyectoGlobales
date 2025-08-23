@@ -1,5 +1,5 @@
-import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth  } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
   RegisterClientDto,
@@ -18,6 +18,8 @@ import { CreateBrandDto } from '../brand-register/dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
 import { AUTH_SUCCESS_RESPONSE } from '../common/templates';
 import { Public } from '../common/decorators';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ProfileResponseDto } from './dto';
 
 @ApiTags('Autenticación')
 @Controller('auth')
@@ -133,4 +135,24 @@ export class AuthController {
   ): Promise<BaseResponseDto<ResetPasswordResponseDto>> {
     return this.authService.resetPassword(resetPasswordDto);
   }
+
+  // ==================== PROFILE ENDPOINT ====================
+  
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener perfil del usuario autenticado' })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil obtenido exitosamente',
+    type: BaseResponseDto<ProfileResponseDto>
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'No autorizado'
+  })
+  async getProfile(@Request() req): Promise<BaseResponseDto<ProfileResponseDto>> {
+    return this.authService.getProfile(req.user);
+  }
+
 }
