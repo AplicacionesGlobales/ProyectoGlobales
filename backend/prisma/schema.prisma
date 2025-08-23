@@ -13,8 +13,8 @@ model User {
   email              String              @unique
   username           String              @unique
   firstName          String
-  lastName           String
-  phone              String
+  lastName           String?
+  phone              String?
   role               UserRole            @default(CLIENT)
   isActive           Boolean             @default(true)
   createdAt          DateTime            @default(now())
