@@ -135,8 +135,8 @@ export class AuthService {
           data: {
             email: registerDto.email,
             username: registerDto.username,
-            firstName: registerDto.firstName,
-            lastName: registerDto.lastName,
+            firstName: registerDto.firstName || '', 
+            lastName: registerDto.lastName || null,  
             role: UserRole.CLIENT,
           },
           include: {

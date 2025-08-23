@@ -53,8 +53,8 @@ export class UserCreationService {
       data: {
         email: userData.email.toLowerCase(),
         username: userData.username,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
+        firstName: userData.firstName || '', 
+        lastName: userData.lastName || null, 
         role: UserRole.ROOT,
         isActive: true
       },
