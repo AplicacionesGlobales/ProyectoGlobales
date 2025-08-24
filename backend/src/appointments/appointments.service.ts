@@ -13,6 +13,7 @@ import {
   CreateAppointmentDto,
   CreateAppointmentByRootDto,
   UpdateAppointmentDto,
+  UpdateAppointmentStatusDto,
   GetAppointmentsQueryDto,
   AvailableTimeSlotsDto,
   TimeSlotDto,
@@ -476,6 +477,93 @@ export class AppointmentsService {
     } catch (error) {
       console.error('Error updating appointment:', error);
       throw error;
+    }
+  }
+
+  // Actualizar solo el estado de una cita
+  async updateAppointmentStatus(
+    brandId: number,
+    appointmentId: number,
+    updateData: UpdateAppointmentStatusDto,
+    userId: number
+  ): Promise<BaseResponseDto<AppointmentDto>> {
+    try {
+      const appointment = await this.prisma.appointment.findUnique({
+        where: { id: appointmentId }
+      });
+
+      if (!appointment || appointment.brandId !== brandId) {
+        throw new NotFoundException('Cita no encontrada');
+      }
+
+      const isRoot = await this.isRootUser(brandId, userId);
+      
+      // Solo el ROOT o el cliente dueño de la cita pueden actualizarla
+      if (!isRoot && appointment.clientId !== userId) {
+        throw new ForbiddenException('No tiene permisos para actualizar esta cita');
+      }
+
+      // Validar transiciones de estado válidas
+      this.validateStatusTransition(appointment.status as AppointmentStatus, updateData.status);
+
+      const updated = await this.prisma.appointment.update({
+        where: { id: appointmentId },
+        data: {
+          status: updateData.status,
+          ...(updateData.notes && { notes: updateData.notes })
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      });
+
+      return BaseResponseDto.success(this.mapToDto(updated));
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      throw error;
+    }
+  }
+
+  // Validar transiciones de estado válidas
+  private validateStatusTransition(currentStatus: AppointmentStatus, newStatus: AppointmentStatus): void {
+    const validTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
+      [AppointmentStatus.PENDING]: [
+        AppointmentStatus.CONFIRMED, 
+        AppointmentStatus.CANCELLED
+      ],
+      [AppointmentStatus.CONFIRMED]: [
+        AppointmentStatus.IN_PROGRESS, 
+        AppointmentStatus.CANCELLED,
+        AppointmentStatus.NO_SHOW
+      ],
+      [AppointmentStatus.IN_PROGRESS]: [
+        AppointmentStatus.COMPLETED,
+        AppointmentStatus.CANCELLED
+      ],
+      [AppointmentStatus.COMPLETED]: [], // Estado final
+      [AppointmentStatus.CANCELLED]: [], // Estado final
+      [AppointmentStatus.NO_SHOW]: []    // Estado final
+    };
+
+    if (!validTransitions[currentStatus]?.includes(newStatus)) {
+      throw new BadRequestException(
+        `No se puede cambiar el estado de ${currentStatus} a ${newStatus}`
+      );
     }
   }
 

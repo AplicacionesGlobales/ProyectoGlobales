@@ -32,6 +32,7 @@ import {
   CreateAppointmentDto,
   CreateAppointmentByRootDto,
   UpdateAppointmentDto,
+  UpdateAppointmentStatusDto,
   GetAppointmentsQueryDto,
   AvailableTimeSlotsDto,
   TimeSlotDto
@@ -225,18 +226,18 @@ export class AppointmentsController {
     return BaseResponseDto.success(appointment);
   }
 
-  // Actualizar cita
-  @Put('appointments/:appointmentId')
+  // Actualizar estado de cita
+  @Put('appointments/:appointmentId/status')
   @ApiOperation({
-    summary: 'Actualizar cita',
-    description: 'Actualiza una cita existente. ROOT puede actualizar cualquier cita, clientes solo las suyas'
+    summary: 'Actualizar estado de cita',
+    description: 'Actualiza únicamente el estado de una cita existente. ROOT puede actualizar cualquier cita, clientes solo las suyas'
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
-  @ApiBody({ type: UpdateAppointmentDto })
+  @ApiBody({ type: UpdateAppointmentStatusDto })
   @ApiResponse({
     status: 200,
-    description: 'Cita actualizada exitosamente',
+    description: 'Estado de cita actualizado exitosamente',
     type: BaseResponseDto
   })
   @ApiResponse({
@@ -247,13 +248,13 @@ export class AppointmentsController {
     status: 404,
     description: 'Cita no encontrada'
   })
-  async updateAppointment(
+  async updateAppointmentStatus(
     @Param('brandId') brandId: string,
     @Param('appointmentId') appointmentId: string,
-    @Body(ValidationPipe) updateData: UpdateAppointmentDto,
+    @Body(ValidationPipe) updateData: UpdateAppointmentStatusDto,
     @Request() req: any
   ): Promise<BaseResponseDto<AppointmentDto>> {
-    return this.appointmentsService.updateAppointment(
+    return this.appointmentsService.updateAppointmentStatus(
       parseInt(brandId),
       parseInt(appointmentId),
       updateData,
@@ -280,10 +281,10 @@ export class AppointmentsController {
     @Param('appointmentId') appointmentId: string,
     @Request() req: any
   ): Promise<BaseResponseDto<AppointmentDto>> {
-    return this.appointmentsService.updateAppointment(
+    return this.appointmentsService.updateAppointmentStatus(
       parseInt(brandId),
       parseInt(appointmentId),
-      { status: 'CANCELLED' as any },
+      { status: 'CANCELLED' as any, notes: 'Cita cancelada' },
       req.user.userId
     );
   }
