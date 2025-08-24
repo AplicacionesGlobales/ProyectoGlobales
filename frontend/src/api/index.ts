@@ -10,6 +10,11 @@ export {
   loginUser,
   validateEmail,
   validateUsername,
-  forgotPassword
+  forgotPassword,
+  validateResetCode,
+  resetPassword,
+  getColorPaletteByBrand,
+  getBrandById,
+  getBrandImages
 } from './endpoints';
 

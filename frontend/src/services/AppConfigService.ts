@@ -1,7 +1,6 @@
 // services/AppConfigService.ts
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getColorPaletteByBrand } from '../api';
-import { ColorPaletteData } from '../api/types';
+import { getColorPaletteByBrand, getBrandImages } from '../api';
+import { ColorPaletteData, BrandImagesData } from '../api/types';
 
 export interface ColorPaletteConfig {
   primary: string;
@@ -11,9 +10,31 @@ export interface ColorPaletteConfig {
   success: string;
 }
 
+export interface BrandImagesConfig {
+  logo?: {
+    id: number;
+    url: string;
+    name: string;
+    contentType: string;
+  };
+  isotipo?: {
+    id: number;
+    url: string;
+    name: string;
+    contentType: string;
+  };
+  imagotipo?: {
+    id: number;
+    url: string;
+    name: string;
+    contentType: string;
+  };
+}
+
 class AppConfigService {
   private static instance: AppConfigService;
   private colorPalette: ColorPaletteConfig | null = null;
+  private brandImages: BrandImagesConfig | null = null;
   private configLoaded: boolean = false;
 
   private constructor() {}
@@ -27,22 +48,23 @@ class AppConfigService {
 
   /**
    * Obtiene el brandId desde variable de entorno
-   * Este será configurado al momento de generar la APK específica para cada cliente
    */
   private async getBrandId(): Promise<number> {
     try {
-      // Desde variable de entorno (configurada al compilar)
       const BUILD_BRAND_ID = process.env.EXPO_PUBLIC_BRAND_ID;
+      console.log('🏷️ Environment EXPO_PUBLIC_BRAND_ID:', BUILD_BRAND_ID);
+      
       if (BUILD_BRAND_ID) {
-        console.log('Brand ID from env:', BUILD_BRAND_ID);
-        return parseInt(BUILD_BRAND_ID, 10);
+        const brandId = parseInt(BUILD_BRAND_ID, 10);
+        console.log('✅ Brand ID from env:', brandId);
+        return brandId;
       }
 
       // Fallback para desarrollo
-      console.warn('No brand ID found, using default for development');
-      return 1; // ID por defecto para desarrollo
+      console.warn('⚠️ No brand ID found, using default for development');
+      return 1;
     } catch (error) {
-      console.error('Error getting brand ID:', error);
+      console.error('❌ Error getting brand ID:', error);
       return 1;
     }
   }
@@ -55,23 +77,10 @@ class AppConfigService {
       const brandId = await this.getBrandId();
       console.log(`Loading color palette for brand: ${brandId}`);
       
-      // Intentar cargar desde cache primero
-      const cachedPalette = await this.getCachedPalette();
-      if (cachedPalette && this.isCacheValid(cachedPalette) && cachedPalette.brandId === brandId) {
-        console.log('Using cached color palette');
-        this.colorPalette = cachedPalette.data;
-        this.configLoaded = true;
-        return this.colorPalette || this.getDefaultColors();
-      }
-
-      console.log('Loading fresh color palette from API');
-      
-      // Cargar desde el backend
       const colorResponse = await getColorPaletteByBrand(brandId);
 
       let colorPalette: ColorPaletteData | null = null;
 
-      // Procesar respuesta de colores
       if (colorResponse.success && colorResponse.data) {
         colorPalette = colorResponse.data;
         console.log('Color palette loaded successfully:', colorPalette);
@@ -79,33 +88,112 @@ class AppConfigService {
         console.warn('Failed to load color palette from API, using defaults');
       }
 
-      // Construir la configuración de colores
       this.colorPalette = this.buildColorConfig(colorPalette);
-
-      // Guardar en cache
-      await this.cachePalette(this.colorPalette, brandId);
-      this.configLoaded = true;
-
       console.log('Color palette configured:', this.colorPalette);
       return this.colorPalette;
     } catch (error) {
       console.error('Error loading color palette:', error);
-      
-      // Usar configuración por defecto en caso de error
       this.colorPalette = this.getDefaultColors();
-      this.configLoaded = true;
       return this.colorPalette;
     }
+  }
+
+  /**
+   * Carga las imágenes de marca desde el backend
+   */
+  async loadBrandImages(): Promise<BrandImagesConfig> {
+    try {
+      const brandId = await this.getBrandId();
+      console.log(`🖼️ Loading brand images for brand: ${brandId}`);
+      
+      const imagesResponse = await getBrandImages(brandId);
+      console.log('📡 Full API Response:', JSON.stringify(imagesResponse, null, 2));
+
+      let brandImages: BrandImagesData | null = null;
+
+      if (imagesResponse) {
+        brandImages = imagesResponse as BrandImagesData;
+        console.log('✅ Brand images loaded successfully:', JSON.stringify(brandImages, null, 2));
+      } else {
+        console.warn('⚠️ No brand images found in API response');
+      }
+
+      this.brandImages = this.buildImagesConfig(brandImages);
+      console.log('🎨 Final brand images configured:', JSON.stringify(this.brandImages, null, 2));
+      return this.brandImages || this.getDefaultImages();
+    } catch (error) {
+      console.error('❌ Error loading brand images:', error);
+      this.brandImages = this.getDefaultImages();
+      return this.brandImages;
+    }
+  }
+
+  /**
+   * Carga toda la configuración (colores e imágenes)
+   */
+  async loadAppConfig(): Promise<{ colors: ColorPaletteConfig; images: BrandImagesConfig }> {
+    const [colors, images] = await Promise.all([
+      this.loadColorPalette(),
+      this.loadBrandImages()
+    ]);
+
+    this.configLoaded = true;
+    return { colors, images };
+  }
+
+  /**
+   * Construye la configuración de imágenes
+   */
+  private buildImagesConfig(brandImages: BrandImagesData | null): BrandImagesConfig {
+    console.log('🏗️ Building images config from:', brandImages);
+    
+    if (!brandImages) {
+      console.log('⚠️ No brand images data provided');
+      return this.getDefaultImages();
+    }
+
+    const config: BrandImagesConfig = {};
+
+    if (brandImages.logo) {
+      console.log('📸 Adding logo to config:', brandImages.logo);
+      config.logo = {
+        id: brandImages.logo.id,
+        url: brandImages.logo.url,
+        name: brandImages.logo.name,
+        contentType: brandImages.logo.contentType,
+      };
+    }
+
+    if (brandImages.isotipo) {
+      console.log('🎭 Adding isotipo to config:', brandImages.isotipo);
+      config.isotipo = {
+        id: brandImages.isotipo.id,
+        url: brandImages.isotipo.url,
+        name: brandImages.isotipo.name,
+        contentType: brandImages.isotipo.contentType,
+      };
+    }
+
+    if (brandImages.imagotipo) {
+      console.log('🖼️ Adding imagotipo to config:', brandImages.imagotipo);
+      config.imagotipo = {
+        id: brandImages.imagotipo.id,
+        url: brandImages.imagotipo.url,
+        name: brandImages.imagotipo.name,
+        contentType: brandImages.imagotipo.contentType,
+      };
+    }
+
+    console.log('✅ Final images config built:', config);
+    return config;
   }
 
   /**
    * Construye la configuración de colores
    */
   private buildColorConfig(colorPalette: ColorPaletteData | null): ColorPaletteConfig {
-    const defaultColors = this.getDefaultColors();
-
     if (!colorPalette) {
-      return defaultColors;
+      return this.getDefaultColors();
     }
 
     return {
@@ -118,7 +206,7 @@ class AppConfigService {
   }
 
   /**
-   * Configuración de colores por defecto
+   * Configuración por defecto
    */
   private getDefaultColors(): ColorPaletteConfig {
     return {
@@ -130,43 +218,8 @@ class AppConfigService {
     };
   }
 
-  /**
-   * Cache management
-   */
-  private async cachePalette(palette: ColorPaletteConfig, brandId: number): Promise<void> {
-    try {
-      const cacheData = {
-        data: palette,
-        brandId,
-        timestamp: Date.now(),
-        version: '1.0',
-      };
-      
-      await AsyncStorage.setItem('colorPalette', JSON.stringify(cacheData));
-      console.log('Color palette cached successfully');
-    } catch (error) {
-      console.warn('Failed to cache color palette:', error);
-    }
-  }
-
-  private async getCachedPalette(): Promise<any> {
-    try {
-      const cached = await AsyncStorage.getItem('colorPalette');
-      return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      console.warn('Failed to get cached color palette:', error);
-      return null;
-    }
-  }
-
-  private isCacheValid(cachedData: any): boolean {
-    if (!cachedData || !cachedData.timestamp) return false;
-    
-    // Cache válido por 24 horas
-    const cacheAge = Date.now() - cachedData.timestamp;
-    const maxAge = 24 * 60 * 60 * 1000;
-    
-    return cacheAge < maxAge;
+  private getDefaultImages(): BrandImagesConfig {
+    return {};
   }
 
   /**
@@ -174,6 +227,22 @@ class AppConfigService {
    */
   getColorPalette(): ColorPaletteConfig | null {
     return this.colorPalette;
+  }
+
+  getBrandImages(): BrandImagesConfig | null {
+    return this.brandImages;
+  }
+
+  getLogoUrl(): string | null {
+    return this.brandImages?.logo?.url || null;
+  }
+
+  getIsotipoUrl(): string | null {
+    return this.brandImages?.isotipo?.url || null;
+  }
+
+  getImagotipoUrl(): string | null {
+    return this.brandImages?.imagotipo?.url || null;
   }
 
   isConfigLoaded(): boolean {
@@ -197,13 +266,13 @@ class AppConfigService {
   }
 
   /**
-   * Fuerza una recarga de la paleta de colores
+   * Fuerza una recarga de toda la configuración
    */
-  async reloadColorPalette(): Promise<ColorPaletteConfig> {
-    await AsyncStorage.removeItem('colorPalette');
+  async reloadAppConfig(): Promise<{ colors: ColorPaletteConfig; images: BrandImagesConfig }> {
     this.configLoaded = false;
     this.colorPalette = null;
-    return await this.loadColorPalette();
+    this.brandImages = null;
+    return await this.loadAppConfig();
   }
 
   /**
