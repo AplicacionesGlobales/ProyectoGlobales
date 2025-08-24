@@ -159,6 +159,37 @@ export interface BrandData {
 export interface BrandResponse extends BaseResponseDto<BrandData> {
 }
 
+export interface BrandImageData {
+  id: number;
+  name: string;
+  url: string;
+  key: string;
+  contentType: string;
+  fileType: string; // 'logo', 'isotipo', 'imagotipo'
+  size: number;
+  entityId: number;
+  entityType: string;
+  uploadedBy: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Estructura como viene directamente del backend (sin envoltorio)
+export interface BrandImagesData {
+  logo?: BrandImageData;
+  isotipo?: BrandImageData;
+  imagotipo?: BrandImageData;
+}
+
+// Si en algún momento tu API cambia para devolver con envoltorio, usa esta:
+export interface BrandImagesResponse {
+  success: boolean;
+  data?: BrandImagesData;
+  message?: string;
+  error?: string;
+}
+
 // NEW: App Configuration (combinación de marca y colores)
 export interface AppConfigData {
   brandId: number;

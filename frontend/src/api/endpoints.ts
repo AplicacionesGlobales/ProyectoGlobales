@@ -14,7 +14,8 @@ import {
   ResetPasswordResponse,
   BaseResponseDto,
   ColorPaletteResponse,
-  BrandResponse
+  BrandResponse,
+  BrandImagesResponse
 } from './types';
 
 // Función helper para hacer requests
@@ -154,6 +155,14 @@ export const getColorPaletteByBrand = async (brandId: number): Promise<ColorPale
 export const getBrandById = async (brandId: number): Promise<BrandResponse> => {
   return apiRequest<BrandResponse>(
     `${API_ENDPOINTS.BRANDS.BY_ID}/${brandId}`,
+    'GET'
+  );
+};
+
+// NEW: Brand Images Endpoints
+export const getBrandImages = async (brandId: number): Promise<BrandImagesResponse> => {
+  return apiRequest<BrandImagesResponse>(
+    `${API_ENDPOINTS.BRAND_IMAGES.BY_BRAND}/${brandId}/images`,
     'GET'
   );
 };

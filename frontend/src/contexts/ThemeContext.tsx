@@ -1,6 +1,6 @@
 // contexts/ThemeContext.tsx
 import React, { createContext, ReactNode, useContext, useState, useEffect } from 'react';
-import AppConfigService, { ColorPaletteConfig } from '../services/AppConfigService';
+import AppConfigService, { ColorPaletteConfig, BrandImagesConfig } from '../services/AppConfigService';
 
 export interface ThemeColors {
   primary: string;
@@ -18,6 +18,7 @@ export interface ThemeColors {
 interface ThemeContextType {
   colors: ThemeColors;
   colorPalette: ColorPaletteConfig | null;
+  brandImages: BrandImagesConfig | null;
   isConfigLoaded: boolean;
   updateColors: (newColors: Partial<ThemeColors>) => void;
   resetToDefault: () => void;
@@ -46,37 +47,60 @@ interface ThemeProviderProps {
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [colors, setColors] = useState<ThemeColors>(defaultColors);
   const [colorPalette, setColorPalette] = useState<ColorPaletteConfig | null>(null);
+  const [brandImages, setBrandImages] = useState<BrandImagesConfig | null>(null);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
 
   useEffect(() => {
-    loadColorPalette();
+    loadAppConfig();
   }, []);
 
-  const loadColorPalette = async () => {
+  const loadAppConfig = async () => {
     try {
       const configService = AppConfigService.getInstance();
       
       // Si la configuración ya está cargada, usarla
       if (configService.isConfigLoaded()) {
+        console.log('📦 Using already loaded config from service');
         const palette = configService.getColorPalette();
+        const images = configService.getBrandImages();
+        
         if (palette) {
+          console.log('🎨 Setting color palette from service:', palette);
+          setColorPalette(palette); // ⭐ AQUÍ ESTABA EL PROBLEMA - faltaba esto
           updateFromPalette(palette);
-          return;
         }
+        
+        if (images) {
+          console.log('🖼️ Setting brand images from service:', images);
+          setBrandImages(images);
+        }
+        
+        setIsConfigLoaded(true);
+        return;
       }
 
-      // Cargar paleta de colores fresca
-      const palette = await configService.loadColorPalette();
-      updateFromPalette(palette);
+      console.log('🌐 Loading fresh config from API');
+      
+      // Cargar configuración completa
+      const config = await configService.loadAppConfig();
+      
+      console.log('✅ Config loaded successfully:', config);
+      
+      // Actualizar estado con los datos cargados
+      setColorPalette(config.colors);
+      updateFromPalette(config.colors);
+      setBrandImages(config.images);
+      setIsConfigLoaded(true);
+      
     } catch (error) {
-      console.error('Error loading color palette in ThemeProvider:', error);
-      // Mantener colores por defecto si falla
+      console.error('❌ Error loading app config in ThemeProvider:', error);
+      // Mantener valores por defecto si falla
       setIsConfigLoaded(true);
     }
   };
 
   const updateFromPalette = (palette: ColorPaletteConfig) => {
-    console.log('Updating theme from color palette:', palette);
+    console.log('🔄 Updating theme from color palette:', palette);
     
     const newColors: ThemeColors = {
       primary: palette.primary,
@@ -92,10 +116,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     };
 
     setColors(newColors);
-    setColorPalette(palette);
-    setIsConfigLoaded(true);
-    
-    console.log('Theme updated with colors:', newColors);
+    console.log('✅ Theme updated with colors:', newColors);
   };
 
   const updateColors = (newColors: Partial<ThemeColors>) => {
@@ -105,17 +126,30 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const resetToDefault = () => {
     setColors(defaultColors);
     setColorPalette(null);
+    setBrandImages(null);
   };
 
   const reloadConfig = async () => {
+    console.log('🔄 Reloading config...');
     setIsConfigLoaded(false);
-    await loadColorPalette();
+    setColorPalette(null);
+    setBrandImages(null);
+    await loadAppConfig();
   };
+
+  // Debug logs para verificar el estado
+  console.log('🔍 ThemeProvider State:', {
+    isConfigLoaded,
+    hasColorPalette: !!colorPalette,
+    hasBrandImages: !!brandImages,
+    brandImages,
+  });
 
   return (
     <ThemeContext.Provider value={{ 
       colors, 
       colorPalette, 
+      brandImages,
       isConfigLoaded, 
       updateColors, 
       resetToDefault,
@@ -138,4 +172,19 @@ export const useTheme = () => {
 export const useColorPalette = () => {
   const { colorPalette, isConfigLoaded, reloadConfig } = useTheme();
   return { colorPalette, isConfigLoaded, reloadConfig };
+};
+
+// Hook adicional para acceso rápido a las imágenes de marca
+export const useBrandImages = () => {
+  const { brandImages, isConfigLoaded, reloadConfig } = useTheme();
+  
+  // Debug log específico para este hook
+  console.log('🔍 useBrandImages Hook:', {
+    brandImages,
+    isConfigLoaded,
+    hasLogo: !!brandImages?.logo,
+    logoUrl: brandImages?.logo?.url
+  });
+  
+  return { brandImages, isConfigLoaded, reloadConfig };
 };
