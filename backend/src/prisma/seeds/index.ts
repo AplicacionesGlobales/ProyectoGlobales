@@ -3,6 +3,8 @@ import { seedBusinessTypes } from './01-business-types';
 import { seedFeatures } from './02-features';
 import { seedPlans } from './03-plans';
 import { seedUsers } from './04-users';
+import { seedAppointmentSettings } from './05-appointment-settings';
+import { seedBusinessHours } from './06-business-hours';
 
 const prisma = new PrismaClient();
 
@@ -21,6 +23,12 @@ async function runAllSeeds() {
     console.log('');
     
     await seedUsers();
+    console.log('');
+  
+    await seedAppointmentSettings();
+    console.log('');
+
+    await seedBusinessHours();
     console.log('');
 
     console.log('🎉 All seeds completed successfully!');
