@@ -142,6 +142,26 @@ export class UpdateAppointmentDto {
   clientId?: number;
 }
 
+export class UpdateAppointmentStatusDto {
+  @ApiProperty({ 
+    enum: AppointmentStatus,
+    example: AppointmentStatus.CONFIRMED,
+    description: 'Nuevo estado de la cita'
+  })
+  @IsEnum(AppointmentStatus)
+  @IsNotEmpty()
+  status: AppointmentStatus;
+
+  @ApiPropertyOptional({ 
+    example: 'Cliente confirmó la cita',
+    description: 'Notas adicionales sobre el cambio de estado'
+  })
+  @IsString()
+  @IsOptional()
+  @MinLength(3)
+  notes?: string;
+}
+
 export class GetAppointmentsQueryDto {
   @ApiPropertyOptional({ 
     example: '2024-08-20', 
