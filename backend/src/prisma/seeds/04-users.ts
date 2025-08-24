@@ -100,13 +100,23 @@ export async function seedUsers() {
       console.log(`   - ${user.firstName} ${user.lastName} (@${user.username})`);
     });
 
-    // Create UserBrand relationships (clients registered in the brand)
+    // Create UserBrand relationships for ALL users (including ROOT)
     const passwordHash = await bcrypt.hash('password123', 12);
+    const saltRoot = 'salt_root_' + Date.now();
     const salt1 = 'salt_' + Date.now() + '_1';
     const salt2 = 'salt_' + Date.now() + '_2';
     const salt3 = 'salt_' + Date.now() + '_3';
     
     const userBrands = await Promise.all([
+      // ROOT user registered in the brand (¡NUEVO!)
+      prisma.userBrand.create({
+        data: {
+          userId: rootUser.id,
+          brandId: mainBrand.id,
+          passwordHash,
+          salt: saltRoot,
+        }
+      }),
       // Juan registered in the brand
       prisma.userBrand.create({
         data: {
@@ -138,7 +148,8 @@ export async function seedUsers() {
 
     console.log('✅ Created user-brand relationships:');
     userBrands.forEach((ub, index) => {
-      console.log(`   - User ${ub.userId} → Brand ${ub.brandId}`);
+      const userType = index === 0 ? 'ROOT' : index === 3 ? 'ADMIN' : 'CLIENT';
+      console.log(`   - ${userType} User ${ub.userId} → Brand ${ub.brandId}`);
     });
 
     console.log('\n📋 Test data summary:');
@@ -146,7 +157,7 @@ export async function seedUsers() {
     console.log(`   📍 ${mainBrand.address}`);
     console.log(`   📞 ${mainBrand.phone}`);
     
-    console.log('\n👥 Test users:');
+    console.log('\n👥 Test users (all with password: "password123"):');
     console.log(`   - ROOT: ${rootUser.username} (${rootUser.email})`);
     clientUsers.forEach(user => {
       console.log(`   - CLIENT: ${user.username} (${user.firstName} ${user.lastName})`);
@@ -154,6 +165,8 @@ export async function seedUsers() {
     adminUsers.forEach(user => {
       console.log(`   - ADMIN: ${user.username} (${user.firstName} ${user.lastName})`);
     });
+
+    console.log('\n🔐 All users can login with email and password "password123"');
 
   } catch (error) {
     console.error('❌ Error seeding users:', error);
