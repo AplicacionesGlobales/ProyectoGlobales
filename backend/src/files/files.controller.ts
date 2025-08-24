@@ -1,35 +1,39 @@
-import { 
-  Controller, 
-  Post, 
-  Get, 
-  Delete, 
-  Param, 
-  Body, 
-  Query, 
-  HttpCode, 
+import {
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Param,
+  Body,
+  Query,
+  HttpCode,
   HttpStatus,
   ParseIntPipe,
   UseInterceptors,
-  UploadedFile
+  UploadedFile,
+  UseGuards
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { MinioService } from './files.service';
 import { CreateFileDto, FileResponseDto, FilesListResponseDto, UploadResultDto, EntityType, FileType } from './dto/file.dto';
 import { BrandImageType, BrandImagesResponseDto } from './dto/brand-image.dto';
 import { BaseResponseDto } from '../common/dto';
 import { Public } from '../common/decorators/public-auth.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Gestión de Archivos')
 @Controller('files')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class FilesController {
-  constructor(private readonly minioService: MinioService) {}
+  constructor(private readonly minioService: MinioService) { }
 
   @Post('brand-images')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Subir imagen de marca',
     description: 'Sube una imagen específica de marca (logo, isotipo o imagotipo) y la asocia con el usuario y la marca'
   })
@@ -58,8 +62,8 @@ export class FilesController {
       required: ['file', 'brandId', 'imageType', 'userId'],
     },
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Imagen de marca subida exitosamente',
     type: UploadResultDto
   })
@@ -86,12 +90,13 @@ export class FilesController {
   }
 
   @Get('brand/:brandId/images')
-  @ApiOperation({ 
+  @Public()
+  @ApiOperation({
     summary: 'Obtener imágenes de marca',
     description: 'Obtiene todas las imágenes (logo, isotipo, imagotipo) de una marca específica'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Imágenes de la marca',
     type: BrandImagesResponseDto
   })
@@ -105,7 +110,7 @@ export class FilesController {
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Subir archivo a MinIO',
     description: 'Sube un archivo mediante FormData a MinIO y guarda los metadatos en la base de datos'
   })
@@ -135,8 +140,8 @@ export class FilesController {
       required: ['file', 'fileType', 'entityType', 'entityId'],
     },
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Archivo subido exitosamente',
     type: UploadResultDto
   })
@@ -157,15 +162,15 @@ export class FilesController {
   }
 
   @Get('entity/:entityType/:entityId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Obtener archivos por entidad',
     description: 'Obtiene todos los archivos asociados a una entidad específica'
   })
   @ApiQuery({ name: 'fileType', required: false, enum: FileType })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Lista de archivos',
     type: FilesListResponseDto
   })
@@ -177,13 +182,13 @@ export class FilesController {
     @Query('limit', ParseIntPipe) limit: number = 10
   ): Promise<FilesListResponseDto> {
     const result = await this.minioService.getFilesByEntity(
-      entityType, 
-      entityId, 
-      fileType, 
-      page, 
+      entityType,
+      entityId,
+      fileType,
+      page,
       limit
     );
-    
+
     return {
       files: result.files,
       total: result.total,
@@ -193,12 +198,12 @@ export class FilesController {
   }
 
   @Get(':id')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Obtener archivo por ID',
     description: 'Obtiene un archivo específico por su ID'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Información del archivo',
     type: FileResponseDto
   })
@@ -209,12 +214,12 @@ export class FilesController {
   }
 
   @Delete(':id')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Eliminar archivo',
     description: 'Elimina un archivo tanto de MinIO como de la base de datos'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Archivo eliminado exitosamente'
   })
   async deleteFile(
@@ -233,7 +238,7 @@ export class FilesController {
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Reemplazar archivo de entidad',
     description: 'Reemplaza un archivo existente del mismo tipo para una entidad específica'
   })
@@ -263,8 +268,8 @@ export class FilesController {
       required: ['file', 'fileType', 'entityType', 'entityId'],
     },
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Archivo reemplazado exitosamente',
     type: UploadResultDto
   })
@@ -292,13 +297,14 @@ export class FilesController {
   }
 
   @Get(':id/presigned-url')
-  @ApiOperation({ 
+  @Public()
+  @ApiOperation({
     summary: 'Obtener URL firmada',
     description: 'Genera una URL firmada temporal para acceso directo al archivo'
   })
   @ApiQuery({ name: 'expiry', required: false, type: Number, example: 3600 })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'URL firmada generada'
   })
   async getPresignedUrl(
@@ -315,12 +321,12 @@ export class FilesController {
 
   @Get('stats/storage')
   @Public()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Estadísticas de almacenamiento',
     description: 'Obtiene estadísticas generales del almacenamiento de archivos'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Estadísticas de almacenamiento'
   })
   async getStorageStats(): Promise<BaseResponseDto<any>> {
