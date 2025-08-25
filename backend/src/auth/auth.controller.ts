@@ -1,5 +1,5 @@
-import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth  } from '@nestjs/swagger';
+import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, UseGuards, Request, Put} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
   RegisterClientDto,
@@ -13,6 +13,7 @@ import {
   LoginRequestDto,
   RefreshRequestDto,
   RefreshResponseDto,
+  UpdateProfileDto,
 } from './dto';
 import { CreateBrandDto } from '../brand-register/dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
@@ -137,7 +138,7 @@ export class AuthController {
   }
 
   // ==================== PROFILE ENDPOINT ====================
-  
+
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -155,4 +156,26 @@ export class AuthController {
     return this.authService.getProfile(req.user);
   }
 
+
+  // En src/auth/auth.controller.ts (agrega este método a la clase AuthController)
+
+  @Put('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar perfil del usuario autenticado' })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil actualizado exitosamente',
+    type: BaseResponseDto<ProfileResponseDto>
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'No autorizado'
+  })
+  async updateProfile(
+    @Request() req,
+    @Body(ValidationPipe) updateProfileDto: UpdateProfileDto
+  ): Promise<BaseResponseDto<ProfileResponseDto>> {
+    return this.authService.updateProfile(req.user, updateProfileDto);
+  }
 }

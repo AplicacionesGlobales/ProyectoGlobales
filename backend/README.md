@@ -75,3 +75,19 @@ curl -X POST http://localhost:3000/auth/register/client \
    - ADMIN: admin_user (Admin User)
 
    - Password: password123
+
+
+### JSON Users
+-Client
+{
+  "email": "juan@gmail.com",
+  "password": "password123",
+  "rememberMe": false
+}
+
+-Root
+{
+  "email": "owner@barbershop.com",
+  "password": "password123",
+  "rememberMe": false
+}

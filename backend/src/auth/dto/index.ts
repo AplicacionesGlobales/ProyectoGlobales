@@ -6,3 +6,4 @@ export * from './login-request.dto';
 export * from './refresh-request.dto';
 export * from './refresh-response.dto';
 export * from './profile-response.dto';
+export * from './update-profile.dto';
