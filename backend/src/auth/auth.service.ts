@@ -9,7 +9,7 @@ import { PlanService } from '../common/services/plan.service';
 import { PaymentService } from '../common/services/payment.service';
 import { ColorPaletteService } from './services/color-palette.service';
 import * as bcrypt from 'bcryptjs';
-import { ValidateResetCodeDto,ProfileResponseDto, RegisterClientDto, AuthResponse, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto, LoginRequestDto, RefreshRequestDto, RefreshResponseDto } from './dto';
+import { ValidateResetCodeDto, ProfileResponseDto, RegisterClientDto, AuthResponse, UpdateProfileDto, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto, LoginRequestDto, RefreshRequestDto, RefreshResponseDto } from './dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole } from '../../generated/prisma';
 import { randomBytes } from 'crypto';
@@ -135,8 +135,8 @@ export class AuthService {
           data: {
             email: registerDto.email,
             username: registerDto.username,
-            firstName: registerDto.firstName || '', 
-            lastName: registerDto.lastName || null,  
+            firstName: registerDto.firstName || '',
+            lastName: registerDto.lastName || null,
             role: UserRole.CLIENT,
           },
           include: {
@@ -554,7 +554,7 @@ export class AuthService {
     return `${random}_${timestamp}`;
   }
 
-  
+
   // ==================== LOGIN AND REFRESH TOKEN METHODS ====================
 
   async login(loginDto: LoginRequestDto): Promise<BaseResponseDto<AuthResponse>> {
@@ -808,7 +808,7 @@ export class AuthService {
     return { isValid: errors.length === 0, errors };
   }
 
-   // ==================== PROFILE METHODS ====================
+  // ==================== PROFILE METHODS ====================
 
   async getProfile(userPayload: any): Promise<BaseResponseDto<ProfileResponseDto>> {
     try {
@@ -818,9 +818,9 @@ export class AuthService {
 
       // Obtener usuario con los campos básicos del perfil
       const user = await this.prisma.user.findUnique({
-        where: { 
+        where: {
           id: userPayload.userId,
-          isActive: true 
+          isActive: true
         },
         select: {
           id: true,
@@ -870,4 +870,95 @@ export class AuthService {
   }
 
 
+  async updateProfile(
+    userPayload: any,
+    updateProfileDto: UpdateProfileDto
+  ): Promise<BaseResponseDto<ProfileResponseDto>> {
+    try {
+      console.log('\n🔍 === ACTUALIZANDO PERFIL ===');
+      console.log('👤 User ID:', userPayload.userId);
+      console.log('📊 Datos a actualizar:', updateProfileDto);
+      console.log('📅 Timestamp:', new Date().toISOString());
+
+      // Verificar si el username ya existe (solo si se está intentando cambiar)
+      if (updateProfileDto.username) {
+        const existingUser = await this.prisma.user.findFirst({
+          where: {
+            username: updateProfileDto.username,
+            id: { not: userPayload.userId } // Excluir al usuario actual
+          }
+        });
+
+        if (existingUser) {
+          console.log('❌ Username ya existe:', updateProfileDto.username);
+          return BaseResponseDto.singleError(
+            ERROR_CODES.USERNAME_EXISTS,
+            ERROR_MESSAGES.USERNAME_EXISTS
+          );
+        }
+      }
+
+      // Actualizar el usuario
+      const updatedUser = await this.prisma.user.update({
+        where: {
+          id: userPayload.userId,
+          isActive: true
+        },
+        data: {
+          firstName: updateProfileDto.firstName,
+          lastName: updateProfileDto.lastName,
+          phone: updateProfileDto.phone,
+          username: updateProfileDto.username,
+          updatedAt: new Date(),
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      console.log('✅ Perfil actualizado exitosamente:', updatedUser.email);
+
+      const profileResponse: ProfileResponseDto = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        username: updatedUser.username,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName || undefined,
+        phone: updatedUser.phone || undefined,
+        role: updatedUser.role,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      };
+
+      return BaseResponseDto.success(profileResponse);
+
+    } catch (error) {
+      console.error('\n💥 === ERROR ACTUALIZANDO PERFIL ===');
+      console.error('Error en updateProfile:', error);
+
+      // Manejar error de registro único de Prisma
+      if (error.code === 'P2002') {
+        const target = error.meta?.target;
+        if (target && target.includes('username')) {
+          return BaseResponseDto.singleError(
+            ERROR_CODES.USERNAME_EXISTS,
+            ERROR_MESSAGES.USERNAME_EXISTS
+          );
+        }
+      }
+
+      return BaseResponseDto.singleError(
+        ERROR_CODES.INTERNAL_ERROR,
+        ERROR_MESSAGES.INTERNAL_ERROR
+      );
+    }
+  }
 }
