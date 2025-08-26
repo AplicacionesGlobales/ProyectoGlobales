@@ -42,7 +42,7 @@ import {
 @UseGuards(JwtAuthGuard, BrandOwnerGuard)
 @ApiBearerAuth()
 export class ScheduleController {
-  constructor(private readonly scheduleService: ScheduleService) {}
+  constructor(private readonly scheduleService: ScheduleService) { }
 
   // Business Hours Endpoints
   @Get('business-hours')
@@ -81,8 +81,38 @@ export class ScheduleController {
     @Request() req: any
   ): Promise<BaseResponseDto<BusinessHoursDto[]>> {
     return this.scheduleService.updateBusinessHours(
-      parseInt(brandId), 
-      updateData, 
+      parseInt(brandId),
+      updateData,
+      req.user.userId
+    );
+  }
+
+  // Availability Schedule Endpoints
+  @Post('availability/schedule')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Registrar horarios de disponibilidad inicial',
+    description: 'Configura los horarios laborales por primera vez para el brand. Solo funciona si no hay horarios previamente configurados.'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiBody({ type: UpdateBusinessHoursDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Horarios de disponibilidad creados exitosamente',
+    type: BaseResponseDto
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Los horarios ya están configurados. Use PUT /business-hours para actualizar.'
+  })
+  async createAvailabilitySchedule(
+    @Param('brandId') brandId: string,
+    @Body(ValidationPipe) scheduleData: UpdateBusinessHoursDto,
+    @Request() req: any
+  ): Promise<BaseResponseDto<BusinessHoursDto[]>> {
+    return this.scheduleService.createAvailabilitySchedule(
+      parseInt(brandId),
+      scheduleData,
       req.user.userId
     );
   }
@@ -94,15 +124,15 @@ export class ScheduleController {
     description: 'Retorna los horarios especiales/excepciones configuradas'
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiQuery({ 
-    name: 'startDate', 
-    required: false, 
-    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)' 
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)'
   })
-  @ApiQuery({ 
-    name: 'endDate', 
-    required: false, 
-    description: 'Fecha de fin para filtrar (YYYY-MM-DD)' 
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'Fecha de fin para filtrar (YYYY-MM-DD)'
   })
   @ApiResponse({
     status: 200,
