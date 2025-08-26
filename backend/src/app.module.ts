@@ -15,6 +15,7 @@ import { BrandModule } from './brand/brand.module';
 import { ScheduleModule } from './schedule/schedule.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { ClientModule } from './client/client.module';
+import { PublicAvailabilityModule } from './public-availability/public-availability.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ClientModule } from './client/client.module';
     FilesModule,
     AppointmentsModule,
     ClientModule,
+    PublicAvailabilityModule,
   ],
   controllers: [],
   providers: [
