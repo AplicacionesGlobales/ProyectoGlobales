@@ -1027,111 +1027,170 @@ export class ClientService {
 
   // ==================== CLIENT NOTES ====================
 
-  async getClientNotes(
-    brandId: number,
-    clientId: number,
-    ownerId: number
-  ): Promise<BaseResponseDto<any>> {
-    console.log('\n🔍 === NOTAS DEL CLIENTE ===');
-    console.log('🏢 BrandId:', brandId);
-    console.log('👤 ClientId:', clientId);
+async getClientNotes(
+  brandId: number,
+  clientId: number,
+  ownerId: number
+): Promise<BaseResponseDto<any>> {
+  console.log('\n🔍 === NOTAS DEL CLIENTE ===');
+  console.log('🏢 BrandId:', brandId);
+  console.log('👤 ClientId:', clientId);
 
-    try {
-      // Verificar permisos
-      const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
-      if (!hasPermission) {
-        return BaseResponseDto.singleError(
-          ERROR_CODES.FORBIDDEN,
-          'No tienes permisos para ver notas de este negocio'
-        );
-      }
-
-      // TODO: Implementar sistema de notas
-      const notes: any[] = [];
-
-      console.log('✅ Notas obtenidas');
-      return BaseResponseDto.success({ notes });
-
-    } catch (error) {
-      console.error('Error en getClientNotes:', error);
+  try {
+    // Verificar permisos
+    const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
+    if (!hasPermission) {
       return BaseResponseDto.singleError(
-        ERROR_CODES.INTERNAL_ERROR,
-        ERROR_MESSAGES.INTERNAL_ERROR
+        ERROR_CODES.FORBIDDEN,
+        'No tienes permisos para ver notas de este negocio'
       );
     }
-  }
 
-  async addClientNote(
-    brandId: number,
-    clientId: number,
-    note: string,
-    isPrivate: boolean,
-    ownerId: number
-  ): Promise<BaseResponseDto<any>> {
-    console.log('\n🔍 === AGREGAR NOTA AL CLIENTE ===');
-    console.log('🏢 BrandId:', brandId);
-    console.log('👤 ClientId:', clientId);
-    console.log('📝 Nota:', note);
-
-    try {
-      // Verificar permisos
-      const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
-      if (!hasPermission) {
-        return BaseResponseDto.singleError(
-          ERROR_CODES.FORBIDDEN,
-          'No tienes permisos para agregar notas en este negocio'
-        );
+    // Obtener las notas de la base de datos
+    const notes = await this.prisma.clientNote.findMany({
+      where: {
+        clientId: clientId,
+        brandId: brandId
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
+    });
 
-      // TODO: Implementar sistema de notas
-      const newNote = {
-        id: Date.now(),
-        clientId,
-        brandId,
-        note,
-        isPrivate,
-        createdBy: ownerId,
-        createdAt: new Date()
-      };
+    console.log('✅ Notas obtenidas:', notes.length);
+    return BaseResponseDto.success({ notes });
 
-      console.log('✅ Nota agregada');
-      return BaseResponseDto.success(newNote);
+  } catch (error) {
+    console.error('Error en getClientNotes:', error);
+    return BaseResponseDto.singleError(
+      ERROR_CODES.INTERNAL_ERROR,
+      ERROR_MESSAGES.INTERNAL_ERROR
+    );
+  }
+}
 
-    } catch (error) {
-      console.error('Error en addClientNote:', error);
+async addClientNote(
+  brandId: number,
+  clientId: number,
+  note: string,
+  isPrivate: boolean,
+  ownerId: number
+): Promise<BaseResponseDto<any>> {
+  console.log('\n🔍 === AGREGAR NOTA AL CLIENTE ===');
+  console.log('🏢 BrandId:', brandId);
+  console.log('👤 ClientId:', clientId);
+  console.log('📝 Nota:', note);
+
+  try {
+    // Verificar permisos
+    const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
+    if (!hasPermission) {
       return BaseResponseDto.singleError(
-        ERROR_CODES.INTERNAL_ERROR,
-        ERROR_MESSAGES.INTERNAL_ERROR
+        ERROR_CODES.FORBIDDEN,
+        'No tienes permisos para agregar notas en este negocio'
       );
     }
-  }
 
-  async deleteClientNote(
-    brandId: number,
-    clientId: number,
-    noteId: number,
-    ownerId: number
-  ): Promise<void> {
-    console.log('\n🔍 === ELIMINAR NOTA DEL CLIENTE ===');
-    console.log('🏢 BrandId:', brandId);
-    console.log('👤 ClientId:', clientId);
-    console.log('📝 NoteId:', noteId);
+    // Verificar que el cliente existe
+    const client = await this.prisma.user.findUnique({
+      where: { id: clientId }
+    });
 
-    try {
-      // Verificar permisos
-      const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
-      if (!hasPermission) {
-        throw new Error('No tienes permisos para eliminar notas en este negocio');
-      }
-
-      // TODO: Implementar sistema de notas
-      console.log('✅ Nota eliminada');
-
-    } catch (error) {
-      console.error('Error en deleteClientNote:', error);
-      throw error;
+    if (!client) {
+      return BaseResponseDto.singleError(
+        ERROR_CODES.USER_NOT_FOUND,
+        'Cliente no encontrado'
+      );
     }
+
+    // Crear la nota en la base de datos
+    const newNote = await this.prisma.clientNote.create({
+      data: {
+        clientId: clientId,
+        brandId: brandId,
+        note: note,
+        isPrivate: isPrivate,
+        createdBy: ownerId
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    console.log('✅ Nota agregada con ID:', newNote.id);
+    return BaseResponseDto.success(newNote);
+
+  } catch (error) {
+    console.error('Error en addClientNote:', error);
+    return BaseResponseDto.singleError(
+      ERROR_CODES.INTERNAL_ERROR,
+      ERROR_MESSAGES.INTERNAL_ERROR
+    );
   }
+}
+
+async deleteClientNote(
+  brandId: number,
+  clientId: number,
+  noteId: number,
+  ownerId: number
+): Promise<void> {
+  console.log('\n🔍 === ELIMINAR NOTA DEL CLIENTE ===');
+  console.log('🏢 BrandId:', brandId);
+  console.log('👤 ClientId:', clientId);
+  console.log('📝 NoteId:', noteId);
+
+  try {
+    // Verificar permisos
+    const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
+    if (!hasPermission) {
+      throw new Error('No tienes permisos para eliminar notas en este negocio');
+    }
+
+    // Verificar que la nota existe y pertenece al brand/cliente correcto
+    const existingNote = await this.prisma.clientNote.findFirst({
+      where: {
+        id: noteId,
+        clientId: clientId,
+        brandId: brandId
+      }
+    });
+
+    if (!existingNote) {
+      throw new Error('Nota no encontrada o no tienes permisos para eliminarla');
+    }
+
+    // Eliminar la nota
+    await this.prisma.clientNote.delete({
+      where: {
+        id: noteId
+      }
+    });
+
+    console.log('✅ Nota eliminada');
+
+  } catch (error) {
+    console.error('Error en deleteClientNote:', error);
+    throw error;
+  }
+}
 
   // ==================== UPDATE CLIENT PROFILE (SELF) ====================
 
