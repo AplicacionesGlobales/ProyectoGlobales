@@ -18,6 +18,12 @@ import {
   TimeSlotDto,
   AppointmentStatus
 } from './dto/appointment.dto';
+import {
+  GetCalendarMonthDto,
+  CalendarMonthResponseDto,
+  DayOccupancyDto,
+  MonthSummaryDto
+} from './dto/calendar-month.dto';
 
 @Injectable()
 export class AppointmentsService {
@@ -561,6 +567,162 @@ export class AppointmentsService {
       return BaseResponseDto.success(slots);
     } catch (error) {
       console.error('Error getting available time slots:', error);
+      throw error;
+    }
+  }
+
+  // Obtener resumen mensual del calendario
+  async getCalendarMonth(
+    brandId: number,
+    month: string,
+    userId: number
+  ): Promise<BaseResponseDto<CalendarMonthResponseDto>> {
+    try {
+      const isRoot = await this.isRootUser(brandId, userId);
+      
+      if (!isRoot) {
+        // Si no es ROOT, verificar que sea cliente con citas
+        const hasAppointments = await this.prisma.appointment.findFirst({
+          where: { brandId, clientId: userId }
+        });
+        
+        if (!hasAppointments) {
+          throw new ForbiddenException('No tiene acceso a las citas de este brand');
+        }
+      }
+
+      // Validar formato de mes (YYYY-MM)
+      const monthRegex = /^\d{4}-\d{2}$/;
+      if (!monthRegex.test(month)) {
+        throw new BadRequestException('Formato de mes inválido. Use YYYY-MM');
+      }
+
+      const [year, monthNum] = month.split('-').map(Number);
+      const startDate = new Date(year, monthNum - 1, 1);
+      const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
+
+      // Obtener configuraciones del brand
+      const { businessHours, specialHours } = await this.getBrandConfigurations(brandId);
+
+      // Obtener todas las citas del mes
+      const where: any = { 
+        brandId,
+        startTime: {
+          gte: startDate,
+          lte: endDate
+        }
+      };
+
+      // Si no es ROOT, solo ver sus propias citas
+      if (!isRoot) {
+        where.clientId = userId;
+      }
+
+      const appointments = await this.prisma.appointment.findMany({
+        where,
+        orderBy: { startTime: 'asc' }
+      });
+
+      // Procesar días del mes
+      const days: DayOccupancyDto[] = [];
+      let totalBusinessMinutes = 0;
+      let businessDaysCount = 0;
+
+      for (let day = 1; day <= endDate.getDate(); day++) {
+        const currentDate = new Date(year, monthNum - 1, day);
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const dayOfWeek = currentDate.getDay();
+
+        // Verificar si es día laborable
+        const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
+        const specialHour = specialHours.find(
+          sh => sh.date.toISOString().split('T')[0] === dateStr
+        );
+
+        const isOpen = specialHour ? specialHour.isOpen : (businessHour?.isOpen || false);
+        
+        let availableMinutes = 0;
+        if (isOpen) {
+          const openTime = specialHour?.openTime || businessHour?.openTime;
+          const closeTime = specialHour?.closeTime || businessHour?.closeTime;
+          
+          if (openTime && closeTime) {
+            const [openHour, openMinute] = openTime.split(':').map(Number);
+            const [closeHour, closeMinute] = closeTime.split(':').map(Number);
+            availableMinutes = (closeHour * 60 + closeMinute) - (openHour * 60 + openMinute);
+            totalBusinessMinutes += availableMinutes;
+            businessDaysCount++;
+          }
+        }
+
+        // Obtener citas del día
+        const dayAppointments = appointments.filter(apt => 
+          apt.startTime.toISOString().split('T')[0] === dateStr
+        );
+
+        // Calcular estadísticas del día
+        const totalAppointments = dayAppointments.length;
+        const confirmedAppointments = dayAppointments.filter(apt => apt.status === AppointmentStatus.CONFIRMED).length;
+        const pendingAppointments = dayAppointments.filter(apt => apt.status === AppointmentStatus.PENDING).length;
+        const completedAppointments = dayAppointments.filter(apt => apt.status === AppointmentStatus.COMPLETED).length;
+        const cancelledAppointments = dayAppointments.filter(apt => apt.status === AppointmentStatus.CANCELLED).length;
+        const totalOccupiedMinutes = dayAppointments
+          .filter(apt => apt.status !== AppointmentStatus.CANCELLED)
+          .reduce((sum, apt) => sum + apt.duration, 0);
+
+        const occupancyPercentage = availableMinutes > 0 ? (totalOccupiedMinutes / availableMinutes) * 100 : 0;
+
+        days.push({
+          date: dateStr,
+          totalAppointments,
+          confirmedAppointments,
+          pendingAppointments,
+          completedAppointments,
+          cancelledAppointments,
+          totalOccupiedMinutes,
+          totalAvailableMinutes: availableMinutes,
+          occupancyPercentage: Math.round(occupancyPercentage * 100) / 100,
+          isBusinessOpen: isOpen
+        });
+      }
+
+      // Calcular resumen del mes
+      const totalAppointments = appointments.length;
+      const confirmedAppointments = appointments.filter(apt => apt.status === AppointmentStatus.CONFIRMED).length;
+      const pendingAppointments = appointments.filter(apt => apt.status === AppointmentStatus.PENDING).length;
+      const completedAppointments = appointments.filter(apt => apt.status === AppointmentStatus.COMPLETED).length;
+      const cancelledAppointments = appointments.filter(apt => apt.status === AppointmentStatus.CANCELLED).length;
+      const totalOccupiedMinutes = appointments
+        .filter(apt => apt.status !== AppointmentStatus.CANCELLED)
+        .reduce((sum, apt) => sum + apt.duration, 0);
+
+      const averageOccupancyPercentage = totalBusinessMinutes > 0 ? 
+        (totalOccupiedMinutes / totalBusinessMinutes) * 100 : 0;
+
+      const daysWithAppointments = days.filter(day => day.totalAppointments > 0).length;
+
+      const summary: MonthSummaryDto = {
+        totalAppointments,
+        confirmedAppointments,
+        pendingAppointments,
+        completedAppointments,
+        cancelledAppointments,
+        totalOccupiedMinutes,
+        totalAvailableMinutes: totalBusinessMinutes,
+        averageOccupancyPercentage: Math.round(averageOccupancyPercentage * 100) / 100,
+        businessDaysInMonth: businessDaysCount,
+        daysWithAppointments
+      };
+
+      const response: CalendarMonthResponseDto = {
+        month,
+        summary,
+        days
+      };
+
+      return BaseResponseDto.success(response);
+    } catch (error) {
+      console.error('Error getting calendar month:', error);
       throw error;
     }
   }

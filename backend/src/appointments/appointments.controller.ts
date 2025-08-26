@@ -36,6 +36,10 @@ import {
   AvailableTimeSlotsDto,
   TimeSlotDto
 } from './dto/appointment.dto';
+import {
+  GetCalendarMonthDto,
+  CalendarMonthResponseDto
+} from './dto/calendar-month.dto';
 
 @ApiTags('Appointments Management')
 @Controller('brand/:brandId')
@@ -387,6 +391,31 @@ export class AppointmentsController {
     );
     
     return BaseResponseDto.success(result.data?.appointments || []);
+  }
+
+  // Obtener resumen mensual del calendario
+  @Get('calendar/month/:month')
+  @ApiOperation({
+    summary: 'Obtener resumen de ocupación mensual',
+    description: 'Retorna un resumen de ocupación y citas para un mes completo con estadísticas diarias y mensuales'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiParam({ name: 'month', description: 'Mes en formato YYYY-MM', example: '2024-08' })
+  @ApiResponse({
+    status: 200,
+    description: 'Resumen mensual obtenido exitosamente',
+    type: BaseResponseDto
+  })
+  async getCalendarMonth(
+    @Param('brandId') brandId: string,
+    @Param('month') month: string,
+    @Request() req: any
+  ): Promise<BaseResponseDto<CalendarMonthResponseDto>> {
+    return this.appointmentsService.getCalendarMonth(
+      parseInt(brandId),
+      month,
+      req.user.userId
+    );
   }
 
   // Obtener citas para el calendario
