@@ -15,7 +15,7 @@ import {
 
 @Injectable()
 export class ScheduleService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   private async validateBrandAccess(brandId: number, userId: number): Promise<void> {
     const userBrand = await this.prisma.userBrand.findFirst({
@@ -36,7 +36,7 @@ export class ScheduleService {
 
   // Business Hours Methods
   async getBusinessHours(
-    brandId: number, 
+    brandId: number,
     requestingUserId: number
   ): Promise<BaseResponseDto<BusinessHoursDto[]>> {
     try {
@@ -88,7 +88,7 @@ export class ScheduleService {
       // Actualizar en transacción
       const updatedHours = await this.prisma.$transaction(async (prisma) => {
         const results: BusinessHoursDto[] = [];
-        
+
         for (const hourData of updateData.businessHours) {
           const updated = await prisma.businessHours.upsert({
             where: {
@@ -437,6 +437,66 @@ export class ScheduleService {
     }
   }
 
+  // Crear configuración inicial de horarios de disponibilidad
+  async createAvailabilitySchedule(
+    brandId: number,
+    scheduleData: UpdateBusinessHoursDto,
+    requestingUserId: number
+  ): Promise<BaseResponseDto<BusinessHoursDto[]>> {
+    try {
+      await this.validateBrandAccess(brandId, requestingUserId);
+
+      // Verificar que NO existan horarios configurados
+      const existingHours = await this.prisma.businessHours.findMany({
+        where: { brandId }
+      });
+
+      if (existingHours.length > 0) {
+        throw new Error('Business hours already configured. Use PUT /business-hours to update existing configuration.');
+      }
+
+      // Validar los datos de entrada
+      this.validateBusinessHoursData(scheduleData.businessHours);
+
+      // Crear configuración inicial en transacción
+      const createdHours = await this.prisma.$transaction(async (prisma) => {
+        const results: BusinessHoursDto[] = [];
+
+        for (const hourData of scheduleData.businessHours) {
+          const created = await prisma.businessHours.create({
+            data: {
+              brandId,
+              dayOfWeek: hourData.dayOfWeek,
+              isOpen: hourData.isOpen,
+              openTime: hourData.isOpen ? hourData.openTime : null,
+              closeTime: hourData.isOpen ? hourData.closeTime : null
+            }
+          });
+
+          results.push({
+            id: created.id,
+            dayOfWeek: created.dayOfWeek,
+            dayName: this.getDayName(created.dayOfWeek),
+            isOpen: created.isOpen,
+            openTime: created.openTime || undefined,
+            closeTime: created.closeTime || undefined
+          });
+        }
+
+        return results;
+      });
+
+      return BaseResponseDto.success(createdHours);
+
+    } catch (error) {
+      console.error('Error creating availability schedule:', error);
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
   // Helper Methods
   private async initializeDefaultBusinessHours(
     brandId: number,
@@ -456,7 +516,7 @@ export class ScheduleService {
       ];
 
       const createdHours = await this.prisma.$transaction(
-        defaultHours.map(hour => 
+        defaultHours.map(hour =>
           this.prisma.businessHours.create({
             data: {
               brandId,
@@ -534,13 +594,13 @@ export class ScheduleService {
     if (!Array.isArray(businessHours)) {
       throw new Error('businessHours must be an array');
     }
-    
+
     for (const hour of businessHours) {
       if (hour.isOpen) {
         if (!hour.openTime || !hour.closeTime) {
           throw new Error(`Día ${hour.dayName}: Debe especificar horarios de apertura y cierre`);
         }
-        
+
         if (!this.isValidTimeFormat(hour.openTime) || !this.isValidTimeFormat(hour.closeTime)) {
           throw new Error(`Día ${hour.dayName}: Formato de hora inválido (use HH:MM)`);
         }
@@ -559,15 +619,15 @@ export class ScheduleService {
   private validateWorkingHours(openTime: string, closeTime: string): boolean {
     const [openHours, openMinutes] = openTime.split(':').map(Number);
     const [closeHours, closeMinutes] = closeTime.split(':').map(Number);
-    
+
     if (openHours < closeHours) {
       return true;
     }
-    
+
     if (openHours === closeHours && openMinutes < closeMinutes) {
       return true;
     }
-    
+
     return false;
   }
 }
