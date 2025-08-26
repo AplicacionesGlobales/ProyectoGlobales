@@ -209,8 +209,9 @@ export class ClientController {
     );
   }
 
+  //
   // === VALIDACIONES ===
-  @Post('check-email')
+  /* @Post('check-email')
   @ApiOperation({
     summary: 'Verificar disponibilidad de email',
     description: 'Verifica si un email está disponible para registro'
@@ -442,7 +443,7 @@ export class ClientController {
       active === 'all' ? undefined : active === 'true',
       req.user.userId
     );
-  }
+  } */
 
   // === CITAS ===
   @Get(':clientId/appointments')
