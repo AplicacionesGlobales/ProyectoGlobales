@@ -3,6 +3,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ClientController } from './client.controller';
+import { ClientProfileController } from './client-profile.controller';
 import { ClientService } from './client.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { CommonModule } from '../common/common.module';
@@ -17,7 +18,7 @@ import { ClientStatsService } from './services/client-stats.service';
     CommonModule,
     AuthModule, // Para usar guards y servicios de autenticación
   ],
-  controllers: [ClientController],
+  controllers: [ClientController, ClientProfileController],
   providers: [
     ClientService,
     ClientValidationService,
