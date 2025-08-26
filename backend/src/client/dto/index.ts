@@ -3,6 +3,7 @@
 // DTOs básicos de cliente
 export * from './create-client.dto';
 export * from './update-client.dto';
+export * from './update-client-profile.dto';
 export * from './client-response.dto';
 export * from './client-list-response.dto';
 export * from './client-filters.dto';
@@ -18,3 +19,6 @@ export * from './import-export-clients.dto';
 
 // DTOs de actividad
 export * from './client-activity-response.dto';
+
+// DTOs de citas del cliente
+export * from './client-appointments.dto';

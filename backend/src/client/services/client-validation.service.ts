@@ -12,9 +12,10 @@ export class ClientValidationService {
    * Un mismo email puede estar en diferentes brands
    * @param email Email a validar
    * @param brandId ID del brand
+   * @param excludeUserId ID del usuario a excluir de la validación
    * @returns Promise<{ isAvailable: boolean, existingClient?: any }>
    */
-  async validateEmailForBrand(email: string, brandId: number): Promise<{
+  async validateEmailForBrand(email: string, brandId: number, excludeUserId?: number): Promise<{
     isAvailable: boolean;
     existingClient?: any;
   }> {
@@ -37,6 +38,11 @@ export class ClientValidationService {
     });
 
     if (!existingUser) {
+      return { isAvailable: true };
+    }
+
+    // Si es el mismo usuario que se está actualizando
+    if (excludeUserId && existingUser.id === excludeUserId) {
       return { isAvailable: true };
     }
 

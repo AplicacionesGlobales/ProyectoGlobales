@@ -11,6 +11,7 @@ import * as bcrypt from 'bcryptjs';
 import { 
   CreateClientDto, 
   UpdateClientDto, 
+  UpdateClientProfileDto,
   ClientResponseDto, 
   ClientListResponseDto,
   CheckEmailResponseDto,
@@ -18,10 +19,12 @@ import {
   ImportClientsDto,
   ImportClientsResponseDto,
   ClientActivityResponseDto,
+  ClientAppointmentListResponseDto,
+  GetClientAppointmentsQueryDto,
   ClientFilters 
 } from './dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
-import { UserRole } from '../../generated/prisma';
+import { UserRole, AppointmentStatus } from '../../generated/prisma';
 import { randomBytes } from 'crypto';
 import { ERROR_CODES, ERROR_MESSAGES } from '../common/constants';
 
@@ -1127,6 +1130,306 @@ export class ClientService {
     } catch (error) {
       console.error('Error en deleteClientNote:', error);
       throw error;
+    }
+  }
+
+  // ==================== UPDATE CLIENT PROFILE (SELF) ====================
+
+  async updateClientProfile(
+    brandId: number,
+    clientId: number,
+    updateClientProfileDto: UpdateClientProfileDto,
+  ): Promise<BaseResponseDto<ClientResponseDto>> {
+    console.log('\n🔍 === CLIENTE ACTUALIZANDO SU PROPIO PERFIL ===');
+    console.log('🏢 BrandId:', brandId);
+    console.log('👤 ClientId:', clientId);
+    console.log('📝 Datos a actualizar:', updateClientProfileDto);
+
+    const errors: ErrorDetail[] = [];
+
+    try {
+      // Verificar que el cliente existe y tiene acceso a este brand
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: {
+          userId: clientId,
+          brandId: brandId,
+          isActive: true,
+          user: {
+            role: UserRole.CLIENT,
+            isActive: true
+          }
+        },
+        include: {
+          user: true,
+        }
+      });
+
+      if (!userBrand) {
+        return BaseResponseDto.singleError(
+          ERROR_CODES.USER_NOT_FOUND,
+          'Cliente no encontrado o sin acceso a este negocio'
+        );
+      }
+
+      // Validar email único si se está actualizando
+      if (updateClientProfileDto.email && updateClientProfileDto.email !== userBrand.user.email) {
+        const emailValidation = await this.clientValidationService.validateEmailForBrand(
+          updateClientProfileDto.email, 
+          brandId,
+          clientId // Excluir el cliente actual de la verificación
+        );
+
+        if (!emailValidation.isAvailable) {
+          errors.push({
+            code: ERROR_CODES.EMAIL_EXISTS_IN_BRANCH,
+            message: 'Este email ya está en uso por otro cliente en este negocio'
+          });
+        }
+      }
+
+      // Validar teléfono si se proporciona
+      if (updateClientProfileDto.phone && !this.clientValidationService.validatePhoneFormat(updateClientProfileDto.phone)) {
+        errors.push({
+          code: ERROR_CODES.INVALID_PASSWORD, // Usar un código existente como alternativa
+          message: 'Formato de teléfono inválido'
+        });
+      }
+
+      if (errors.length > 0) {
+        return BaseResponseDto.error(errors);
+      }
+
+      // Actualizar datos del usuario
+      const updateData: any = {};
+      
+      if (updateClientProfileDto.firstName !== undefined) {
+        updateData.firstName = updateClientProfileDto.firstName;
+      }
+      
+      if (updateClientProfileDto.lastName !== undefined) {
+        updateData.lastName = updateClientProfileDto.lastName;
+      }
+      
+      if (updateClientProfileDto.email !== undefined) {
+        updateData.email = updateClientProfileDto.email;
+      }
+
+      // Actualizar usuario
+      const updatedUser = await this.prisma.user.update({
+        where: { id: clientId },
+        data: updateData,
+      });
+
+      // TODO: Actualizar teléfono cuando se implemente en el schema
+      // if (updateClientProfileDto.phone !== undefined) {
+      //   // Actualizar teléfono en UserBrand o donde corresponda
+      // }
+
+      // Obtener estadísticas actualizadas
+      const stats = await this.clientStatsService.getClientStats(clientId, brandId);
+
+      const response: ClientResponseDto = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName || '',
+        lastName: updatedUser.lastName || null,
+        phone: updateClientProfileDto.phone || '', // Temporal hasta implementar en DB
+        notes: null, // Los clientes no pueden ver/editar sus notas
+        isActive: updatedUser.isActive,
+        brandId: brandId,
+        totalAppointments: stats.totalAppointments,
+        lastVisit: stats.lastVisit || null,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+      };
+
+      console.log('\n🎉 === PERFIL ACTUALIZADO EXITOSAMENTE ===');
+      console.log('✅ Cliente:', updatedUser.email);
+      console.log('✅ En marca:', brandId);
+
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('\n💥 === ERROR EN ACTUALIZACIÓN DE PERFIL ===');
+      console.error('Error en updateClientProfile:', error);
+      return BaseResponseDto.singleError(
+        ERROR_CODES.INTERNAL_ERROR,
+        ERROR_MESSAGES.INTERNAL_ERROR
+      );
+    }
+  }
+
+  // ==================== GET CLIENT APPOINTMENTS HISTORY (SELF) ====================
+
+  async getClientAppointmentsHistory(
+    brandId: number,
+    clientId: number,
+    queryFilters: GetClientAppointmentsQueryDto
+  ): Promise<BaseResponseDto<ClientAppointmentListResponseDto>> {
+    console.log('\n🔍 === HISTORIAL DE CITAS DEL CLIENTE ===');
+    console.log('🏢 BrandId:', brandId);
+    console.log('👤 ClientId:', clientId);
+    console.log('📅 Filtros:', queryFilters);
+
+    try {
+      // Verificar que el cliente existe y tiene acceso a este brand
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: {
+          userId: clientId,
+          brandId: brandId,
+          isActive: true,
+          user: {
+            role: UserRole.CLIENT,
+            isActive: true
+          }
+        },
+        include: {
+          user: true,
+        }
+      });
+
+      if (!userBrand) {
+        return BaseResponseDto.singleError(
+          ERROR_CODES.USER_NOT_FOUND,
+          'Cliente no encontrado o sin acceso a este negocio'
+        );
+      }
+
+      // Construir filtros de fecha
+      const where: any = {
+        brandId,
+        clientId,
+      };
+
+      // Filtros de fecha según el período
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      if (queryFilters.period) {
+        switch (queryFilters.period) {
+          case 'upcoming':
+            where.startTime = { gte: now };
+            break;
+          case 'past':
+            where.startTime = { lt: today };
+            break;
+          case 'today':
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            where.startTime = {
+              gte: today,
+              lt: tomorrow
+            };
+            break;
+          // 'all' no necesita filtro adicional
+        }
+      }
+
+      // Filtros de fecha específicos si se proporcionan
+      if (queryFilters.startDate || queryFilters.endDate) {
+        where.startTime = {};
+        if (queryFilters.startDate) {
+          where.startTime.gte = new Date(queryFilters.startDate);
+        }
+        if (queryFilters.endDate) {
+          const endDate = new Date(queryFilters.endDate);
+          endDate.setHours(23, 59, 59, 999);
+          where.startTime.lte = endDate;
+        }
+      }
+
+      // Filtro de estado
+      if (queryFilters.status) {
+        where.status = queryFilters.status;
+      }
+
+      // Obtener total de citas
+      const total = await this.prisma.appointment.count({ where });
+
+      // Paginación
+      const page = queryFilters.page || 1;
+      const limit = queryFilters.limit || 10;
+      const skip = (page - 1) * limit;
+      const totalPages = Math.ceil(total / limit);
+
+      // Obtener citas
+      const appointments = await this.prisma.appointment.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          startTime: 'desc' // Más recientes primero
+        },
+        select: {
+          id: true,
+          startTime: true,
+          endTime: true,
+          duration: true,
+          status: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
+        }
+      });
+
+      // Obtener estadísticas de resumen
+      const summaryStats = await this.prisma.appointment.groupBy({
+        by: ['status'],
+        where: {
+          brandId,
+          clientId,
+        },
+        _count: {
+          id: true,
+        }
+      });
+
+      // Procesar estadísticas
+      const summary = {
+        totalAppointments: total,
+        completedAppointments: summaryStats.find(s => s.status === 'COMPLETED')?._count.id || 0,
+        cancelledAppointments: summaryStats.find(s => s.status === 'CANCELLED')?._count.id || 0,
+        pendingAppointments: summaryStats.find(s => s.status === 'PENDING')?._count.id || 0,
+      };
+
+      // Formatear respuesta
+      const formattedAppointments = appointments.map(appointment => ({
+        id: appointment.id,
+        startTime: appointment.startTime.toISOString(),
+        endTime: appointment.endTime.toISOString(),
+        duration: appointment.duration,
+        status: appointment.status,
+        notes: appointment.notes || undefined, // Convertir null a undefined
+        createdAt: appointment.createdAt.toISOString(),
+        updatedAt: appointment.updatedAt.toISOString(),
+      }));
+
+      const response = {
+        appointments: formattedAppointments,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages,
+        },
+        summary
+      };
+
+      console.log('✅ Historial de citas obtenido:', {
+        totalCitas: total,
+        citasEnPagina: formattedAppointments.length,
+        pagina: page
+      });
+
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('\n💥 === ERROR EN HISTORIAL DE CITAS ===');
+      console.error('Error en getClientAppointmentsHistory:', error);
+      return BaseResponseDto.singleError(
+        ERROR_CODES.INTERNAL_ERROR,
+        ERROR_MESSAGES.INTERNAL_ERROR
+      );
     }
   }
 
