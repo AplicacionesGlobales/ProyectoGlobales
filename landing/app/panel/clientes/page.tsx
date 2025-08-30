@@ -54,18 +54,26 @@ export default function ClientesPage() {
       render: (client) => (
         <div>
           <h3 className="font-medium">{client.firstName} {client.lastName}</h3>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Mail className="h-3 w-3" />
-              {client.email}
-            </span>
-            {client.phone && (
-              <span className="flex items-center gap-1">
-                <Phone className="h-3 w-3" />
-                {client.phone}
-              </span>
-            )}
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Mail className="h-3 w-3" />
+            {client.email}
           </div>
+        </div>
+      )
+    },
+    {
+      key: 'phone',
+      title: 'Teléfono',
+      render: (client) => (
+        <div className="text-sm">
+          {client.phone ? (
+            <span className="flex items-center gap-1">
+              <Phone className="h-3 w-3" />
+              {client.phone}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Sin teléfono</span>
+          )}
         </div>
       )
     },
@@ -73,7 +81,7 @@ export default function ClientesPage() {
       key: 'stats',
       title: 'Estadísticas',
       render: (client) => (
-        <div className="text-right text-sm">
+        <div className="text-left text-sm">
           <p>Citas: {client.totalAppointments}</p>
         </div>
       )
