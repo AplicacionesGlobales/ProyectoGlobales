@@ -8,7 +8,5 @@ export { ClientForm } from './ClientForm'
 export type { 
   Client,
   CreateClientData,
-  UpdateClientData,
-  ClientFilters,
   ClientsListResponse
 } from '@/services/client.service'
