@@ -1,481 +1,297 @@
-// landing\app\panel\calendario\page.tsx
 "use client"
+
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Calendar, Clock, Mail, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Plus, Users, Clock, TrendingUp, AlertCircle, Zap } from "lucide-react"
-import { CalendarView } from "@/components/panel/calendar/CalendarView"
-import { AppointmentModal } from "@/components/panel/calendar/AppointmentModal"
-import { appointmentsService, Appointment, AppointmentStatus, CalendarEvent } from "@/services/appointment.service"
-import { format, isToday, isTomorrow, addDays } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AppointmentActions } from "@/components/appointment-actions"
 
-interface BrandData {
+interface Appointment {
   id: number
-  name: string
+  brandId: number
+  clientId: number
+  startTime: string
+  endTime: string
+  duration: number
+  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED"
+  notes: string | null
+  createdBy: number
+  createdAt: string
+  updatedAt: string
+  client: {
+    id: number
+    firstName: string
+    lastName: string
+    email: string
+  }
+  creator: {
+    id: number
+    firstName: string
+    lastName: string
+    email: string
+  }
 }
 
-interface TodayStats {
-  totalAppointments: number
-  completedAppointments: number
-  pendingAppointments: number
-  totalRevenue: number
-  nextAppointment?: Appointment
+interface AppointmentsResponse {
+  success: boolean
+  data: {
+    appointments: Appointment[]
+    total: number
+    pages: number
+  }
 }
 
-export default function CalendarioPage() {
+export default function AdminAppointmentsPage() {
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [currentMonth, setCurrentMonth] = useState(new Date())
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  const [brandData, setBrandData] = useState<BrandData | null>(null)
-  const [todayStats, setTodayStats] = useState<TodayStats>({
-    totalAppointments: 0,
-    completedAppointments: 0,
-    pendingAppointments: 0,
-    totalRevenue: 0
-  })
-  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
-  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([])
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
-  
-  // Estados para modal de citas
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [modalInitialDate, setModalInitialDate] = useState<Date>()
-  const [modalInitialTime, setModalInitialTime] = useState<string>()
-  const [editingAppointment, setEditingAppointment] = useState<CalendarEvent>()
 
-  useEffect(() => {
-    loadInitialData()
-  }, [])
-
-  const loadInitialData = async () => {
+  const fetchAppointments = async () => {
     try {
       setLoading(true)
-      setError(null)
-      
-      // Obtener datos del brand
-      const brandDataStr = localStorage.getItem('brand_data')
-      if (!brandDataStr) {
-        setError('No se encontraron datos del brand')
-        return
+      const brandId = 1 // Temporal - en producción obtener del token
+
+      const response = await fetch(`/api/brand/${brandId}/appointments?limit=100&page=1`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`, // Ajustar según tu implementación de auth
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch appointments")
       }
-      
-      const brand = JSON.parse(brandDataStr)
-      setBrandData(brand)
-      
-      // Cargar datos del calendario
-      await Promise.all([
-        loadTodayData(brand.id),
-        loadCalendarEvents(brand.id)
-      ])
+
+      const data: AppointmentsResponse = await response.json()
+      setAppointments(data.data.appointments)
     } catch (error) {
-      console.error('Error loading initial data:', error)
-      setError('Error cargando datos del calendario')
+      console.error("Error fetching appointments:", error)
+      setAppointments([])
     } finally {
       setLoading(false)
     }
   }
 
-  const loadTodayData = async (brandId: number) => {
-    try {
-      const today = format(new Date(), 'yyyy-MM-dd')
-      const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd')
-      const nextWeek = format(addDays(new Date(), 7), 'yyyy-MM-dd')
+  useEffect(() => {
+    fetchAppointments()
+  }, [])
 
-      // Cargar citas de hoy y próximos días
-      const [todayResponse, upcomingResponse] = await Promise.all([
-        appointmentsService.getDayAppointments(brandId, today),
-        appointmentsService.getAppointments(brandId, 1, 10, {
-          startDate: tomorrow,
-          endDate: nextWeek
-        })
-      ])
-
-      // Procesar citas de hoy
-      if (todayResponse.success && todayResponse.data) {
-        const appointments = todayResponse.data
-        setTodayAppointments(appointments)
-        
-        // Calcular estadísticas
-        const stats: TodayStats = {
-          totalAppointments: appointments.length,
-          completedAppointments: appointments.filter(a => a.status === AppointmentStatus.COMPLETED).length,
-          pendingAppointments: appointments.filter(a => 
-            a.status === AppointmentStatus.PENDING || a.status === AppointmentStatus.CONFIRMED
-          ).length,
-          totalRevenue: appointments
-            .filter(a => a.status === AppointmentStatus.COMPLETED)
-            .reduce((sum, a) => {
-              // Usar un precio por defecto si no está disponible
-              const price = (a as any).price || 0
-              return sum + price
-            }, 0),
-          nextAppointment: appointments
-            .filter(a => a.status !== AppointmentStatus.CANCELLED)
-            .sort((a, b) => a.startTime.localeCompare(b.startTime))[0]
-        }
-        setTodayStats(stats)
-      } else {
-        console.error('❌ Day appointments error:', todayResponse.errors || 'No data')
-        setTodayAppointments([])
-      }
-
-      // Procesar próximas citas
-      if (upcomingResponse.success && upcomingResponse.data) {
-        const appointmentsData = upcomingResponse.data as any
-        const appointments = Array.isArray(appointmentsData) ? appointmentsData : (appointmentsData.appointments || [])
-        setUpcomingAppointments(appointments.slice(0, 5))
-      } else {
-        console.error('❌ Upcoming appointments error:', upcomingResponse.errors || 'No data')
-        setUpcomingAppointments([])
-      }
-    } catch (error) {
-      console.error('Error loading today data:', error)
-      setTodayAppointments([])
-      setUpcomingAppointments([])
-    }
-  }
-
-  const loadCalendarEvents = async (brandId: number) => {
-    try {
-      const today = new Date()
-      const startDate = format(new Date(today.getFullYear(), today.getMonth(), 1), 'yyyy-MM-dd')
-      const endDate = format(new Date(today.getFullYear(), today.getMonth() + 2, 0), 'yyyy-MM-dd')
-      
-      const response = await appointmentsService.getCalendarAppointments(brandId, startDate, endDate)
-      
-      if (response.success && response.data) {
-        setCalendarEvents(response.data)
-      } else {
-        console.error('❌ Calendar appointments error:', response.errors || 'No data')
-        setCalendarEvents([])
-      }
-    } catch (error) {
-      console.error('❌ Calendar appointments error:', error)
-      setCalendarEvents([])
-    }
-  }
-
-  const handleCreateAppointment = (date: Date, time: string) => {
-    setModalInitialDate(date)
-    setModalInitialTime(time)
-    setEditingAppointment(undefined)
-    setIsModalOpen(true)
-  }
-
-  const handleEditAppointment = (appointment: CalendarEvent) => {
-    setEditingAppointment(appointment)
-    setIsModalOpen(true)
-  }
-
-  const handleModalSuccess = () => {
-    // Recargar datos después de crear/editar cita
-    if (brandData) {
-      loadTodayData(brandData.id)
-      loadCalendarEvents(brandData.id)
-    }
-  }
-
-  const getStatusColor = (status: AppointmentStatus): string => {
-    switch (status) {
-      case AppointmentStatus.PENDING:
-        return 'border-orange-200 bg-orange-50 text-orange-700'
-      case AppointmentStatus.CONFIRMED:
-        return 'border-blue-200 bg-blue-50 text-blue-700'
-      case AppointmentStatus.IN_PROGRESS:
-        return 'border-green-200 bg-green-50 text-green-700'
-      case AppointmentStatus.COMPLETED:
-        return 'border-gray-200 bg-gray-50 text-gray-700'
-      case AppointmentStatus.CANCELLED:
-        return 'border-red-200 bg-red-50 text-red-700'
-      default:
-        return 'border-gray-200 bg-gray-50 text-gray-700'
-    }
-  }
-
-  const getStatusText = (status: AppointmentStatus): string => {
-    switch (status) {
-      case AppointmentStatus.PENDING:
-        return 'Pendiente'
-      case AppointmentStatus.CONFIRMED:
-        return 'Confirmada'
-      case AppointmentStatus.IN_PROGRESS:
-        return 'En Progreso'
-      case AppointmentStatus.COMPLETED:
-        return 'Completada'
-      case AppointmentStatus.CANCELLED:
-        return 'Cancelada'
-      default:
-        return 'Desconocido'
-    }
-  }
-
-  const formatAppointmentTime = (date: string, startTime: string, endTime: string): string => {
-    try {
-      const appointmentDate = new Date(date)
-      if (isToday(appointmentDate)) {
-        return `Hoy ${startTime} - ${endTime}`
-      } else if (isTomorrow(appointmentDate)) {
-        return `Mañana ${startTime} - ${endTime}`
-      } else {
-        return `${format(appointmentDate, 'dd/MM', { locale: es })} ${startTime} - ${endTime}`
-      }
-    } catch {
-      return `${startTime} - ${endTime}`
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Calendario</h1>
-          <p className="text-muted-foreground">Cargando calendario...</p>
-        </div>
-      </div>
+  const handleStatusChange = (appointmentId: number, newStatus: string) => {
+    setAppointments((prev) =>
+      prev.map((apt) => (apt.id === appointmentId ? { ...apt, status: newStatus as Appointment["status"] } : apt)),
     )
   }
 
-  if (!brandData) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Calendario</h1>
-        </div>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            No se pudo cargar la información del brand. Por favor, recarga la página.
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
+  const filteredAppointments = appointments.filter((appointment) => {
+    const appointmentDate = new Date(appointment.startTime).toISOString().split("T")[0]
+    const selectedDateStr = selectedDate.toISOString().split("T")[0]
+    return appointmentDate === selectedDateStr
+  })
+
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear()
+    const month = currentMonth.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const startDate = new Date(firstDay)
+    startDate.setDate(startDate.getDate() - firstDay.getDay())
+
+    const days = []
+    const current = new Date(startDate)
+
+    for (let i = 0; i < 42; i++) {
+      days.push(new Date(current))
+      current.setDate(current.getDate() + 1)
+    }
+
+    return days
+  }
+
+  const calendarDays = generateCalendarDays()
+  const today = new Date()
+  const currentMonthNumber = currentMonth.getMonth()
+
+  const navigateMonth = (direction: "prev" | "next") => {
+    const newMonth = new Date(currentMonth)
+    newMonth.setMonth(currentMonth.getMonth() + (direction === "next" ? 1 : -1))
+    setCurrentMonth(newMonth)
+  }
+
+  const getAppointmentCount = (date: Date) => {
+    const dateStr = date.toISOString().split("T")[0]
+    return appointments.filter((apt) => {
+      const aptDate = new Date(apt.startTime).toISOString().split("T")[0]
+      return aptDate === dateStr
+    }).length
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Calendario</h1>
-          <p className="text-muted-foreground">
-            Gestiona tus citas y horarios disponibles.
-          </p>
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Gestión de Citas</h1>
+            <p className="text-muted-foreground mt-1">Administra las citas de tu negocio desde un solo lugar</p>
+          </div>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90">Nueva Cita</Button>
         </div>
-        <Button onClick={() => handleCreateAppointment(new Date(), "09:00")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Cita
-        </Button>
-      </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Estadísticas del día */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Citas Hoy
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todayStats.totalAppointments}</div>
-            <p className="text-xs text-muted-foreground">
-              {todayStats.pendingAppointments} pendientes
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Completadas
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todayStats.completedAppointments}</div>
-            <p className="text-xs text-muted-foreground">
-              de {todayStats.totalAppointments} programadas
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Ingresos Hoy
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${todayStats.totalRevenue}</div>
-            <p className="text-xs text-muted-foreground">
-              {todayStats.completedAppointments > 0 
-                ? `$${Math.round(todayStats.totalRevenue / todayStats.completedAppointments)} promedio`
-                : 'Sin ventas aún'
-              }
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Próxima Cita
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {todayStats.nextAppointment ? (
-              <>
-                <div className="text-2xl font-bold">
-                  {format(new Date(todayStats.nextAppointment.startTime), 'HH:mm')}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Calendario */}
+          <div className="lg:col-span-2">
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-card-foreground">
+                    {currentMonth.toLocaleDateString("es-ES", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => navigateMonth("prev")} className="border-border">
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => navigateMonth("next")} className="border-border">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  {todayStats.nextAppointment.client?.firstName || 'Cliente'} {todayStats.nextAppointment.client?.lastName || ''}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">--:--</div>
-                <p className="text-xs text-muted-foreground">Sin citas</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Componente principal del calendario */}
-      <CalendarView 
-        appointments={calendarEvents || []}
-        onCreateAppointment={handleCreateAppointment}
-        onAppointmentClick={handleEditAppointment}
-      />
-
-      {/* Panel lateral con citas del día y próximas */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Citas de Hoy */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Citas de Hoy</CardTitle>
-            <CardDescription>
-              {format(new Date(), "EEEE, dd 'de' MMMM", { locale: es })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {todayAppointments.length > 0 ? (
-              <div className="space-y-3">
-                {todayAppointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className={`p-3 rounded-lg border ${getStatusColor(appointment.status)}`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">
-                        {appointment.client?.firstName || 'Cliente'} {appointment.client?.lastName || ''}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {getStatusText(appointment.status)}
-                      </span>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-7 gap-1 mb-4">
+                  {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((day) => (
+                    <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
+                      {day}
                     </div>
-                    <div className="text-sm space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Zap className="h-3 w-3" />
-                        Cita programada
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(appointment.startTime), 'HH:mm')} - {format(new Date(appointment.endTime), 'HH:mm')}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No hay citas hoy</h3>
-                <p className="text-muted-foreground mb-4">
-                  ¡Perfecto momento para relajarse o planificar!
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarDays.map((day, index) => {
+                    const isCurrentMonth = day.getMonth() === currentMonthNumber
+                    const isToday = day.toDateString() === today.toDateString()
+                    const isSelected = day.toDateString() === selectedDate.toDateString()
+                    const appointmentCount = getAppointmentCount(day)
 
-        {/* Próximas Citas */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Próximas Citas</CardTitle>
-            <CardDescription>
-              Citas programadas para los próximos días
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {upcomingAppointments.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingAppointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">
-                        {appointment.client?.firstName || 'Cliente'} {appointment.client?.lastName || ''}
-                      </span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}>
-                        {getStatusText(appointment.status)}
-                      </span>
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Zap className="h-3 w-3 text-muted-foreground" />
-                        Cita programada
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        {formatAppointmentTime(
-                          format(new Date(appointment.startTime), 'yyyy-MM-dd'),
-                          format(new Date(appointment.startTime), 'HH:mm'),
-                          format(new Date(appointment.endTime), 'HH:mm')
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedDate(day)}
+                        className={`
+                          relative p-2 text-sm rounded-md transition-colors
+                          ${isCurrentMonth ? "text-foreground" : "text-muted-foreground"}
+                          ${isToday ? "bg-accent text-accent-foreground font-semibold" : ""}
+                          ${isSelected && !isToday ? "bg-primary text-primary-foreground" : ""}
+                          ${!isSelected && !isToday ? "hover:bg-muted" : ""}
+                        `}
+                      >
+                        {day.getDate()}
+                        {appointmentCount > 0 && (
+                          <div className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            {appointmentCount}
+                          </div>
                         )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No hay próximas citas</h3>
-                <p className="text-muted-foreground mb-4">
-                  Las nuevas citas aparecerán aquí
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Modal de citas */}
-      {brandData && (
-        <AppointmentModal
-          brandId={brandData.id}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSuccess={handleModalSuccess}
-          initialDate={modalInitialDate}
-          initialTime={modalInitialTime}
-          editingAppointment={editingAppointment}
-        />
-      )}
+          {/* Lista de Citas */}
+          <div className="space-y-4">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-card-foreground flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Citas del {selectedDate.toLocaleDateString("es-ES")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p>Cargando citas...</p>
+                  </div>
+                ) : filteredAppointments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No hay citas programadas para esta fecha</p>
+                  </div>
+                ) : (
+                  filteredAppointments.map((appointment) => {
+                    const startTime = new Date(appointment.startTime)
+                    const endTime = new Date(appointment.endTime)
+                    const clientName = `${appointment.client.firstName} ${appointment.client.lastName}`
+
+                    return (
+                      <Card key={appointment.id} className="bg-muted/50 border-border">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src="/placeholder.svg" />
+                                <AvatarFallback className="bg-accent text-accent-foreground">
+                                  {appointment.client.firstName[0]}
+                                  {appointment.client.lastName[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h4 className="font-semibold text-card-foreground">{clientName}</h4>
+                                <p className="text-sm text-muted-foreground">Cita programada</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Clock className="h-4 w-4" />
+                              <span>
+                                {startTime.toLocaleTimeString("es-ES", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}{" "}
+                                -{" "}
+                                {endTime.toLocaleTimeString("es-ES", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}{" "}
+                                ({appointment.duration} min)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Mail className="h-4 w-4" />
+                              <span>{appointment.client.email}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-3">
+                            <AppointmentActions
+                              appointmentId={appointment.id}
+                              currentStatus={appointment.status}
+                              onStatusChange={handleStatusChange}
+                            />
+                          </div>
+
+                          {appointment.notes && (
+                            <div className="mt-3 p-2 bg-muted rounded text-sm text-muted-foreground">
+                              <strong>Notas:</strong> {appointment.notes}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
