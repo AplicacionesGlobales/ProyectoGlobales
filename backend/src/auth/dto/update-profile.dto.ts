@@ -23,10 +23,16 @@ export class UpdateProfileDto {
   })
   phone?: string;
 
-  @ApiProperty({ description: 'Username del usuario', required: false })
+  @ApiProperty({ 
+    description: 'Nombre de usuario único', 
+    example: 'nuevousuario123', 
+    required: false,
+    minLength: 3, 
+    maxLength: 20 
+  })
   @IsOptional()
-  @IsString()
-  @Length(3, 20)
+  @IsString({ message: 'El username debe ser una cadena de texto' })
+  @Length(3, 20, { message: 'El username debe tener entre 3 y 20 caracteres' })
   @Matches(/^[a-zA-Z0-9_]+$/, {
     message: 'El username solo puede contener letras, números y guiones bajos',
   })

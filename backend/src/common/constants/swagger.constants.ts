@@ -35,6 +35,7 @@ export const ERROR_MESSAGES = {
   BRAND_NOT_EXISTS: 'La marca no existe',
   USER_INACTIVE: 'Usuario inactivo',
   EMAIL_EXISTS: 'El email ya está registrado',
+  INVALID_USERNAME: 'Username inválido',
 } as const;
 
 export const ERROR_CODES = {
@@ -46,6 +47,7 @@ export const ERROR_CODES = {
   EMAIL_EXISTS: 1006,
   INVALID_COLOR_FORMAT: 1007,
   WEAK_PASSWORD: 1008,
+  INVALID_USERNAME: 1009,
   USER_NOT_FOUND: 2000,
   INVALID_CREDENTIALS: 2001,
   FORBIDDEN: 2002,
@@ -58,6 +60,4 @@ export const ERROR_CODES = {
   INVALID_FEATURES: 2008,
   INVALID_BUSINESS_TYPE: 2009,
   INVALID_PLAN: 2010,
-
-
 } as const;
