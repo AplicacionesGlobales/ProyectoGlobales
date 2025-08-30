@@ -1,5 +1,6 @@
 // services/clients.service.ts
 import { apiClient, ApiResponse } from '../api';
+import { API_ENDPOINTS } from '../api/constants';
 
 // Interfaces basadas en la API real
 export interface Client {
@@ -27,12 +28,28 @@ export interface CreateClientData {
   tempPassword?: string;
 }
 
-export interface UpdateClientData {
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  notes?: string;
-  isActive?: boolean;
+export interface ClientNote {
+  id: number;
+  clientId: number;
+  brandId: number;
+  note: string;
+  isPrivate: boolean;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+  creator: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+export interface ClientActivity {
+  id: number;
+  type: string;
+  description: string;
+  createdAt: string;
 }
 
 export interface ClientsListResponse {
@@ -45,13 +62,18 @@ export interface ClientsListResponse {
   };
 }
 
-export interface ClientFilters {
-  page?: number;
-  limit?: number;
-  search?: string;
-  active?: string;
-  sortBy?: 'createdAt' | 'firstName' | 'email' | 'lastVisit';
-  sortOrder?: 'asc' | 'desc';
+export interface ClientNotesResponse {
+  notes: ClientNote[];
+}
+
+export interface ClientActivityResponse {
+  activities: ClientActivity[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 class ClientsService {
@@ -70,13 +92,15 @@ class ClientsService {
     return {};
   }
 
-  // ==================== CRUD OPERATIONS ====================
-  
   // Obtener todos los clientes
-  async getClients(
-    brandId: number,
-    filters: ClientFilters = {}
-  ): Promise<ApiResponse<ClientsListResponse>> {
+  async getClients(brandId: number, filters: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    active?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  } = {}): Promise<ApiResponse<ClientsListResponse>> {
     try {
       console.log('🚀 Getting clients:', { brandId, filters });
       
@@ -89,7 +113,7 @@ class ClientsService {
       if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
 
       const queryString = params.toString();
-      const endpoint = `/brands/${brandId}/clients${queryString ? `?${queryString}` : ''}`;
+      const endpoint = API_ENDPOINTS.CLIENTS.GET_ALL(brandId) + (queryString ? `?${queryString}` : '');
       
       const response = await apiClient.get<ClientsListResponse>(
         endpoint,
@@ -103,14 +127,10 @@ class ClientsService {
       console.error('❌ Clients error:', error);
       return {
         success: false,
-        errors: [
-          {
-            code: 'CLIENTS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo clientes'
-          }
-        ]
+        errors: [{
+          code: 'CLIENTS_ERROR',
+          description: 'Error obteniendo clientes'
+        }]
       };
     }
   }
@@ -121,7 +141,7 @@ class ClientsService {
       console.log('🚀 Getting client:', { brandId, clientId });
       
       const response = await apiClient.get<Client>(
-        `/brands/${brandId}/clients/${clientId}`,
+        API_ENDPOINTS.CLIENTS.GET_BY_ID(brandId, clientId),
         { headers: this.getAuthHeaders() }
       );
       
@@ -132,14 +152,10 @@ class ClientsService {
       console.error('❌ Client error:', error);
       return {
         success: false,
-        errors: [
-          {
-            code: 'CLIENT_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo cliente'
-          }
-        ]
+        errors: [{
+          code: 'CLIENT_ERROR',
+          description: 'Error obteniendo cliente'
+        }]
       };
     }
   }
@@ -150,7 +166,7 @@ class ClientsService {
       console.log('🚀 Creating client:', { brandId, data });
       
       const response = await apiClient.post<Client>(
-        `/brands/${brandId}/clients`,
+        API_ENDPOINTS.CLIENTS.CREATE(brandId),
         data,
         { headers: this.getAuthHeaders() }
       );
@@ -160,90 +176,91 @@ class ClientsService {
       
     } catch (error: any) {
       console.error('❌ Client creation error:', error);
+      
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        
+        if (errorData.success === false && errorData.errors) {
+          return {
+            success: false,
+            errors: errorData.errors
+          };
+        }
+        
+        if (errorData.message) {
+          const messages = Array.isArray(errorData.message) ? errorData.message : [errorData.message];
+          return {
+            success: false,
+            errors: messages.map((msg: string) => ({
+              code: 'VALIDATION_ERROR',
+              description: msg
+            }))
+          };
+        }
+      }
+      
       return {
         success: false,
-        errors: [
-          {
-            code: 'CLIENT_CREATE_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error creando cliente'
-          }
-        ]
+        errors: [{
+          code: 'CLIENT_CREATE_ERROR',
+          description: 'Error creando cliente'
+        }]
       };
     }
   }
 
-  // Actualizar cliente
-  async updateClient(
+  // Obtener notas del cliente
+  async getClientNotes(brandId: number, clientId: number): Promise<ApiResponse<ClientNotesResponse>> {
+    try {
+      console.log('🚀 Getting client notes:', { brandId, clientId });
+      
+      const response = await apiClient.get<ClientNotesResponse>(
+        `/brands/${brandId}/clients/${clientId}/notes`,
+        { headers: this.getAuthHeaders() }
+      );
+      
+      console.log('✅ Client notes response:', response);
+      return response;
+      
+    } catch (error: any) {
+      console.error('❌ Client notes error:', error);
+      return {
+        success: false,
+        errors: [{
+          code: 'CLIENT_NOTES_ERROR',
+          description: 'Error obteniendo notas del cliente'
+        }]
+      };
+    }
+  }
+
+  // Obtener actividad del cliente
+  async getClientActivity(
     brandId: number, 
     clientId: number, 
-    data: UpdateClientData
-  ): Promise<ApiResponse<Client>> {
+    page: number = 1, 
+    limit: number = 20
+  ): Promise<ApiResponse<ClientActivityResponse>> {
     try {
-      console.log('🚀 Updating client:', { brandId, clientId, data });
+      console.log('🚀 Getting client activity:', { brandId, clientId, page, limit });
       
-      const response = await apiClient.put<Client>(
-        `/brands/${brandId}/clients/${clientId}`,
-        data,
+      const response = await apiClient.get<ClientActivityResponse>(
+        `/brands/${brandId}/clients/${clientId}/activity?page=${page}&limit=${limit}`,
         { headers: this.getAuthHeaders() }
       );
       
-      console.log('✅ Client update response:', response);
+      console.log('✅ Client activity response:', response);
       return response;
       
     } catch (error: any) {
-      console.error('❌ Client update error:', error);
+      console.error('❌ Client activity error:', error);
       return {
         success: false,
-        errors: [
-          {
-            code: 'CLIENT_UPDATE_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error actualizando cliente'
-          }
-        ]
+        errors: [{
+          code: 'CLIENT_ACTIVITY_ERROR',
+          description: 'Error obteniendo actividad del cliente'
+        }]
       };
-    }
-  }
-
-  // Eliminar cliente
-  async deleteClient(brandId: number, clientId: number): Promise<ApiResponse<void>> {
-    try {
-      console.log('🚀 Deleting client:', { brandId, clientId });
-      
-      const response = await apiClient.delete<void>(
-        `/brands/${brandId}/clients/${clientId}`,
-        { headers: this.getAuthHeaders() }
-      );
-      
-      console.log('✅ Client deletion response:', response);
-      return response;
-      
-    } catch (error: any) {
-      console.error('❌ Client deletion error:', error);
-      return {
-        success: false,
-        errors: [
-          {
-            code: 'CLIENT_DELETE_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error eliminando cliente'
-          }
-        ]
-      };
-    }
-  }
-
-  // Health check
-  async healthCheck(): Promise<{ status: string }> {
-    try {
-      const response = await apiClient.get('/health');
-      return { status: 'ok' };
-    } catch (error) {
-      return { status: 'error' };
     }
   }
 }
