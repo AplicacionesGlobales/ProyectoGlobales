@@ -25,13 +25,31 @@ import {
   DayOccupancyDto,
   MonthSummaryDto
 } from './dto/calendar-month.dto';
+import {
+  DayAgendaDto,
+  GetDayAgendaQueryDto,
+  AgendaSlotDto,
+  AgendaSlotType,
+  BusinessHoursDto
+} from './dto/day-agenda.dto';
 
 @Injectable()
 export class AppointmentsService {
   constructor(private prisma: PrismaService) {}
 
-  // Validación de acceso al brand
+  // Validación de acceso al brand - incluye dueños y clientes
   private async validateBrandAccess(brandId: number, userId: number): Promise<boolean> {
+    // Check if user is brand owner
+    const brand = await this.prisma.brand.findUnique({
+      where: { id: brandId },
+      select: { ownerId: true }
+    });
+    
+    if (brand?.ownerId === userId) {
+      return true;
+    }
+
+    // Check if user is a client of this brand
     const userBrand = await this.prisma.userBrand.findFirst({
       where: {
         brandId,
@@ -43,7 +61,7 @@ export class AppointmentsService {
       }
     });
 
-    return !!userBrand && ['ROOT', 'ADMIN'].includes(userBrand.user.role);
+    return !!userBrand;
   }
 
   // Validación si es ROOT del brand
@@ -94,30 +112,21 @@ export class AppointmentsService {
     const { appointmentSettings, businessHours, specialHours } = 
       await this.getBrandConfigurations(brandId);
 
-    // 1. Validar horarios de negocio
+    // 1. Validar horarios usando la misma lógica que getDayAgenda
     const dayOfWeek = startTime.getDay();
-    const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
+    const dateStr = startTime.toISOString().split('T')[0];
+    const businessHoursForDay = await this.getBusinessHoursForDay(brandId, dayOfWeek, dateStr);
     
-    if (!businessHour || !businessHour.isOpen) {
+    if (businessHoursForDay.isClosed) {
       throw new BadRequestException('El negocio está cerrado este día');
     }
 
-    // 2. Validar horarios especiales
-    const dateStr = startTime.toISOString().split('T')[0];
-    const specialHour = specialHours.find(
-      sh => sh.date.toISOString().split('T')[0] === dateStr
-    );
-
-    if (specialHour && !specialHour.isOpen) {
-      throw new BadRequestException(`El negocio está cerrado: ${specialHour.reason || 'Día especial'}`);
-    }
-
-    // 3. Validar horario dentro del rango de operación
+    // 2. Validar horario dentro del rango de operación
     const startTimeStr = startTime.toTimeString().substring(0, 5);
     const endTimeStr = endTime.toTimeString().substring(0, 5);
     
-    const operationStart = specialHour?.openTime || businessHour.openTime;
-    const operationEnd = specialHour?.closeTime || businessHour.closeTime;
+    const operationStart = businessHoursForDay.start;
+    const operationEnd = businessHoursForDay.end;
 
     if (!operationStart || !operationEnd) {
       throw new BadRequestException('No se pudo determinar el horario de operación para este día');
@@ -129,7 +138,7 @@ export class AppointmentsService {
       );
     }
 
-    // 4. Validar restricciones de tiempo
+    // 3. Validar restricciones de tiempo
     const now = new Date();
     const timeDiffHours = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
     
@@ -813,6 +822,340 @@ export class AppointmentsService {
       console.error('Error getting calendar month:', error);
       throw error;
     }
+  }
+
+  // Get complete day agenda with appointments and available slots
+  async getDayAgenda(
+    brandId: number,
+    date: string,
+    userId: number,
+    query: GetDayAgendaQueryDto = {}
+  ): Promise<BaseResponseDto<DayAgendaDto>> {
+    try {
+      // Validate brand access - user must be owner or client of this brand
+      const hasAccess = await this.validateBrandAccess(brandId, userId);
+      if (!hasAccess) {
+        throw new ForbiddenException('No tiene acceso a este brand');
+      }
+
+      // Validate date format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(date)) {
+        throw new BadRequestException('Formato de fecha inválido. Use YYYY-MM-DD');
+      }
+
+      const targetDate = new Date(date);
+      const dayOfWeek = targetDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const includeCancelled = query.includeCancelled || false;
+
+      // Get brand settings for slot duration
+      const brandSettings = await this.prisma.appointmentSettings.findUnique({
+        where: { brandId }
+      });
+      const slotDuration = brandSettings?.defaultDuration || 30;
+
+      // Check user role for cancelled appointments access
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId },
+        select: { ownerId: true }
+      });
+      
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: { brandId, userId, isActive: true },
+        include: { user: { select: { role: true } } }
+      });
+      
+      const isOwner = brand?.ownerId === userId;
+      const isAdminOrRoot = userBrand?.user.role === 'ROOT' || userBrand?.user.role === 'ADMIN' || isOwner;
+
+      // Only ROOT, ADMIN or brand owner can see cancelled appointments
+      const shouldIncludeCancelled = isAdminOrRoot && includeCancelled;
+
+      // Get business hours for the day (including special hours check)
+      const businessHours = await this.getBusinessHoursForDay(brandId, dayOfWeek, date);
+      
+      // If business is closed, return empty agenda
+      if (businessHours.isClosed) {
+        const emptyAgenda: DayAgendaDto = {
+          date,
+          businessHours,
+          agenda: [],
+          totalAppointments: 0,
+          totalAvailableSlots: 0,
+          slotDuration,
+          totalAvailableTime: 0,
+          totalBookedTime: 0
+        };
+        return BaseResponseDto.success(emptyAgenda);
+      }
+
+      // Get appointments for the day
+      const startOfDay = new Date(`${date}T00:00:00Z`);
+      const endOfDay = new Date(`${date}T23:59:59Z`);
+
+      // Filter appointment statuses based on user permissions
+      const appointmentStatuses = shouldIncludeCancelled 
+        ? Object.values(AppointmentStatus)
+        : Object.values(AppointmentStatus).filter(status => status !== AppointmentStatus.CANCELLED);
+
+      const appointments = await this.prisma.appointment.findMany({
+        where: {
+          brandId,
+          startTime: {
+            gte: startOfDay,
+            lte: endOfDay
+          },
+          status: {
+            in: appointmentStatuses
+          }
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true
+            }
+          },
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        },
+        orderBy: {
+          startTime: 'asc'
+        }
+      });
+
+      // Generate complete agenda
+      const agenda = this.generateDayAgenda(
+        businessHours,
+        appointments.map(apt => this.mapToDto(apt)),
+        date,
+        slotDuration
+      );
+
+      // Calculate statistics
+      const totalAppointments = appointments.length;
+      const totalAvailableSlots = agenda.filter(slot => slot.type === AgendaSlotType.AVAILABLE).length;
+      const totalBookedTime = agenda
+        .filter(slot => slot.type === AgendaSlotType.APPOINTMENT)
+        .reduce((total, slot) => total + slot.duration, 0);
+      const totalAvailableTime = agenda
+        .filter(slot => slot.type === AgendaSlotType.AVAILABLE)
+        .reduce((total, slot) => total + slot.duration, 0);
+
+      const dayAgenda: DayAgendaDto = {
+        date,
+        businessHours,
+        agenda,
+        totalAppointments,
+        totalAvailableSlots,
+        slotDuration,
+        totalAvailableTime,
+        totalBookedTime
+      };
+
+      return BaseResponseDto.success(dayAgenda);
+    } catch (error) {
+      console.error('Error getting day agenda:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to check if business is open on a specific date
+  async isBusinessOpenOnDate(brandId: number, date: string): Promise<boolean> {
+    const targetDate = new Date(date);
+    const dayOfWeek = targetDate.getDay();
+    
+    const businessHours = await this.getBusinessHoursForDay(brandId, dayOfWeek, date);
+    return !businessHours.isClosed;
+  }
+
+  // Get business hours for a specific date (considers special hours and regular business hours)
+  private async getBusinessHoursForDay(brandId: number, dayOfWeek: number, date?: string): Promise<BusinessHoursDto> {
+    // First check for special hours if date is provided
+    if (date) {
+      const specialHours = await this.prisma.specialHours.findFirst({
+        where: {
+          brandId,
+          date: new Date(`${date}T00:00:00.000Z`)
+        }
+      });
+
+      // Special hours override regular business hours
+      if (specialHours) {
+        if (!specialHours.isOpen) {
+          return {
+            start: '00:00',
+            end: '00:00',
+            isClosed: true
+          };
+        }
+
+        // Validate special hours configuration
+        if (!specialHours.openTime || !specialHours.closeTime) {
+          console.warn(`Brand ${brandId} has incomplete special hours configuration for date ${date}`);
+          return {
+            start: '00:00',
+            end: '00:00',
+            isClosed: true
+          };
+        }
+
+        return {
+          start: specialHours.openTime,
+          end: specialHours.closeTime,
+          isClosed: false
+        };
+      }
+    }
+
+    // Fall back to regular business hours
+    const businessHours = await this.prisma.businessHours.findFirst({
+      where: {
+        brandId,
+        dayOfWeek
+      }
+    });
+
+    // If no business hours configured or closed, return closed
+    if (!businessHours || !businessHours.isOpen) {
+      return {
+        start: '00:00',
+        end: '00:00',
+        isClosed: true
+      };
+    }
+
+    // Validate that business hours are properly configured
+    if (!businessHours.openTime || !businessHours.closeTime) {
+      console.warn(`Brand ${brandId} has incomplete business hours configuration for day ${dayOfWeek}`);
+      return {
+        start: '00:00',
+        end: '00:00',
+        isClosed: true
+      };
+    }
+
+    return {
+      start: businessHours.openTime,
+      end: businessHours.closeTime,
+      isClosed: false
+    };
+  }
+
+  // Generate complete day agenda with appointments and available slots
+  private generateDayAgenda(
+    businessHours: BusinessHoursDto,
+    appointments: AppointmentDto[],
+    date: string,
+    slotDuration: number
+  ): AgendaSlotDto[] {
+    const agenda: AgendaSlotDto[] = [];
+
+    if (businessHours.isClosed) {
+      return agenda;
+    }
+
+    // Parse business hours
+    const startMinutes = this.timeToMinutes(businessHours.start);
+    const endMinutes = this.timeToMinutes(businessHours.end);
+
+    // Sort appointments by start time
+    const sortedAppointments = [...appointments].sort((a, b) => 
+      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    );
+
+    let currentMinutes = startMinutes;
+    let appointmentIndex = 0;
+
+    while (currentMinutes < endMinutes) {
+      const currentTime = this.minutesToTime(currentMinutes);
+      
+      // Check if there's an appointment at this time
+      const currentAppointment = sortedAppointments.find(apt => {
+        const aptStart = new Date(apt.startTime);
+        const aptStartMinutes = aptStart.getHours() * 60 + aptStart.getMinutes();
+        return aptStartMinutes === currentMinutes;
+      });
+
+      if (currentAppointment) {
+        // Add appointment slot
+        const aptStart = new Date(currentAppointment.startTime);
+        const aptEnd = new Date(currentAppointment.endTime);
+        const aptDuration = (aptEnd.getTime() - aptStart.getTime()) / (1000 * 60);
+
+        agenda.push({
+          startTime: this.minutesToTime(currentMinutes),
+          endTime: this.minutesToTime(currentMinutes + aptDuration),
+          type: AgendaSlotType.APPOINTMENT,
+          appointment: currentAppointment,
+          duration: aptDuration,
+          isBookable: false
+        });
+
+        currentMinutes += aptDuration;
+      } else {
+        // Check if current slot would overlap with next appointment
+        const nextAppointment = sortedAppointments.find(apt => {
+          const aptStart = new Date(apt.startTime);
+          const aptStartMinutes = aptStart.getHours() * 60 + aptStart.getMinutes();
+          return aptStartMinutes > currentMinutes;
+        });
+
+        let availableSlotDuration = slotDuration;
+        
+        if (nextAppointment) {
+          const nextAptStart = new Date(nextAppointment.startTime);
+          const nextAptStartMinutes = nextAptStart.getHours() * 60 + nextAptStart.getMinutes();
+          const timeUntilNextApt = nextAptStartMinutes - currentMinutes;
+          
+          if (timeUntilNextApt < slotDuration) {
+            availableSlotDuration = timeUntilNextApt;
+          }
+        }
+
+        // Check if slot fits before business hours end
+        if (currentMinutes + availableSlotDuration > endMinutes) {
+          availableSlotDuration = endMinutes - currentMinutes;
+        }
+
+        // Only add slot if it's meaningful (at least 15 minutes)
+        if (availableSlotDuration >= 15) {
+          agenda.push({
+            startTime: this.minutesToTime(currentMinutes),
+            endTime: this.minutesToTime(currentMinutes + availableSlotDuration),
+            type: AgendaSlotType.AVAILABLE,
+            duration: availableSlotDuration,
+            isBookable: availableSlotDuration >= slotDuration
+          });
+        }
+
+        currentMinutes += availableSlotDuration;
+      }
+    }
+
+    return agenda;
+  }
+
+  // Convert time string (HH:mm) to minutes
+  private timeToMinutes(time: string): number {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  // Convert minutes to time string (HH:mm)
+  private minutesToTime(minutes: number): string {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
   }
 
   // Mapear entidad a DTO
