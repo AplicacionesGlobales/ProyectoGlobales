@@ -33,7 +33,7 @@ import {
   AlertCircle,
   RefreshCw
 } from "lucide-react"
-import { Client, clientsService } from "@/services/clients.service"
+import { Client, clientsService } from "@/services/client.service"
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
