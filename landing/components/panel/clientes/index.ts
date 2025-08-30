@@ -11,4 +11,4 @@ export type {
   UpdateClientData,
   ClientFilters,
   ClientsListResponse
-} from '@/services/clients.service'
+} from '@/services/client.service'

@@ -56,7 +56,7 @@ import {
   CreateClientData, 
   UpdateClientData,
   ClientFilters
-} from "@/services/clients.service"
+} from "@/services/client.service"
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 

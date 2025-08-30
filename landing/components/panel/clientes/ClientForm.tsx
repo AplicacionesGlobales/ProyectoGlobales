@@ -25,7 +25,7 @@ import {
   FileText,
   Key
 } from "lucide-react"
-import { Client, CreateClientData, UpdateClientData } from "@/services/clients.service"
+import { Client, CreateClientData, UpdateClientData } from "@/services/client.service"
 
 interface ClientFormProps {
   client?: Client
