@@ -1,5 +1,12 @@
 import React from "react"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { X, RefreshCw } from "lucide-react"
 
@@ -81,8 +88,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent 
-        className={contentClasses}
-        style={contentStyle}
+        className={`${contentClasses} flex flex-col`}
+        style={{ maxHeight: maxHeight }}
         onInteractOutside={(e) => {
           if (!closeOnOverlayClick) {
             e.preventDefault()
@@ -103,7 +110,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
         </DialogHeader>
 
         {/* Content */}
-        <div className="overflow-y-auto">
+        <div className="overflow-y-auto flex-1 min-h-0">
           {children}
         </div>
 

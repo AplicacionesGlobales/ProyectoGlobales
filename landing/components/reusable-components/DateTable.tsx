@@ -174,6 +174,13 @@ export const DataTable = <T,>({
     )
   }
 
+  // Construir el estilo de grid dinámicamente
+  const gridColumns = [
+    ...(avatar?.show ? ['auto'] : []),
+    ...columns.map(col => col.width || '1fr'),
+    ...(actions.length > 0 ? ['auto'] : [])
+  ].join(' ')
+
   return (
     <Card className={cardClassName}>
       <CardHeader>
@@ -213,37 +220,59 @@ export const DataTable = <T,>({
             )}
           </div>
         ) : (
-          <div className="space-y-4">
-            {data.map((item) => (
-              <div
-                key={keyExtractor(item)}
-                className={`flex items-center justify-between p-4 border rounded-lg ${hover ? 'hover:bg-gray-50' : ''}`}
-              >
-                <div className="flex items-center space-x-4">
-                  {renderAvatar(item)}
-                  <div className="flex-1">
-                    <div className="grid gap-2" style={{ 
-                      gridTemplateColumns: columns.map(col => col.width || 'auto').join(' ')
-                    }}>
-                      {columns.map((column) => (
-                        <div key={column.key} className={column.className}>
-                          {column.title && columns.length > 1 && (
-                            <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                              {column.title}
-                            </div>
-                          )}
-                          <div className="text-sm">
-                            {renderCellContent(item, column)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+          <div className="overflow-hidden">
+            {/* Header de la tabla */}
+            <div 
+              className="grid gap-4 px-4 py-3 bg-gray-50/50 border-b font-medium text-sm text-gray-700 items-center"
+              style={{ gridTemplateColumns: gridColumns }}
+            >
+              {avatar?.show && (
+                <div className="flex justify-start">
+                  <div className="w-10 h-10 flex items-center">
+                    {/* Espacio para alinear con avatar */}
                   </div>
                 </div>
-                
-                {renderActions(item)}
-              </div>
-            ))}
+              )}
+              {columns.map((column) => (
+                <div key={column.key} className={`${column.className || ''} text-sm flex items-center`}>
+                  {column.title}
+                </div>
+              ))}
+              {actions.length > 0 && (
+                <div className="flex justify-end">
+                  <div className="text-sm">Acciones</div>
+                </div>
+              )}
+            </div>
+
+            {/* Filas de datos */}
+            <div className="divide-y">
+              {data.map((item) => (
+                <div
+                  key={keyExtractor(item)}
+                  className={`grid gap-4 px-4 py-3 items-center ${hover ? 'hover:bg-gray-50/50 transition-colors' : ''}`}
+                  style={{ gridTemplateColumns: gridColumns }}
+                >
+                  {avatar?.show && (
+                    <div className="flex justify-start">
+                      {renderAvatar(item)}
+                    </div>
+                  )}
+                  
+                  {columns.map((column) => (
+                    <div key={column.key} className={`${column.className || ''} text-sm`}>
+                      {renderCellContent(item, column)}
+                    </div>
+                  ))}
+                  
+                  {actions.length > 0 && (
+                    <div className="flex justify-end">
+                      {renderActions(item)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>
