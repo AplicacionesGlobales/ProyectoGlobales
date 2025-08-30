@@ -256,77 +256,11 @@ class ClientsService {
       console.error('❌ Client activity error:', error);
       return {
         success: false,
-        errors: [
-          {
-            code: 'EMAIL_VALIDATION_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error validando email'
-          }
-        ]
+        errors: [{
+          code: 'CLIENT_ACTIVITY_ERROR',
+          description: 'Error obteniendo actividad del cliente'
+        }]
       };
-    }
-  }
-
-  // Obtener clientes recientes
-  async getRecentClients(brandId: number, limit: number = 10): Promise<ApiResponse<Client[]>> {
-    try {
-      console.log('🚀 Getting recent clients:', { brandId, limit });
-      const response = await apiClient.get<Client[]>(
-        `${API_ENDPOINTS.CLIENTS.GET_ALL(brandId)}?sortBy=createdAt&order=desc&limit=${limit}`,
-        { headers: this.getAuthHeaders() }
-      );
-      console.log('✅ Recent clients response:', response);
-      return response;
-    } catch (error: any) {
-      console.error('❌ Recent clients error:', error);
-      return {
-        success: false,
-        errors: [
-          {
-            code: 'RECENT_CLIENTS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo clientes recientes'
-          }
-        ]
-      };
-    }
-  }
-
-  // Obtener clientes top 
-  async getVIPClients(brandId: number): Promise<ApiResponse<Client[]>> {
-    try {
-      console.log('🚀 Getting top clients:', brandId);
-      const response = await apiClient.get<Client[]>(
-        `${API_ENDPOINTS.CLIENTS.GET_ALL(brandId)}?clientType=${ClientType.CLIENT}&sortBy=totalSpent&order=desc`,
-        { headers: this.getAuthHeaders() }
-      );
-      console.log('✅ Top clients response:', response);
-      return response;
-    } catch (error: any) {
-      console.error('❌ VIP clients error:', error);
-      return {
-        success: false,
-        errors: [
-          {
-            code: 'VIP_CLIENTS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo clientes VIP'
-          }
-        ]
-      };
-    }
-  }
-
-  // Health check
-  async healthCheck(): Promise<{ status: string }> {
-    try {
-      const response = await apiClient.get(API_ENDPOINTS.HEALTH);
-      return { status: 'ok' };
-    } catch (error) {
-      return { status: 'error' };
     }
   }
 }
