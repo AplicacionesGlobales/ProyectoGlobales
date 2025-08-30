@@ -25,13 +25,13 @@ import {
   FileText,
   Key
 } from "lucide-react"
-import { Client, CreateClientData, UpdateClientData } from "@/services/client.service"
+import { Client, CreateClientData } from "@/services/client.service"
 
 interface ClientFormProps {
   client?: Client
   isOpen: boolean
   onClose: () => void
-  onSave: (data: CreateClientData | UpdateClientData) => Promise<void>
+  onSave: (data: CreateClientData ) => Promise<void>
   loading: boolean
 }
 
@@ -138,7 +138,7 @@ export function ClientForm({
         return
       }
       
-      const clientData: CreateClientData | UpdateClientData = {
+      const clientData: CreateClientData = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim().toLowerCase(),
