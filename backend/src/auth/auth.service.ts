@@ -39,6 +39,16 @@ export class AuthService {
     const errors: ErrorDetail[] = [];
 
     try {
+      // Validar username (validaciones adicionales)
+      console.log('\n🔎 Validando username...');
+      const usernameValidation = this.validateUsername(registerDto.username);
+      if (!usernameValidation.isValid) {
+        console.log('❌ Username inválido:', usernameValidation.errors);
+        errors.push(...usernameValidation.errors);
+      } else {
+        console.log('✅ Username válido');
+      }
+
       // Validar contraseña
       console.log('\n🔐 Validando contraseña...');
       const passwordValidation = this.validatePassword(registerDto.password);
@@ -808,6 +818,44 @@ export class AuthService {
     return { isValid: errors.length === 0, errors };
   }
 
+  private validateUsername(username: string): { isValid: boolean; errors: ErrorDetail[] } {
+    const errors: ErrorDetail[] = [];
+
+    // Validar longitud mínima
+    if (username.length < 3) {
+      errors.push({
+        code: ERROR_CODES.INVALID_USERNAME,
+        description: 'El username debe tener al menos 3 caracteres'
+      });
+    }
+
+    // Validar longitud máxima
+    if (username.length > 20) {
+      errors.push({
+        code: ERROR_CODES.INVALID_USERNAME,
+        description: 'El username no puede tener más de 20 caracteres'
+      });
+    }
+
+    // Validar caracteres permitidos (solo letras, números y guiones bajos)
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      errors.push({
+        code: ERROR_CODES.INVALID_USERNAME,
+        description: 'El username solo puede contener letras, números y guiones bajos'
+      });
+    }
+
+    // Validar que no empiece con número o guión bajo
+    if (/^[0-9_]/.test(username)) {
+      errors.push({
+        code: ERROR_CODES.INVALID_USERNAME,
+        description: 'El username no puede empezar con número o guión bajo'
+      });
+    }
+
+    return { isValid: errors.length === 0, errors };
+  }
+
   // ==================== PROFILE METHODS ====================
 
   async getProfile(userPayload: any): Promise<BaseResponseDto<ProfileResponseDto>> {
@@ -882,6 +930,16 @@ export class AuthService {
 
       // Verificar si el username ya existe (solo si se está intentando cambiar)
       if (updateProfileDto.username) {
+        // Validar username antes de verificar si existe
+        console.log('\n🔎 Validando username...');
+        const usernameValidation = this.validateUsername(updateProfileDto.username);
+        if (!usernameValidation.isValid) {
+          console.log('❌ Username inválido:', usernameValidation.errors);
+          return BaseResponseDto.error(usernameValidation.errors);
+        } else {
+          console.log('✅ Username válido');
+        }
+
         const existingUser = await this.prisma.user.findFirst({
           where: {
             username: updateProfileDto.username,
