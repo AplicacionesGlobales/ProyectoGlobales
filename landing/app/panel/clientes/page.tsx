@@ -1,7 +1,6 @@
-// landing\app\panel\clientes\page.tsx
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   Select,
@@ -24,7 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { 
   Users, 
   Plus, 
@@ -39,18 +44,19 @@ import {
   CheckCircle,
   RefreshCw,
   Filter,
-  TrendingUp
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Settings,
+  History
 } from "lucide-react"
 import { 
   clientsService, 
   Client, 
   CreateClientData, 
-  UpdateClientData, 
-  ClientType,
-  CLIENT_TYPE_LABELS,
-  CLIENT_TYPE_COLORS,
-  ClientStats
-} from "@/services/client.service"
+  UpdateClientData,
+  ClientFilters
+} from "@/services/clients.service"
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -64,9 +70,9 @@ interface ClientFormData {
   lastName: string
   email: string
   phone: string
-  dateOfBirth: string
-  address: string
   notes: string
+  createAccess: boolean
+  tempPassword: string
 }
 
 const defaultFormData: ClientFormData = {
@@ -74,9 +80,9 @@ const defaultFormData: ClientFormData = {
   lastName: '',
   email: '',
   phone: '',
-  dateOfBirth: '',
-  address: '',
-  notes: ''
+  notes: '',
+  createAccess: false,
+  tempPassword: ''
 }
 
 export default function ClientesPage() {
@@ -87,23 +93,28 @@ export default function ClientesPage() {
   
   const [brandData, setBrandData] = useState<BrandData | null>(null)
   const [clients, setClients] = useState<Client[]>([])
-  const [stats, setStats] = useState<ClientStats | null>(null)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1
+  })
   
   // Estados del UI
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedType, setSelectedType] = useState<ClientType | 'all'>('all')
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<'createdAt' | 'firstName' | 'email' | 'lastVisit'>('createdAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  
+  // Estados de modales
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [viewingClient, setViewingClient] = useState<Client | null>(null)
   
   // Estados del formulario
   const [formData, setFormData] = useState<ClientFormData>(defaultFormData)
-  
-  // Paginación
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const itemsPerPage = 20
 
   useEffect(() => {
     loadInitialData()
@@ -111,60 +122,48 @@ export default function ClientesPage() {
 
   useEffect(() => {
     loadClients()
-  }, [currentPage, searchTerm, selectedType])
+  }, [pagination.page, searchTerm, activeFilter, sortBy, sortOrder])
 
   const loadInitialData = async () => {
     try {
-      setLoading(true)
-      setError(null)
-
-      // Obtener datos del brand
+      // Obtener datos del brand desde localStorage
       const brandDataStr = localStorage.getItem('brand_data')
       if (!brandDataStr) {
         setError('No se encontraron datos del brand')
         return
       }
-
       const brand = JSON.parse(brandDataStr)
       setBrandData(brand)
-
-      // Cargar estadísticas
-      const statsResponse = await clientsService.getClientStats(brand.id)
-      if (statsResponse.success && statsResponse.data) {
-        setStats(statsResponse.data)
-      }
-
     } catch (error) {
       console.error('Error loading initial data:', error)
       setError('Error cargando datos iniciales')
-    } finally {
-      setLoading(false)
     }
   }
 
   const loadClients = async () => {
     if (!brandData) return
-
+    
     try {
       setLoading(true)
       setError(null)
-
-      const filters = {
+      
+      const filters: ClientFilters = {
+        page: pagination.page,
+        limit: pagination.limit,
         search: searchTerm || undefined,
-        clientType: selectedType !== 'all' ? selectedType : undefined,
-        isActive: true
+        active: activeFilter === 'all' ? undefined : activeFilter,
+        sortBy,
+        sortOrder
       }
-
-      const response = await clientsService.getClients(brandData.id, currentPage, itemsPerPage, filters)
-
+      
+      const response = await clientsService.getClients(brandData.id, filters)
+      
       if (response.success && response.data) {
-        setClients(response.data)
-        // Calcular páginas totales (esto debería venir del backend)
-        setTotalPages(Math.ceil(response.data.length / itemsPerPage))
+        setClients(response.data.clients)
+        setPagination(response.data.pagination)
       } else {
         setError(response.errors?.[0]?.description || 'Error cargando clientes')
       }
-
     } catch (error) {
       console.error('Error loading clients:', error)
       setError('Error cargando clientes')
@@ -173,126 +172,116 @@ export default function ClientesPage() {
     }
   }
 
-  // Filtrar clientes localmente (complemento al filtro del servidor)
-  const filteredClients = useMemo(() => {
-    let filtered = clients
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(client =>
-        `${client.firstName} ${client.lastName}`.toLowerCase().includes(term) ||
-        client.email.toLowerCase().includes(term) ||
-        (client.phone && client.phone.includes(term))
-      )
-    }
-
-    if (selectedType !== 'all') {
-      filtered = filtered.filter(client => client.clientType === selectedType)
-    }
-
-    return filtered
-  }, [clients, searchTerm, selectedType])
-
-  const handleFormChange = (field: keyof ClientFormData, value: string) => {
+  const handleFormChange = (field: keyof ClientFormData, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
   }
 
-  const handleOpenDialog = (client?: Client) => {
-    if (client) {
-      setEditingClient(client)
-      setFormData({
-        firstName: client.firstName,
-        lastName: client.lastName,
-        email: client.email,
-        phone: client.phone || '',
-        dateOfBirth: client.dateOfBirth || '',
-        address: client.address || '',
-        notes: client.notes || ''
-      })
-    } else {
-      setEditingClient(null)
-      setFormData(defaultFormData)
-    }
-    setIsDialogOpen(true)
-  }
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false)
-    setEditingClient(null)
+  const handleOpenCreateDialog = () => {
     setFormData(defaultFormData)
+    setIsCreateDialogOpen(true)
     setError(null)
   }
 
-  const handleViewClient = (client: Client) => {
-    setViewingClient(client)
-    setIsViewDialogOpen(true)
+  const handleOpenEditDialog = (client: Client) => {
+    setEditingClient(client)
+    setFormData({
+      firstName: client.firstName,
+      lastName: client.lastName,
+      email: client.email,
+      phone: client.phone || '',
+      notes: client.notes || '',
+      createAccess: false,
+      tempPassword: ''
+    })
+    setIsEditDialogOpen(true)
+    setError(null)
+  }
+
+  const handleOpenDetailView = async (client: Client) => {
+    try {
+      if (!brandData) return
+      
+      setLoading(true)
+      const response = await clientsService.getClient(brandData.id, client.id)
+      
+      if (response.success && response.data) {
+        setViewingClient(response.data)
+        setIsDetailViewOpen(true)
+      } else {
+        setError('Error cargando detalles del cliente')
+      }
+    } catch (error) {
+      setError('Error cargando detalles del cliente')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const validateForm = (): string | null => {
-    if (!formData.firstName.trim()) {
-      return 'El nombre es obligatorio'
-    }
-    if (!formData.lastName.trim()) {
-      return 'El apellido es obligatorio'
-    }
-    if (!formData.email.trim()) {
-      return 'El email es obligatorio'
-    }
+    if (!formData.firstName.trim()) return 'El nombre es obligatorio'
+    if (!formData.lastName.trim()) return 'El apellido es obligatorio'
+    if (!formData.email.trim()) return 'El email es obligatorio'
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) {
-      return 'El formato del email no es válido'
+    if (!emailRegex.test(formData.email)) return 'El formato del email no es válido'
+    
+    if (formData.createAccess && !formData.tempPassword.trim()) {
+      return 'La contraseña temporal es obligatoria cuando se crea acceso'
     }
-
+    
     return null
   }
 
   const handleSave = async () => {
     if (!brandData) return
-
+    
     try {
       setSaving(true)
       setError(null)
-
+      
       const validationError = validateForm()
       if (validationError) {
         setError(validationError)
         return
       }
-
+      
       const clientData: CreateClientData | UpdateClientData = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim() || undefined,
-        dateOfBirth: formData.dateOfBirth || undefined,
-        address: formData.address.trim() || undefined,
-        notes: formData.notes.trim() || undefined
+        notes: formData.notes.trim() || undefined,
       }
 
+      if (!editingClient) {
+        // Crear cliente
+        const createData = clientData as CreateClientData
+        createData.createAccess = formData.createAccess
+        if (formData.createAccess) {
+          createData.tempPassword = formData.tempPassword
+        }
+      }
+      
       let response
       if (editingClient) {
         response = await clientsService.updateClient(brandData.id, editingClient.id, clientData)
       } else {
         response = await clientsService.createClient(brandData.id, clientData as CreateClientData)
       }
-
+      
       if (response.success) {
         setSuccess(editingClient ? 'Cliente actualizado exitosamente' : 'Cliente creado exitosamente')
-        handleCloseDialog()
+        setIsCreateDialogOpen(false)
+        setIsEditDialogOpen(false)
+        setEditingClient(null)
+        setFormData(defaultFormData)
         loadClients()
-        
-        // Actualizar estadísticas
-        if (!editingClient) {
-          loadInitialData()
-        }
       } else {
         setError(response.errors?.[0]?.description || 'Error guardando cliente')
       }
-
     } catch (error: any) {
       console.error('Error saving client:', error)
       setError('Error guardando cliente')
@@ -301,20 +290,19 @@ export default function ClientesPage() {
     }
   }
 
-  const handleDelete = async (clientId: number) => {
+  const handleDelete = async (client: Client) => {
     if (!brandData) return
     
-    if (!confirm('¿Está seguro de que desea eliminar este cliente?')) {
+    if (!confirm(`¿Está seguro de que desea eliminar a ${client.firstName} ${client.lastName}?`)) {
       return
     }
-
+    
     try {
-      const response = await clientsService.deleteClient(brandData.id, clientId)
+      const response = await clientsService.deleteClient(brandData.id, client.id)
       
       if (response.success) {
         setSuccess('Cliente eliminado exitosamente')
         loadClients()
-        loadInitialData() // Actualizar estadísticas
       } else {
         setError(response.errors?.[0]?.description || 'Error eliminando cliente')
       }
@@ -324,17 +312,17 @@ export default function ClientesPage() {
     }
   }
 
-  const getTypeColor = (type: ClientType): string => {
-    return CLIENT_TYPE_COLORS[type]
-  }
-
-  const getTypeLabel = (type: ClientType): string => {
-    return CLIENT_TYPE_LABELS[type]
-  }
-
   const formatDate = (dateString: string): string => {
     try {
       return format(new Date(dateString), 'dd/MM/yyyy', { locale: es })
+    } catch {
+      return dateString
+    }
+  }
+
+  const formatDateTime = (dateString: string): string => {
+    try {
+      return format(new Date(dateString), 'dd/MM/yyyy HH:mm', { locale: es })
     } catch {
       return dateString
     }
@@ -358,12 +346,16 @@ export default function ClientesPage() {
     }
   }
 
-  if (loading && !clients.length) {
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }))
+  }
+
+  if (loading && clients.length === 0) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
-          <p className="text-muted-foreground">Cargando clientes...</p>
+        <div className="flex items-center justify-center py-8">
+          <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+          <span>Cargando clientes...</span>
         </div>
       </div>
     )
@@ -375,10 +367,10 @@ export default function ClientesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
           <p className="text-muted-foreground">
-            Gestiona tu base de datos de clientes y su historial.
+            Gestiona tu base de datos de clientes - Total: {pagination.total}
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={handleOpenCreateDialog}>
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Cliente
         </Button>
@@ -398,63 +390,6 @@ export default function ClientesPage() {
         </Alert>
       )}
 
-      {/* Estadísticas */}
-      {stats && (
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Clientes</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalClients || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.activeClients || 0} activos
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Nuevos Este Mes</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.newClientsThisMonth || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Clientes registrados
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clientes</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.clientTypes?.client || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Clientes registrados
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Administradores</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.clientTypes?.root || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Usuarios admin
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* Filtros y búsqueda */}
       <Card>
         <CardContent className="p-6">
@@ -462,22 +397,39 @@ export default function ClientesPage() {
             <div className="relative flex-1">
               <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-3" />
               <Input
-                placeholder="Buscar clientes por nombre, teléfono o email..."
+                placeholder="Buscar por nombre, email o teléfono..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
               />
             </div>
-            <Select value={selectedType} onValueChange={(value) => setSelectedType(value as ClientType | 'all')}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filtrar por tipo" />
+            <Select value={activeFilter} onValueChange={setActiveFilter}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value={ClientType.CLIENT}>Clientes</SelectItem>
-                <SelectItem value={ClientType.ROOT}>Administradores</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="createdAt">Fecha registro</SelectItem>
+                <SelectItem value="firstName">Nombre</SelectItem>
+                <SelectItem value="email">Email</SelectItem>
+                <SelectItem value="lastVisit">Última visita</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button 
+              variant="outline" 
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </Button>
             <Button variant="outline" onClick={loadClients}>
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -493,117 +445,140 @@ export default function ClientesPage() {
             Lista de Clientes
           </CardTitle>
           <CardDescription>
-            {filteredClients.length} cliente{filteredClients.length !== 1 ? 's' : ''} {searchTerm || selectedType !== 'all' ? 'encontrado' + (filteredClients.length !== 1 ? 's' : '') : 'registrado' + (filteredClients.length !== 1 ? 's' : '')}
+            Página {pagination.page} de {pagination.totalPages} - {clients.length} clientes mostrados
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="h-6 w-6 animate-spin" />
-              <span className="ml-2">Cargando clientes...</span>
+              <span className="ml-2">Cargando...</span>
             </div>
-          ) : filteredClients.length === 0 ? (
+          ) : clients.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">
-                {searchTerm || selectedType !== 'all' 
-                  ? 'No se encontraron clientes' 
-                  : 'No hay clientes registrados'
-                }
-              </h3>
+              <h3 className="text-lg font-medium mb-2">No hay clientes</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm || selectedType !== 'all'
-                  ? 'Intenta con otros términos de búsqueda'
+                {searchTerm || activeFilter !== 'all'
+                  ? 'No se encontraron clientes con esos filtros'
                   : 'Comienza agregando tu primer cliente'
                 }
               </p>
-              <Button onClick={() => handleOpenDialog()}>
+              <Button onClick={handleOpenCreateDialog}>
                 <Plus className="mr-2 h-4 w-4" />
-                Agregar Primer Cliente
+                Agregar Cliente
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredClients.map((client) => (
-                <div
-                  key={client.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium">
-                      {client.firstName.charAt(0)}{client.lastName.charAt(0)}
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{client.firstName} {client.lastName}</h3>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {client.email}
-                        </span>
-                        {client.phone && (
+            <>
+              <div className="space-y-4">
+                {clients.map((client) => (
+                  <div
+                    key={client.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium">
+                        {client.firstName.charAt(0)}{client.lastName.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{client.firstName} {client.lastName}</h3>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {client.phone}
+                            <Mail className="h-3 w-3" />
+                            {client.email}
                           </span>
-                        )}
+                          {client.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {client.phone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="text-right text-sm">
+                        <p className="font-medium">Citas: {client.totalAppointments}</p>
+                        <p className="text-muted-foreground">
+                          Última: {formatLastVisit(client.lastVisit)}
+                        </p>
+                      </div>
+                      <Badge variant={client.isActive ? "default" : "secondary"}>
+                        {client.isActive ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenDetailView(client)}
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenEditDialog(client)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(client)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-sm font-medium">Última visita</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatLastVisit(client.lastVisit)}
-                      </p>
-                    </div>
-                    <Badge variant={getTypeColor(client.clientType) as any}>
-                      {getTypeLabel(client.clientType)}
-                    </Badge>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewClient(client)}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenDialog(client)}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(client.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
+                ))}
+              </div>
+
+              {/* Paginación */}
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Página {pagination.page} de {pagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.totalPages}
+                    >
+                      Siguiente
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Modal para crear/editar cliente */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Modal para crear cliente */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}
-            </DialogTitle>
+            <DialogTitle>Nuevo Cliente</DialogTitle>
             <DialogDescription>
-              {editingClient ? 'Modifica la información del cliente' : 'Agrega un nuevo cliente a tu base de datos'}
+              Registra un nuevo cliente en tu base de datos
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -623,7 +598,6 @@ export default function ClientesPage() {
                 />
               </div>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="email">Email *</Label>
               <Input
@@ -633,7 +607,6 @@ export default function ClientesPage() {
                 onChange={(e) => handleFormChange('email', e.target.value)}
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="phone">Teléfono</Label>
               <Input
@@ -642,26 +615,6 @@ export default function ClientesPage() {
                 onChange={(e) => handleFormChange('phone', e.target.value)}
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dateOfBirth">Fecha de Nacimiento</Label>
-              <Input
-                id="dateOfBirth"
-                type="date"
-                value={formData.dateOfBirth}
-                onChange={(e) => handleFormChange('dateOfBirth', e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">Dirección</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => handleFormChange('address', e.target.value)}
-              />
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="notes">Notas</Label>
               <Textarea
@@ -672,130 +625,347 @@ export default function ClientesPage() {
                 rows={3}
               />
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="createAccess"
+                checked={formData.createAccess}
+                onCheckedChange={(checked) => handleFormChange('createAccess', !!checked)}
+              />
+              <Label htmlFor="createAccess" className="text-sm">
+                Crear acceso al sistema
+              </Label>
+            </div>
+            {formData.createAccess && (
+              <div className="space-y-2">
+                <Label htmlFor="tempPassword">Contraseña Temporal *</Label>
+                <Input
+                  id="tempPassword"
+                  type="password"
+                  value={formData.tempPassword}
+                  onChange={(e) => handleFormChange('tempPassword', e.target.value)}
+                  placeholder="Contraseña temporal para el cliente"
+                />
+              </div>
+            )}
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={handleCloseDialog}>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  {editingClient ? 'Actualizando...' : 'Creando...'}
+                  Creando...
                 </>
               ) : (
-                editingClient ? 'Actualizar Cliente' : 'Crear Cliente'
+                'Crear Cliente'
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal para ver detalles del cliente */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+      {/* Modal para editar cliente */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Detalles del Cliente</DialogTitle>
+            <DialogTitle>Editar Cliente</DialogTitle>
             <DialogDescription>
-              Información completa del cliente
+              Modifica la información del cliente
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editFirstName">Nombre *</Label>
+                <Input
+                  id="editFirstName"
+                  value={formData.firstName}
+                  onChange={(e) => handleFormChange('firstName', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editLastName">Apellido *</Label>
+                <Input
+                  id="editLastName"
+                  value={formData.lastName}
+                  onChange={(e) => handleFormChange('lastName', e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editEmail">Email *</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleFormChange('email', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPhone">Teléfono</Label>
+              <Input
+                id="editPhone"
+                value={formData.phone}
+                onChange={(e) => handleFormChange('phone', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editNotes">Notas</Label>
+              <Textarea
+                id="editNotes"
+                placeholder="Notas adicionales sobre el cliente..."
+                value={formData.notes}
+                onChange={(e) => handleFormChange('notes', e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Actualizando...
+                </>
+              ) : (
+                'Actualizar Cliente'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
+      {/* Modal de vista detallada del cliente (ClientDetailView) */}
+      <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Perfil del Cliente
+            </DialogTitle>
+            <DialogDescription>
+              Vista completa del perfil y historial del cliente
+            </DialogDescription>
+          </DialogHeader>
+          
           {viewingClient && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xl font-medium">
+            <div className="space-y-6">
+              {/* Header del cliente */}
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xl font-bold">
                   {viewingClient.firstName.charAt(0)}{viewingClient.lastName.charAt(0)}
                 </div>
-                <div>
-                  <h3 className="text-lg font-medium">
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold">
                     {viewingClient.firstName} {viewingClient.lastName}
-                  </h3>
-                  <Badge variant={getTypeColor(viewingClient.clientType) as any}>
-                    {getTypeLabel(viewingClient.clientType)}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{viewingClient.email}</span>
-                </div>
-
-                {viewingClient.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{viewingClient.phone}</span>
+                  </h2>
+                  <p className="text-muted-foreground">{viewingClient.email}</p>
+                  <div className="flex items-center gap-4 mt-2">
+                    <Badge variant={viewingClient.isActive ? "default" : "secondary"}>
+                      {viewingClient.isActive ? 'Cliente Activo' : 'Cliente Inactivo'}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      Cliente desde {formatDate(viewingClient.createdAt)}
+                    </span>
                   </div>
-                )}
-
-                {viewingClient.dateOfBirth && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>Nació el {formatDate(viewingClient.dateOfBirth)}</span>
-                  </div>
-                )}
-
-                {viewingClient.address && (
-                  <div className="flex items-start gap-2">
-                    <div className="h-4 w-4 text-muted-foreground mt-0.5">📍</div>
-                    <span>{viewingClient.address}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium">Total Visitas</p>
-                  <p className="text-lg font-bold">{viewingClient.totalVisits}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Total Gastado</p>
-                  <p className="text-lg font-bold">${viewingClient.totalSpent}</p>
-                </div>
-              </div>
-
-              {viewingClient.lastVisit && (
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-blue-700">Última Visita</p>
-                  <p className="text-blue-600">{formatLastVisit(viewingClient.lastVisit)}</p>
-                </div>
-              )}
-
-              {viewingClient.notes && (
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium mb-1">Notas</p>
-                  <p className="text-sm text-gray-600">{viewingClient.notes}</p>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-4">
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => {
-                    setIsViewDialogOpen(false)
-                    handleOpenDialog(viewingClient)
+                    setIsDetailViewOpen(false)
+                    handleOpenEditDialog(viewingClient)
                   }}
                 >
+                  <Edit className="h-3 w-3 mr-1" />
                   Editar
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    // TODO: Abrir modal de crear cita con este cliente preseleccionado
-                  }}
-                >
-                  <Calendar className="h-3 w-3 mr-1" />
-                  Agendar Cita
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setIsViewDialogOpen(false)}>
-                  Cerrar
-                </Button>
               </div>
+
+              {/* Tabs del cliente */}
+              <Tabs defaultValue="info" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="info" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Información
+                  </TabsTrigger>
+                  <TabsTrigger value="history" className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Historial
+                  </TabsTrigger>
+                  <TabsTrigger value="notes" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Notas
+                  </TabsTrigger>
+                  <TabsTrigger value="settings" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Configuración
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="info" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Información Personal</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Nombre</Label>
+                          <p className="text-sm">{viewingClient.firstName}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Apellido</Label>
+                          <p className="text-sm">{viewingClient.lastName}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                          <p className="text-sm flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {viewingClient.email}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Teléfono</Label>
+                          <p className="text-sm flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {viewingClient.phone || 'No especificado'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Estadísticas</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <p className="text-2xl font-bold text-blue-600">
+                            {viewingClient.totalAppointments}
+                          </p>
+                          <p className="text-sm text-blue-600">Total Citas</p>
+                        </div>
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <p className="text-2xl font-bold text-green-600">
+                            {viewingClient.lastVisit ? 'Reciente' : 'Nunca'}
+                          </p>
+                          <p className="text-sm text-green-600">Estado</p>
+                        </div>
+                        <div className="text-center p-3 bg-purple-50 rounded-lg">
+                          <p className="text-2xl font-bold text-purple-600">
+                            {viewingClient.isActive ? 'Activo' : 'Inactivo'}
+                          </p>
+                          <p className="text-sm text-purple-600">Cliente</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="history" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Historial de Citas</CardTitle>
+                      <CardDescription>
+                        Historial completo de citas y servicios
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {viewingClient.totalAppointments === 0 ? (
+                        <div className="text-center py-8">
+                          <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                          <h3 className="text-lg font-medium mb-2">Sin historial de citas</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Este cliente aún no tiene citas registradas
+                          </p>
+                          <Button variant="outline">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            Crear Primera Cita
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 border rounded">
+                            <div>
+                              <p className="font-medium">Última visita</p>
+                              <p className="text-sm text-muted-foreground">
+                                {formatLastVisit(viewingClient.lastVisit)}
+                              </p>
+                            </div>
+                            <Badge>Completada</Badge>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="notes" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Notas del Cliente</CardTitle>
+                      <CardDescription>
+                        Notas e información adicional sobre el cliente
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {viewingClient.notes ? (
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <p className="text-sm">{viewingClient.notes}</p>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                          <p className="text-muted-foreground">No hay notas registradas para este cliente</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="settings" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Configuración del Cliente</CardTitle>
+                      <CardDescription>
+                        Ajustes y preferencias del cliente
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Estado</Label>
+                          <p className="text-sm">{viewingClient.isActive ? 'Cliente Activo' : 'Cliente Inactivo'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Fecha de Registro</Label>
+                          <p className="text-sm">{formatDateTime(viewingClient.createdAt)}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Última Actualización</Label>
+                          <p className="text-sm">{formatDateTime(viewingClient.updatedAt)}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">ID del Cliente</Label>
+                          <p className="text-sm font-mono">#{viewingClient.id}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </DialogContent>
