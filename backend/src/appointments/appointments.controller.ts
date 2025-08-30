@@ -27,6 +27,7 @@ import { AppointmentsService } from './appointments.service';
 import { BaseResponseDto } from '../common/dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BrandOwnerGuard } from '../common/guards/brand-owner.guard';
+import { Public } from '../common/decorators';
 import {
   AppointmentDto,
   CreateAppointmentDto,
@@ -41,6 +42,10 @@ import {
   GetCalendarMonthDto,
   CalendarMonthResponseDto
 } from './dto/calendar-month.dto';
+import {
+  DayAgendaDto,
+  GetDayAgendaQueryDto
+} from './dto/day-agenda.dto';
 
 @ApiTags('Appointments Management')
 @Controller('brand/:brandId')
@@ -461,5 +466,40 @@ export class AppointmentsController {
     );
     
     return BaseResponseDto.success(result.data?.appointments || []);
+  }
+
+  // Get complete day agenda with appointments and available slots
+  @Get('calendar/today/agenda')
+  @UseGuards(JwtAuthGuard) // Requiere autenticación
+  @ApiOperation({
+    summary: 'Obtener agenda completa del día actual',
+    description: 'Retorna la agenda del día actual con citas programadas y espacios disponibles. Solo accesible para miembros del brand.'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiQuery({ 
+    name: 'includeCancelled', 
+    required: false, 
+    description: 'Incluir citas canceladas (solo para dueños)',
+    example: false
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Agenda del día obtenida exitosamente',
+    type: BaseResponseDto
+  })
+  async getTodayAgenda(
+    @Param('brandId') brandId: string,
+    @Query(ValidationPipe) query: GetDayAgendaQueryDto,
+    @Request() req: any
+  ): Promise<BaseResponseDto<DayAgendaDto>> {
+    // Always use current date
+    const today = new Date().toISOString().split('T')[0];
+    const userId = req.user?.sub || req.user?.userId;
+    return this.appointmentsService.getDayAgenda(
+      parseInt(brandId),
+      today,
+      userId,
+      query
+    );
   }
 }
