@@ -594,7 +594,7 @@ class ClientsService {
     try {
       console.log('🚀 Getting top clients:', brandId);
       const response = await apiClient.get<Client[]>(
-        `${API_ENDPOINTS.CLIENTS.GET_ALL(brandId)}?clientType=${ClientType.CLIENT}&sortBy=totalSpent&order=desc`,
+        `${API_ENDPOINTS.CLIENTS.GET_ALL(brandId)}`,
         { headers: this.getAuthHeaders() }
       );
       console.log('✅ Top clients response:', response);
