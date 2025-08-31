@@ -95,14 +95,14 @@ export const API_ENDPOINTS = {
 
   // Client management endpoints
   CLIENTS: {
-    GET_ALL: (brandId: number) => `/brand/${brandId}/clients`,
-    GET_BY_ID: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}`,
-    CREATE: (brandId: number) => `/brand/${brandId}/clients`,
-    UPDATE: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}`,
-    DELETE: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}`,
-    SEARCH: (brandId: number) => `/brand/${brandId}/clients/search`,
-    GET_APPOINTMENTS: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}/appointments`,
-    GET_HISTORY: (brandId: number, clientId: number) => `/brand/${brandId}/clients/${clientId}/history`,
+    GET_ALL: (brandId: number) => `/brands/${brandId}/clients`,
+    GET_BY_ID: (brandId: number, clientId: number) => `/brands/${brandId}/clients/${clientId}`,
+    CREATE: (brandId: number) => `/brands/${brandId}/clients`,
+    UPDATE: (brandId: number, clientId: number) => `/brands/${brandId}/clients/${clientId}`,
+    DELETE: (brandId: number, clientId: number) => `/brands/${brandId}/clients/${clientId}`,
+    SEARCH: (brandId: number) => `/brands/${brandId}/clients/search`,
+    GET_APPOINTMENTS: (brandId: number, clientId: number) => `/brands/${brandId}/clients/${clientId}/appointments`,
+    GET_HISTORY: (brandId: number, clientId: number) => `/brands/${brandId}/clients/${clientId}/history`,
   },
 
   // Schedule endpoints
