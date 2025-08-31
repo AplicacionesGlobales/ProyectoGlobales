@@ -32,6 +32,8 @@ import {
   AgendaSlotType,
   BusinessHoursDto
 } from './dto/day-agenda.dto';
+import { AppointmentUtils } from './utils/appointment.utils';
+import { APPOINTMENT_CONSTANTS } from './utils/appointment.constants';
 
 @Injectable()
 export class AppointmentsService {
@@ -1064,98 +1066,109 @@ export class AppointmentsService {
       return agenda;
     }
 
-    // Parse business hours
-    const startMinutes = this.timeToMinutes(businessHours.start);
-    const endMinutes = this.timeToMinutes(businessHours.end);
-
-    // Sort appointments by start time
-    const sortedAppointments = [...appointments].sort((a, b) => 
-      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    // Generate all possible time slots using utils
+    const allTimeSlots = AppointmentUtils.generateTimeSlots(
+      businessHours.start,
+      businessHours.end,
+      slotDuration
     );
 
-    let currentMinutes = startMinutes;
+    // Convert appointments to a more efficient format for conflict checking
+    const appointmentBlocks = appointments.map(apt => {
+      const start = new Date(apt.startTime);
+      const end = new Date(apt.endTime);
+      return {
+        startMinutes: start.getUTCHours() * 60 + start.getUTCMinutes(),
+        endMinutes: end.getUTCHours() * 60 + end.getUTCMinutes(),
+        appointment: apt
+      };
+    }).sort((a, b) => a.startMinutes - b.startMinutes);
+
+    // Process each time slot
     let appointmentIndex = 0;
+    
+    for (let i = 0; i < allTimeSlots.length; i++) {
+      const slotTime = allTimeSlots[i];
+      const slotStartMinutes = AppointmentUtils.timeToMinutes(slotTime);
+      const slotEndMinutes = slotStartMinutes + slotDuration;
 
-    while (currentMinutes < endMinutes) {
-      const currentTime = this.minutesToTime(currentMinutes);
-      
-      // Check if there's an appointment at this time
-      const currentAppointment = sortedAppointments.find(apt => {
-        const aptStart = new Date(apt.startTime);
-        const aptStartMinutes = aptStart.getHours() * 60 + aptStart.getMinutes();
-        return aptStartMinutes === currentMinutes;
-      });
+      // Check if this slot has an appointment
+      const appointmentAtSlot = appointmentBlocks.find(apt => 
+        apt.startMinutes === slotStartMinutes
+      );
 
-      if (currentAppointment) {
+      if (appointmentAtSlot) {
         // Add appointment slot
-        const aptStart = new Date(currentAppointment.startTime);
-        const aptEnd = new Date(currentAppointment.endTime);
-        const aptDuration = (aptEnd.getTime() - aptStart.getTime()) / (1000 * 60);
-
+        const aptDuration = appointmentAtSlot.endMinutes - appointmentAtSlot.startMinutes;
+        
         agenda.push({
-          startTime: this.minutesToTime(currentMinutes),
-          endTime: this.minutesToTime(currentMinutes + aptDuration),
+          startTime: AppointmentUtils.minutesToTime(appointmentAtSlot.startMinutes),
+          endTime: AppointmentUtils.minutesToTime(appointmentAtSlot.endMinutes),
           type: AgendaSlotType.APPOINTMENT,
-          appointment: currentAppointment,
+          appointment: appointmentAtSlot.appointment,
           duration: aptDuration,
           isBookable: false
         });
 
-        currentMinutes += aptDuration;
+        // Skip slots that overlap with this appointment
+        const slotsToSkip = Math.ceil(aptDuration / slotDuration) - 1;
+        i += slotsToSkip;
       } else {
-        // Check if current slot would overlap with next appointment
-        const nextAppointment = sortedAppointments.find(apt => {
-          const aptStart = new Date(apt.startTime);
-          const aptStartMinutes = aptStart.getHours() * 60 + aptStart.getMinutes();
-          return aptStartMinutes > currentMinutes;
-        });
+        // Check if this slot conflicts with any appointment
+        const hasConflict = appointmentBlocks.some(apt =>
+          AppointmentUtils.hasTimeConflict(
+            { startTime: new Date(), endTime: new Date() }, // Dummy dates, we use minutes
+            { startTime: new Date(), endTime: new Date() }
+          ) || (
+            apt.startMinutes < slotEndMinutes && apt.endMinutes > slotStartMinutes
+          )
+        );
 
-        let availableSlotDuration = slotDuration;
-        
-        if (nextAppointment) {
-          const nextAptStart = new Date(nextAppointment.startTime);
-          const nextAptStartMinutes = nextAptStart.getHours() * 60 + nextAptStart.getMinutes();
-          const timeUntilNextApt = nextAptStartMinutes - currentMinutes;
+        if (!hasConflict) {
+          // Calculate available slot duration (might extend beyond standard slot)
+          let availableEndMinutes = slotEndMinutes;
           
-          if (timeUntilNextApt < slotDuration) {
-            availableSlotDuration = timeUntilNextApt;
+          // Find next appointment to determine max available time
+          const nextAppointment = appointmentBlocks.find(apt => 
+            apt.startMinutes >= slotEndMinutes
+          );
+          
+          if (nextAppointment) {
+            const businessEndMinutes = AppointmentUtils.timeToMinutes(businessHours.end);
+            const maxPossibleEnd = Math.min(nextAppointment.startMinutes, businessEndMinutes);
+            
+            // Extend the slot if we have more time available
+            if (maxPossibleEnd > availableEndMinutes) {
+              availableEndMinutes = maxPossibleEnd;
+            }
+          } else {
+            // No more appointments, extend to business hours end
+            availableEndMinutes = AppointmentUtils.timeToMinutes(businessHours.end);
+          }
+
+          const availableDuration = availableEndMinutes - slotStartMinutes;
+          
+          // Only add slot if it's meaningful (use constant from utils)
+          if (availableDuration >= APPOINTMENT_CONSTANTS.DURATION.MIN) {
+            agenda.push({
+              startTime: slotTime,
+              endTime: AppointmentUtils.minutesToTime(availableEndMinutes),
+              type: AgendaSlotType.AVAILABLE,
+              duration: availableDuration,
+              isBookable: availableDuration >= slotDuration
+            });
+
+            // Skip overlapping slots if this is a larger block
+            if (availableDuration > slotDuration) {
+              const slotsToSkip = Math.floor(availableDuration / slotDuration) - 1;
+              i += slotsToSkip;
+            }
           }
         }
-
-        // Check if slot fits before business hours end
-        if (currentMinutes + availableSlotDuration > endMinutes) {
-          availableSlotDuration = endMinutes - currentMinutes;
-        }
-
-        // Only add slot if it's meaningful (at least 15 minutes)
-        if (availableSlotDuration >= 15) {
-          agenda.push({
-            startTime: this.minutesToTime(currentMinutes),
-            endTime: this.minutesToTime(currentMinutes + availableSlotDuration),
-            type: AgendaSlotType.AVAILABLE,
-            duration: availableSlotDuration,
-            isBookable: availableSlotDuration >= slotDuration
-          });
-        }
-
-        currentMinutes += availableSlotDuration;
       }
     }
 
     return agenda;
-  }
-
-  // Convert time string (HH:mm) to minutes
-  private timeToMinutes(time: string): number {
-    const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes;
-  }
-
-  // Convert minutes to time string (HH:mm)
-  private minutesToTime(minutes: number): string {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
   }
 
   // Mapear entidad a DTO
