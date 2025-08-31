@@ -113,7 +113,7 @@ export class AppointmentsService {
       await this.getBrandConfigurations(brandId);
 
     // 1. Validar horarios usando la misma lógica que getDayAgenda
-    const dayOfWeek = startTime.getDay();
+    const dayOfWeek = startTime.getUTCDay(); // Use UTC to match database timezone
     const dateStr = startTime.toISOString().split('T')[0];
     const businessHoursForDay = await this.getBusinessHoursForDay(brandId, dayOfWeek, dateStr);
     
@@ -728,7 +728,7 @@ export class AppointmentsService {
       for (let day = 1; day <= endDate.getDate(); day++) {
         const currentDate = new Date(year, monthNum - 1, day);
         const dateStr = currentDate.toISOString().split('T')[0];
-        const dayOfWeek = currentDate.getDay();
+        const dayOfWeek = currentDate.getUTCDay(); // Use UTC to match database timezone
 
         // Verificar si es día laborable
         const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
@@ -844,8 +844,8 @@ export class AppointmentsService {
         throw new BadRequestException('Formato de fecha inválido. Use YYYY-MM-DD');
       }
 
-      const targetDate = new Date(date);
-      const dayOfWeek = targetDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const targetDate = new Date(date + 'T00:00:00Z'); // Force UTC to match database
+      const dayOfWeek = targetDate.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
       const includeCancelled = query.includeCancelled || false;
 
       // Get brand settings for slot duration
@@ -971,8 +971,8 @@ export class AppointmentsService {
 
   // Helper method to check if business is open on a specific date
   async isBusinessOpenOnDate(brandId: number, date: string): Promise<boolean> {
-    const targetDate = new Date(date);
-    const dayOfWeek = targetDate.getDay();
+    const targetDate = new Date(date + 'T00:00:00Z'); // Force UTC
+    const dayOfWeek = targetDate.getUTCDay(); // Use UTC to match database timezone
     
     const businessHours = await this.getBusinessHoursForDay(brandId, dayOfWeek, date);
     return !businessHours.isClosed;
