@@ -6,90 +6,160 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { AppointmentActions } from "@/components/appointment-actions"
-
-interface Appointment {
-  id: number
-  brandId: number
-  clientId: number
-  startTime: string
-  endTime: string
-  duration: number
-  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED"
-  notes: string | null
-  createdBy: number
-  createdAt: string
-  updatedAt: string
-  client: {
-    id: number
-    firstName: string
-    lastName: string
-    email: string
-  }
-  creator: {
-    id: number
-    firstName: string
-    lastName: string
-    email: string
-  }
-}
-
-interface AppointmentsResponse {
-  success: boolean
-  data: {
-    appointments: Appointment[]
-    total: number
-    pages: number
-  }
-}
+import { appointmentsService, Appointment, AppointmentStatus } from "@/services/appointment.service"
 
 export default function AdminAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [monthAppointments, setMonthAppointments] = useState<Appointment[]>([])
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [loading, setLoading] = useState(true)
+  const [loadingMonth, setLoadingMonth] = useState(false)
 
-  const fetchAppointments = async () => {
+  // Obtener el brandId del usuario (temporal)
+  const getBrandId = () => {
+    // En producción, obtener del contexto de auth o del token decodificado
+    return 1;
+  }
+
+  // Formatear fecha a YYYY-MM-DD
+  const formatDateForAPI = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  // Obtener primer y último día del mes
+  const getMonthDateRange = (date: Date) => {
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1)
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0)
+    return {
+      startDate: formatDateForAPI(firstDay),
+      endDate: formatDateForAPI(lastDay)
+    }
+  }
+
+  // Cargar citas del día seleccionado
+  const fetchDayAppointments = async () => {
     try {
       setLoading(true)
-      const brandId = 1 // Temporal - en producción obtener del token
+      const brandId = getBrandId()
+      const dateStr = formatDateForAPI(selectedDate)
 
-      const response = await fetch(`/api/brand/${brandId}/appointments?limit=100&page=1`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`, // Ajustar según tu implementación de auth
-          "Content-Type": "application/json",
-        },
-      })
+      // Usar el método getAppointments con filtros de fecha
+      const response = await appointmentsService.getAppointments(
+        brandId,
+        1, // página
+        100, // límite
+        {
+          startDate: dateStr,
+          endDate: dateStr
+        }
+      )
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch appointments")
+      if (response.success && response.data) {
+        // Verificar el tipo de response.data
+        let appointmentsList: Appointment[] = []
+        
+        if (Array.isArray(response.data)) {
+          appointmentsList = response.data
+        } else if (typeof response.data === 'object' && 'appointments' in response.data) {
+          appointmentsList = (response.data as any).appointments || []
+        }
+        
+        setAppointments(appointmentsList)
+      } else {
+        console.error('Error:', response.errors)
+        setAppointments([])
       }
-
-      const data: AppointmentsResponse = await response.json()
-      setAppointments(data.data.appointments)
     } catch (error) {
-      console.error("Error fetching appointments:", error)
+      console.error("Error fetching day appointments:", error)
       setAppointments([])
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchAppointments()
-  }, [])
+  // Cargar todas las citas del mes para mostrar indicadores
+  const fetchMonthAppointments = async () => {
+    try {
+      setLoadingMonth(true)
+      const brandId = getBrandId()
+      const { startDate, endDate } = getMonthDateRange(currentMonth)
 
-  const handleStatusChange = (appointmentId: number, newStatus: string) => {
-    setAppointments((prev) =>
-      prev.map((apt) => (apt.id === appointmentId ? { ...apt, status: newStatus as Appointment["status"] } : apt)),
-    )
+      // Usar el método getAppointments con rango de fechas
+      const response = await appointmentsService.getAppointments(
+        brandId,
+        1, // página
+        200, // límite mayor para el mes completo
+        {
+          startDate,
+          endDate
+        }
+      )
+
+      if (response.success && response.data) {
+        // Verificar el tipo de response.data
+        let appointmentsList: Appointment[] = []
+        
+        if (Array.isArray(response.data)) {
+          appointmentsList = response.data
+        } else if (typeof response.data === 'object' && 'appointments' in response.data) {
+          appointmentsList = (response.data as any).appointments || []
+        }
+        
+        setMonthAppointments(appointmentsList)
+      } else {
+        console.error('Error:', response.errors)
+        setMonthAppointments([])
+      }
+    } catch (error) {
+      console.error("Error fetching month appointments:", error)
+      setMonthAppointments([])
+    } finally {
+      setLoadingMonth(false)
+    }
   }
 
-  const filteredAppointments = appointments.filter((appointment) => {
-    const appointmentDate = new Date(appointment.startTime).toISOString().split("T")[0]
-    const selectedDateStr = selectedDate.toISOString().split("T")[0]
-    return appointmentDate === selectedDateStr
-  })
+  // Manejar cambio de estado de cita
+  const handleStatusChange = async (appointmentId: number, newStatus: string) => {
+    try {
+      const brandId = getBrandId()
+      
+      // Usar el método updateAppointment con el objeto de status
+      const response = await appointmentsService.updateAppointment(brandId, appointmentId, {
+        status: newStatus as AppointmentStatus
+      })
 
+      if (response.success) {
+        // Actualizar estado local
+        setAppointments((prev) =>
+          prev.map((apt) => 
+            apt.id === appointmentId 
+              ? { ...apt, status: newStatus as AppointmentStatus } 
+              : apt
+          )
+        )
+        
+        // También actualizar en las citas del mes
+        setMonthAppointments((prev) =>
+          prev.map((apt) => 
+            apt.id === appointmentId 
+              ? { ...apt, status: newStatus as AppointmentStatus } 
+              : apt
+          )
+        )
+      } else {
+        console.error('Error actualizando estado:', response.errors)
+        // Aquí podrías mostrar un toast o notificación de error
+      }
+    } catch (error) {
+      console.error('Error updating appointment status:', error)
+    }
+  }
+
+  // Generar días del calendario
   const generateCalendarDays = () => {
     const year = currentMonth.getFullYear()
     const month = currentMonth.getMonth()
@@ -113,19 +183,30 @@ export default function AdminAppointmentsPage() {
   const today = new Date()
   const currentMonthNumber = currentMonth.getMonth()
 
+  // Navegar entre meses
   const navigateMonth = (direction: "prev" | "next") => {
     const newMonth = new Date(currentMonth)
     newMonth.setMonth(currentMonth.getMonth() + (direction === "next" ? 1 : -1))
     setCurrentMonth(newMonth)
   }
 
+  // Obtener cantidad de citas para un día
   const getAppointmentCount = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0]
-    return appointments.filter((apt) => {
-      const aptDate = new Date(apt.startTime).toISOString().split("T")[0]
-      return aptDate === dateStr
+    const dateStr = formatDateForAPI(date)
+    return monthAppointments.filter((apt) => {
+      const aptDate = formatDateForAPI(new Date(apt.startTime))
+      return aptDate === dateStr && apt.status !== AppointmentStatus.CANCELLED
     }).length
   }
+
+  // Efectos
+  useEffect(() => {
+    fetchDayAppointments()
+  }, [selectedDate])
+
+  useEffect(() => {
+    fetchMonthAppointments()
+  }, [currentMonth])
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -152,10 +233,22 @@ export default function AdminAppointmentsPage() {
                     })}
                   </CardTitle>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigateMonth("prev")} className="border-border">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => navigateMonth("prev")} 
+                      className="border-border"
+                      disabled={loadingMonth}
+                    >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => navigateMonth("next")} className="border-border">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => navigateMonth("next")} 
+                      className="border-border"
+                      disabled={loadingMonth}
+                    >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -180,12 +273,14 @@ export default function AdminAppointmentsPage() {
                       <button
                         key={index}
                         onClick={() => setSelectedDate(day)}
+                        disabled={loadingMonth}
                         className={`
                           relative p-2 text-sm rounded-md transition-colors
                           ${isCurrentMonth ? "text-foreground" : "text-muted-foreground"}
                           ${isToday ? "bg-accent text-accent-foreground font-semibold" : ""}
                           ${isSelected && !isToday ? "bg-primary text-primary-foreground" : ""}
                           ${!isSelected && !isToday ? "hover:bg-muted" : ""}
+                          ${loadingMonth ? "cursor-wait" : ""}
                         `}
                       >
                         {day.getDate()}
@@ -198,6 +293,11 @@ export default function AdminAppointmentsPage() {
                     )
                   })}
                 </div>
+                {loadingMonth && (
+                  <div className="absolute inset-0 bg-background/50 flex items-center justify-center rounded-lg">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -217,16 +317,18 @@ export default function AdminAppointmentsPage() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                     <p>Cargando citas...</p>
                   </div>
-                ) : filteredAppointments.length === 0 ? (
+                ) : appointments.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No hay citas programadas para esta fecha</p>
                   </div>
                 ) : (
-                  filteredAppointments.map((appointment) => {
+                  appointments.map((appointment) => {
                     const startTime = new Date(appointment.startTime)
                     const endTime = new Date(appointment.endTime)
-                    const clientName = `${appointment.client.firstName} ${appointment.client.lastName}`
+                    const clientName = appointment.client 
+                      ? `${appointment.client.firstName || ''} ${appointment.client.lastName || ''}`.trim() || appointment.client.email
+                      : 'Sin cliente asignado'
 
                     return (
                       <Card key={appointment.id} className="bg-muted/50 border-border">
@@ -236,13 +338,17 @@ export default function AdminAppointmentsPage() {
                               <Avatar className="h-10 w-10">
                                 <AvatarImage src="/placeholder.svg" />
                                 <AvatarFallback className="bg-accent text-accent-foreground">
-                                  {appointment.client.firstName[0]}
-                                  {appointment.client.lastName[0]}
+                                  {appointment.client 
+                                    ? `${appointment.client.firstName?.[0] || ''}${appointment.client.lastName?.[0] || ''}`
+                                    : 'NA'
+                                  }
                                 </AvatarFallback>
                               </Avatar>
                               <div>
                                 <h4 className="font-semibold text-card-foreground">{clientName}</h4>
-                                <p className="text-sm text-muted-foreground">Cita programada</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Estado: {appointment.status}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -263,16 +369,18 @@ export default function AdminAppointmentsPage() {
                                 ({appointment.duration} min)
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Mail className="h-4 w-4" />
-                              <span>{appointment.client.email}</span>
-                            </div>
+                            {appointment.client?.email && (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Mail className="h-4 w-4" />
+                                <span>{appointment.client.email}</span>
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex items-center justify-between mt-3">
                             <AppointmentActions
                               appointmentId={appointment.id}
-                              currentStatus={appointment.status}
+                              currentStatus={appointment.status as string}
                               onStatusChange={handleStatusChange}
                             />
                           </div>
