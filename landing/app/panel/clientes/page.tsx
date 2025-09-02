@@ -212,6 +212,7 @@ export default function ClientesPage() {
     }
   }
 
+
   // Configuración de columnas para la tabla
   const columns: ColumnConfig<Client>[] = [
     {
