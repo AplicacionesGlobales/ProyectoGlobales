@@ -30,6 +30,7 @@ interface FormData {
 export default function ClientesPage() {
   // Estados locales para modales y búsqueda
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [brandId, setBrandId] = useState<number | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -40,7 +41,16 @@ export default function ClientesPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  // Hook de paginación
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 500) // 500ms delay
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Hook de paginación - solo cuando brandId esté disponible
   const {
     data: clients,
     currentPage,
@@ -54,8 +64,17 @@ export default function ClientesPage() {
     setError: setPaginationError
   } = usePagination<Client>({
     initialItemsPerPage: 25,
-    onFetch: (page, limit) => ClientPaginationService.getClientsPaginated(brandId!, page, limit, searchTerm),
-    dependencies: [brandId, searchTerm]
+    onFetch: (page, limit) => {
+      if (!brandId) {
+        return Promise.resolve({
+          success: false,
+          data: { items: [], pagination: { currentPage: 1, totalPages: 0, totalItems: 0, itemsPerPage: 25, hasNextPage: false, hasPrevPage: false } },
+          errors: [{ code: 'NO_BRAND', message: 'Brand ID not available' }]
+        })
+      }
+      return ClientPaginationService.getClientsPaginated(brandId, page, limit, debouncedSearchTerm)
+    },
+    dependencies: [brandId, debouncedSearchTerm]
   })
 
   // Inicializar brandId
@@ -159,7 +178,7 @@ export default function ClientesPage() {
         <div>
           <h3 className="font-medium">{client.firstName} {client.lastName}</h3>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Mail className="h-3 w-3" />
+            <Mail className="w-3 h-3" />
             {client.email}
           </div>
         </div>
@@ -172,7 +191,7 @@ export default function ClientesPage() {
         <div className="text-sm">
           {client.phone ? (
             <span className="flex items-center gap-1">
-              <Phone className="h-3 w-3" />
+              <Phone className="w-3 h-3" />
               {client.phone}
             </span>
           ) : (
@@ -185,7 +204,7 @@ export default function ClientesPage() {
       key: 'stats',
       title: 'Estadísticas',
       render: (client) => (
-        <div className="text-left text-sm">
+        <div className="text-sm text-left">
           <p>Citas: {client.totalAppointments}</p>
         </div>
       )
@@ -238,14 +257,14 @@ export default function ClientesPage() {
       {/* Mensajes de error y éxito */}
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="w-4 h-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {success && (
         <Alert className="border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
+          <CheckCircle className="w-4 h-4 text-green-600" />
           <AlertDescription className="text-green-800">{success}</AlertDescription>
         </Alert>
       )}

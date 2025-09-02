@@ -24,35 +24,44 @@ export function usePagination<T>({
       setLoading(true)
       setError(null)
       
+      console.log('📊 Fetching pagination data:', { page, limit })
+      
       const response = await onFetch(page, limit)
       
       if (response.success && response.data) {
         setData(response.data.items || [])
         
         if (response.data.pagination) {
-          setCurrentPage(response.data.pagination.currentPage)
-          setTotalPages(response.data.pagination.totalPages)
-          setTotalItems(response.data.pagination.totalItems)
-          setItemsPerPage(response.data.pagination.itemsPerPage)
+          const { currentPage: respPage, totalPages: respTotal, totalItems: respItems, itemsPerPage: respLimit } = response.data.pagination
+          
+          // Solo actualizar si los valores han cambiado para evitar loops
+          if (respPage !== currentPage) setCurrentPage(respPage)
+          if (respTotal !== totalPages) setTotalPages(respTotal)
+          if (respItems !== totalItems) setTotalItems(respItems)
+          if (respLimit !== itemsPerPage) setItemsPerPage(respLimit)
         }
       } else {
         const errorMessage = response.errors?.[0]?.message || 'Error al cargar datos'
+        console.error('❌ Pagination error:', errorMessage)
         setError(errorMessage)
         setData([])
       }
     } catch (err: any) {
-      console.error('Pagination fetch error:', err)
+      console.error('❌ Pagination fetch error:', err)
       setError(err.message || 'Error de conexión')
       setData([])
     } finally {
       setLoading(false)
     }
-  }, [onFetch])
+  }, [onFetch]) // Removed state dependencies to prevent loops
 
   // Cargar datos iniciales y cuando cambien dependencias
   useEffect(() => {
+    if (dependencies.some(dep => dep === null || dep === undefined)) {
+      return // No cargar si alguna dependencia es null/undefined
+    }
     fetchData(currentPage, itemsPerPage)
-  }, [fetchData, ...dependencies])
+  }, [currentPage, itemsPerPage, ...dependencies]) // Removed fetchData from dependencies
 
   // Funciones de navegación
   const goToPage = useCallback((page: number) => {
