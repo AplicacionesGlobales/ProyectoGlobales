@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Users, Plus, Phone, Mail, Eye, AlertCircle, CheckCircle } from "lucide-react"
-import { CreateClientModal, ClientDetailModal } from "@/components/modals/client"
+import { Users, Plus, Phone, Mail, Eye, Edit, AlertCircle, CheckCircle } from "lucide-react"
+import { CreateClientModal, ClientDetailModal, EditClientModal } from "@/components/modals/client"
 
 // Componentes genéricos
 import { PageHeader } from "@/components/reusable-components/PageHeader"
@@ -15,7 +15,7 @@ import { SmartPagination } from "@/components/reusable-components/SmartPaginatio
 // Hooks y servicios
 import { usePagination } from "@/hooks/usePagination"
 import { ClientPaginationService, clientsService } from "@/services/client-pagination.adapter"
-import { Client, CreateClientData, ClientNote, ClientActivity } from "@/services/client.service"
+import { Client, CreateClientData, UpdateClientData, ClientNote, ClientActivity } from "@/services/client.service"
 
 interface FormData {
   firstName: string
@@ -34,7 +34,9 @@ export default function ClientesPage() {
   const [brandId, setBrandId] = useState<number | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [clientNotes, setClientNotes] = useState<ClientNote[]>([])
   const [clientActivity, setClientActivity] = useState<ClientActivity[]>([])
   const [modalLoading, setModalLoading] = useState(false)
@@ -169,6 +171,47 @@ export default function ClientesPage() {
     }
   }
 
+  // Manejar edición de cliente
+  const handleEditClient = (client: Client) => {
+    setEditingClient(client)
+    setShowEditModal(true)
+    clearMessages()
+  }
+
+  // Manejar guardado de edición
+  const handleSaveClient = async (clientId: number, data: UpdateClientData) => {
+    if (!brandId) return
+
+    try {
+      setModalLoading(true)
+      clearMessages()
+
+      const response = await clientsService.updateClient(brandId, clientId, data)
+
+      if (response.success) {
+        setSuccess('Cliente actualizado exitosamente')
+        setShowEditModal(false)
+        refresh() // Refrescar la lista paginada
+        
+        // Si estamos viendo los detalles del mismo cliente, actualizar también
+        if (selectedClient && selectedClient.id === clientId) {
+          const updatedClient = { ...selectedClient, ...data }
+          setSelectedClient(updatedClient)
+        }
+      } else {
+        const errorMsg = response.errors?.[0]?.description || 'Error actualizando cliente'
+        setError(errorMsg)
+        throw new Error(errorMsg)
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Error de conexión'
+      setError(errorMsg)
+      throw error
+    } finally {
+      setModalLoading(false)
+    }
+  }
+
   // Configuración de columnas para la tabla
   const columns: ColumnConfig<Client>[] = [
     {
@@ -227,6 +270,13 @@ export default function ClientesPage() {
       label: 'Ver detalles',
       icon: Eye,
       onClick: handleViewClient,
+      variant: 'outline'
+    },
+    {
+      key: 'edit',
+      label: 'Editar',
+      icon: Edit,
+      onClick: handleEditClient,
       variant: 'outline'
     }
   ]
@@ -331,6 +381,16 @@ export default function ClientesPage() {
         notes={clientNotes}
         activities={clientActivity}
         loading={loading}
+      />
+
+      <EditClientModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        client={editingClient}
+        onSave={handleSaveClient}
+        loading={modalLoading}
+        error={error}
+        success={success}
       />
     </div>
   )
