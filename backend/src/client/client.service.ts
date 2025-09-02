@@ -8,11 +8,11 @@ import { ClientStatsService } from './services/client-stats.service';
 import { EmailService } from '../common/services/email/email.service';
 import { CryptoService } from '../common/services/crypto.service';
 import * as bcrypt from 'bcryptjs';
-import { 
-  CreateClientDto, 
-  UpdateClientDto, 
+import {
+  CreateClientDto,
+  UpdateClientDto,
   UpdateClientProfileDto,
-  ClientResponseDto, 
+  ClientResponseDto,
   ClientListResponseDto,
   CheckEmailResponseDto,
   ClientStatsResponseDto,
@@ -21,7 +21,7 @@ import {
   ClientActivityResponseDto,
   ClientAppointmentListResponseDto,
   GetClientAppointmentsQueryDto,
-  ClientFilters 
+  ClientFilters
 } from './dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole, AppointmentStatus } from '../../generated/prisma';
@@ -46,8 +46,8 @@ export class ClientService {
   // ==================== CREATE CLIENT ====================
 
   async createClient(
-    brandId: number, 
-    createClientDto: CreateClientDto, 
+    brandId: number,
+    createClientDto: CreateClientDto,
     ownerId: number
   ): Promise<BaseResponseDto<ClientResponseDto>> {
     console.log('\n🔍 === REGISTRO DE CLIENTE INICIADO ===');
@@ -64,7 +64,7 @@ export class ClientService {
       // Verificar permisos del owner sobre el brand
       console.log('\n🔐 Verificando permisos del owner...');
       const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
-      
+
       if (!hasPermission) {
         console.log('❌ Sin permisos para este brand');
         errors.push({
@@ -109,7 +109,7 @@ export class ClientService {
       // Verificar email único en el brand
       console.log('\n📧 Verificando email único en marca...');
       const emailValidation = await this.clientValidationService.validateEmailForBrand(
-        createClientDto.email, 
+        createClientDto.email,
         brandId
       );
 
@@ -140,7 +140,7 @@ export class ClientService {
           email: emailValidation.existingClient.email
         });
         user = emailValidation.existingClient;
-        
+
         // Actualizar información si es necesario
         if (createClientDto.firstName || createClientDto.lastName || createClientDto.phone) {
           user = await this.prisma.user.update({
@@ -154,10 +154,10 @@ export class ClientService {
         }
       } else {
         console.log('🆕 Creando nuevo usuario...');
-        
+
         // Generar username único
         const username = await this.clientValidationService.generateUniqueUsername(createClientDto.email);
-        
+
         user = await this.prisma.user.create({
           data: {
             email: createClientDto.email.toLowerCase(),
@@ -176,7 +176,7 @@ export class ClientService {
 
       // Crear UserBrand con datos adicionales del cliente
       console.log('\n🔗 Creando relación UserBrand...');
-      
+
       // Generar contraseña temporal si no existe
       const tempPassword = this.generateTempPassword();
       const passwordHash = await bcrypt.hash(tempPassword, 12);
@@ -236,254 +236,254 @@ export class ClientService {
     }
   }
 
-// ==================== LIST CLIENTS ====================
-async listClients(
-  brandId: number,
-  ownerId: number,
-  filters: ClientFilters
-): Promise<BaseResponseDto<ClientListResponseDto>> {
-  console.log('\n🔍 === LISTADO DE CLIENTES INICIADO ===');
-  console.log('🏢 BrandId:', brandId);
-  console.log('📄 Página:', filters.page);
-  console.log('📊 Límite:', filters.limit);
-  console.log('🔎 Búsqueda:', filters.search);
-  console.log('✅ Solo activos:', filters.active);
-  console.log('📋 Ordenar por:', filters.sortBy);
-  console.log('🔄 Orden:', filters.sortOrder);
-  
-  try {
-    // Verificar permisos
-    const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
-    if (!hasPermission) {
-      return BaseResponseDto.singleError(
-        ERROR_CODES.FORBIDDEN,
-        'No tienes permisos para ver los clientes de este negocio'
-      );
-    }
+  // ==================== LIST CLIENTS ====================
+  async listClients(
+    brandId: number,
+    ownerId: number,
+    filters: ClientFilters
+  ): Promise<BaseResponseDto<ClientListResponseDto>> {
+    console.log('\n🔍 === LISTADO DE CLIENTES INICIADO ===');
+    console.log('🏢 BrandId:', brandId);
+    console.log('📄 Página:', filters.page);
+    console.log('📊 Límite:', filters.limit);
+    console.log('🔎 Búsqueda:', filters.search);
+    console.log('✅ Solo activos:', filters.active);
+    console.log('📋 Ordenar por:', filters.sortBy);
+    console.log('🔄 Orden:', filters.sortOrder);
 
-    // Construir where clause
-    const where: any = {
-      brandId,
-      user: {
-        role: 'CLIENT', // Usar string en lugar de enum para evitar problemas
-        ...(filters.active !== undefined && { isActive: filters.active }),
-        ...(filters.search && {
-          OR: [
-            { email: { contains: filters.search, mode: 'insensitive' } },
-            { firstName: { contains: filters.search, mode: 'insensitive' } },
-            { lastName: { contains: filters.search, mode: 'insensitive' } },
-            { phone: { contains: filters.search, mode: 'insensitive' } },
-          ]
-        })
+    try {
+      // Verificar permisos
+      const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
+      if (!hasPermission) {
+        return BaseResponseDto.singleError(
+          ERROR_CODES.FORBIDDEN,
+          'No tienes permisos para ver los clientes de este negocio'
+        );
       }
-    };
 
-    // Obtener total
-    const total = await this.prisma.userBrand.count({ where });
-
-    // Valores por defecto para paginación
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
-
-    // Calcular paginación
-    const skip = (page - 1) * limit;
-    const totalPages = Math.ceil(total / limit);
-
-    // Configurar ordenamiento
-    let orderBy: any = { createdAt: 'desc' }; // default
-
-    if (filters.sortBy) {
-      switch (filters.sortBy) {
-        case 'firstName':
-        case 'email':
-          orderBy = {
-            user: {
-              [filters.sortBy]: filters.sortOrder || 'asc'
-            }
-          };
-          break;
-        case 'createdAt':
-          orderBy = {
-            createdAt: filters.sortOrder || 'desc'
-          };
-          break;
-        case 'lastVisit':
-          // Para lastVisit necesitamos un orderBy más complejo, por ahora usar createdAt
-          orderBy = { createdAt: filters.sortOrder || 'desc' };
-          break;
-        default:
-          orderBy = { createdAt: 'desc' };
-      }
-    }
-
-    // Obtener clientes
-    const userBrands = await this.prisma.userBrand.findMany({
-      where,
-      skip,
-      take: limit,
-      include: {
+      // Construir where clause
+      const where: any = {
+        brandId,
         user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-            isActive: true,
-            createdAt: true,
-            updatedAt: true,
-          }
-        },
-      },
-      orderBy
-    });
-
-    console.log('📊 UserBrands encontrados:', userBrands.length);
-
-    // Obtener estadísticas para cada cliente
-    const clients: ClientResponseDto[] = await Promise.all(
-      userBrands.map(async (ub) => {
-        try {
-          const stats = await this.clientStatsService.getClientStats(ub.userId, brandId);
-          
-          return {
-            id: ub.user.id,
-            email: ub.user.email,
-            firstName: ub.user.firstName || '',
-            lastName: ub.user.lastName || null,
-            phone: ub.user.phone || '', // Usar el campo phone del User
-            notes: ub.notes || null, // Usar el campo notes del UserBrand
-            isActive: ub.user.isActive,
-            brandId: brandId,
-            totalAppointments: stats.totalAppointments,
-            lastVisit: stats.lastVisit || null,
-            createdAt: ub.createdAt,
-            updatedAt: ub.updatedAt,
-          };
-        } catch (statsError) {
-          console.error('Error obteniendo stats para usuario:', ub.userId, statsError);
-          // Devolver cliente con stats por defecto si falla
-          return {
-            id: ub.user.id,
-            email: ub.user.email,
-            firstName: ub.user.firstName || '',
-            lastName: ub.user.lastName || null,
-            phone: ub.user.phone || '',
-            notes: ub.notes || null,
-            isActive: ub.user.isActive,
-            brandId: brandId,
-            totalAppointments: 0,
-            lastVisit: null,
-            createdAt: ub.createdAt,
-            updatedAt: ub.updatedAt,
-          };
+          role: 'CLIENT', // Usar string en lugar de enum para evitar problemas
+          ...(filters.active !== undefined && { isActive: filters.active }),
+          ...(filters.search && {
+            OR: [
+              { email: { contains: filters.search, mode: 'insensitive' } },
+              { firstName: { contains: filters.search, mode: 'insensitive' } },
+              { lastName: { contains: filters.search, mode: 'insensitive' } },
+              { phone: { contains: filters.search, mode: 'insensitive' } },
+            ]
+          })
         }
-      })
-    );
+      };
 
-    const response: ClientListResponseDto = {
-      clients,
-      pagination: {
-        total,
-        page: page,
-        limit: limit,
-        totalPages,
+      // Obtener total
+      const total = await this.prisma.userBrand.count({ where });
+
+      // Valores por defecto para paginación
+      const page = filters.page || 1;
+      const limit = filters.limit || 10;
+
+      // Calcular paginación
+      const skip = (page - 1) * limit;
+      const totalPages = Math.ceil(total / limit);
+
+      // Configurar ordenamiento
+      let orderBy: any = { createdAt: 'desc' }; // default
+
+      if (filters.sortBy) {
+        switch (filters.sortBy) {
+          case 'firstName':
+          case 'email':
+            orderBy = {
+              user: {
+                [filters.sortBy]: filters.sortOrder || 'asc'
+              }
+            };
+            break;
+          case 'createdAt':
+            orderBy = {
+              createdAt: filters.sortOrder || 'desc'
+            };
+            break;
+          case 'lastVisit':
+            // Para lastVisit necesitamos un orderBy más complejo, por ahora usar createdAt
+            orderBy = { createdAt: filters.sortOrder || 'desc' };
+            break;
+          default:
+            orderBy = { createdAt: 'desc' };
+        }
       }
-    };
 
-    console.log('✅ Clientes obtenidos exitosamente:', clients.length);
-    return BaseResponseDto.success(response);
-
-  } catch (error) {
-    console.error('❌ Error en listClients:', error);
-    console.error('Stack trace:', error.stack);
-    return BaseResponseDto.singleError(
-      ERROR_CODES.INTERNAL_ERROR,
-      ERROR_MESSAGES.INTERNAL_ERROR
-    );
-  }
-}
-
-// ==================== GET CLIENT ====================
-async getClient(
-  brandId: number,
-  clientId: number,
-  ownerId: number
-): Promise<BaseResponseDto<ClientResponseDto>> {
-  console.log('\n🔍 === OBTENER CLIENTE ===');
-  console.log('🏢 BrandId:', brandId);
-  console.log('👤 ClientId:', clientId);
-
-  try {
-    // Verificar permisos
-    const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
-    if (!hasPermission) {
-      return BaseResponseDto.singleError(
-        ERROR_CODES.FORBIDDEN,
-        'No tienes permisos para ver este cliente'
-      );
-    }
-
-    // Buscar cliente
-    const userBrand = await this.prisma.userBrand.findFirst({
-      where: {
-        userId: clientId,
-        brandId: brandId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-            isActive: true,
-            createdAt: true,
-            updatedAt: true,
-          }
+      // Obtener clientes
+      const userBrands = await this.prisma.userBrand.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              isActive: true,
+              createdAt: true,
+              updatedAt: true,
+            }
+          },
         },
-      }
-    });
+        orderBy
+      });
 
-    if (!userBrand) {
-      console.log('❌ Cliente no encontrado');
+      console.log('📊 UserBrands encontrados:', userBrands.length);
+
+      // Obtener estadísticas para cada cliente
+      const clients: ClientResponseDto[] = await Promise.all(
+        userBrands.map(async (ub) => {
+          try {
+            const stats = await this.clientStatsService.getClientStats(ub.userId, brandId);
+
+            return {
+              id: ub.user.id,
+              email: ub.user.email,
+              firstName: ub.user.firstName || '',
+              lastName: ub.user.lastName || null,
+              phone: ub.user.phone || '', // Usar el campo phone del User
+              notes: ub.notes || null, // Usar el campo notes del UserBrand
+              isActive: ub.user.isActive,
+              brandId: brandId,
+              totalAppointments: stats.totalAppointments,
+              lastVisit: stats.lastVisit || null,
+              createdAt: ub.createdAt,
+              updatedAt: ub.updatedAt,
+            };
+          } catch (statsError) {
+            console.error('Error obteniendo stats para usuario:', ub.userId, statsError);
+            // Devolver cliente con stats por defecto si falla
+            return {
+              id: ub.user.id,
+              email: ub.user.email,
+              firstName: ub.user.firstName || '',
+              lastName: ub.user.lastName || null,
+              phone: ub.user.phone || '',
+              notes: ub.notes || null,
+              isActive: ub.user.isActive,
+              brandId: brandId,
+              totalAppointments: 0,
+              lastVisit: null,
+              createdAt: ub.createdAt,
+              updatedAt: ub.updatedAt,
+            };
+          }
+        })
+      );
+
+      const response: ClientListResponseDto = {
+        clients,
+        pagination: {
+          total,
+          page: page,
+          limit: limit,
+          totalPages,
+        }
+      };
+
+      console.log('✅ Clientes obtenidos exitosamente:', clients.length);
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('❌ Error en listClients:', error);
+      console.error('Stack trace:', error.stack);
       return BaseResponseDto.singleError(
-        ERROR_CODES.USER_NOT_FOUND,
-        'Cliente no encontrado'
+        ERROR_CODES.INTERNAL_ERROR,
+        ERROR_MESSAGES.INTERNAL_ERROR
       );
     }
-
-    // Obtener estadísticas
-    const stats = await this.clientStatsService.getClientStats(clientId, brandId);
-
-    const response: ClientResponseDto = {
-      id: userBrand.user.id,
-      email: userBrand.user.email,
-      firstName: userBrand.user.firstName || '',
-      lastName: userBrand.user.lastName || null,
-      phone: userBrand.user.phone || '', // Usar el campo phone del User
-      notes: userBrand.notes || null, // Usar el campo notes del UserBrand
-      isActive: userBrand.user.isActive,
-      brandId: brandId,
-      totalAppointments: stats.totalAppointments,
-      lastVisit: stats.lastVisit || null,
-      createdAt: userBrand.user.createdAt,
-      updatedAt: userBrand.user.updatedAt,
-    };
-
-    console.log('✅ Cliente obtenido:', userBrand.user.email);
-    return BaseResponseDto.success(response);
-
-  } catch (error) {
-    console.error('❌ Error en getClient:', error);
-    console.error('Stack trace:', error.stack);
-    return BaseResponseDto.singleError(
-      ERROR_CODES.INTERNAL_ERROR,
-      ERROR_MESSAGES.INTERNAL_ERROR
-    );
   }
-}
+
+  // ==================== GET CLIENT ====================
+  async getClient(
+    brandId: number,
+    clientId: number,
+    ownerId: number
+  ): Promise<BaseResponseDto<ClientResponseDto>> {
+    console.log('\n🔍 === OBTENER CLIENTE ===');
+    console.log('🏢 BrandId:', brandId);
+    console.log('👤 ClientId:', clientId);
+
+    try {
+      // Verificar permisos
+      const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
+      if (!hasPermission) {
+        return BaseResponseDto.singleError(
+          ERROR_CODES.FORBIDDEN,
+          'No tienes permisos para ver este cliente'
+        );
+      }
+
+      // Buscar cliente
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: {
+          userId: clientId,
+          brandId: brandId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              isActive: true,
+              createdAt: true,
+              updatedAt: true,
+            }
+          },
+        }
+      });
+
+      if (!userBrand) {
+        console.log('❌ Cliente no encontrado');
+        return BaseResponseDto.singleError(
+          ERROR_CODES.USER_NOT_FOUND,
+          'Cliente no encontrado'
+        );
+      }
+
+      // Obtener estadísticas
+      const stats = await this.clientStatsService.getClientStats(clientId, brandId);
+
+      const response: ClientResponseDto = {
+        id: userBrand.user.id,
+        email: userBrand.user.email,
+        firstName: userBrand.user.firstName || '',
+        lastName: userBrand.user.lastName || null,
+        phone: userBrand.user.phone || '', // Usar el campo phone del User
+        notes: userBrand.notes || null, // Usar el campo notes del UserBrand
+        isActive: userBrand.user.isActive,
+        brandId: brandId,
+        totalAppointments: stats.totalAppointments,
+        lastVisit: stats.lastVisit || null,
+        createdAt: userBrand.user.createdAt,
+        updatedAt: userBrand.user.updatedAt,
+      };
+
+      console.log('✅ Cliente obtenido:', userBrand.user.email);
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('❌ Error en getClient:', error);
+      console.error('Stack trace:', error.stack);
+      return BaseResponseDto.singleError(
+        ERROR_CODES.INTERNAL_ERROR,
+        ERROR_MESSAGES.INTERNAL_ERROR
+      );
+    }
+  }
 
   // ==================== UPDATE CLIENT ====================
 
@@ -538,11 +538,18 @@ async getClient(
         data: {
           firstName: updateClientDto.firstName,
           lastName: updateClientDto.lastName,
+          phone: updateClientDto.phone,
           isActive: updateClientDto.isActive,
         }
       });
 
-      // TODO: Actualizar phone y notes cuando se agreguen los campos
+      // Actualizar notes en UserBrand
+      const updatedUserBrand = await this.prisma.userBrand.update({
+        where: { id: userBrand.id },
+        data: {
+          notes: updateClientDto.notes,
+        }
+      });
 
       // Obtener estadísticas
       const stats = await this.clientStatsService.getClientStats(clientId, brandId);
@@ -552,8 +559,8 @@ async getClient(
         email: updatedUser.email,
         firstName: updatedUser.firstName || '',
         lastName: updatedUser.lastName || null,
-        phone: updateClientDto.phone || '',
-        notes: updateClientDto.notes || null,
+        phone: updatedUser.phone || '',
+        notes: updatedUserBrand.notes || null,
         isActive: updatedUser.isActive,
         brandId: brandId,
         totalAppointments: stats.totalAppointments,
@@ -871,7 +878,7 @@ async getClient(
             phone: clientData.phone || '', // Proporcionar string vacío si no hay phone
             notes: clientData.notes
           };
-          
+
           const result = await this.createClient(brandId, createData, ownerId);
           if (result.success) {
             results.successful++;
@@ -957,7 +964,7 @@ async getClient(
         userBrands.map(async (ub) => {
           // Obtener estadísticas básicas del cliente
           const stats = await this.clientStatsService.getClientStats(ub.userId, brandId);
-          
+
           return {
             id: ub.user.id,
             email: ub.user.email,
@@ -985,14 +992,14 @@ async getClient(
       } else {
         // Generar CSV
         const csvHeader = 'id,email,firstName,lastName,phone,isActive,createdAt,updatedAt,totalAppointments,totalRevenue,lastVisit';
-        const csvRows = clients.map(c => 
+        const csvRows = clients.map(c =>
           `${c.id},${c.email},${c.firstName || ''},${c.lastName || ''},${c.phone || ''},${c.isActive},${c.createdAt.toISOString()},${c.updatedAt.toISOString()},${c.totalAppointments},${c.totalRevenue},${c.lastVisit?.toISOString() || ''}`
         );
         const csvContent = [csvHeader, ...csvRows].join('\n');
-        
+
         const now = new Date();
         const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
-        
+
         console.log('✅ Exportación CSV completada');
         return BaseResponseDto.success({
           csv: csvContent,
@@ -1098,170 +1105,170 @@ async getClient(
 
   // ==================== CLIENT NOTES ====================
 
-async getClientNotes(
-  brandId: number,
-  clientId: number,
-  ownerId: number
-): Promise<BaseResponseDto<any>> {
-  console.log('\n🔍 === NOTAS DEL CLIENTE ===');
-  console.log('🏢 BrandId:', brandId);
-  console.log('👤 ClientId:', clientId);
+  async getClientNotes(
+    brandId: number,
+    clientId: number,
+    ownerId: number
+  ): Promise<BaseResponseDto<any>> {
+    console.log('\n🔍 === NOTAS DEL CLIENTE ===');
+    console.log('🏢 BrandId:', brandId);
+    console.log('👤 ClientId:', clientId);
 
-  try {
-    // Verificar permisos
-    const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
-    if (!hasPermission) {
+    try {
+      // Verificar permisos
+      const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
+      if (!hasPermission) {
+        return BaseResponseDto.singleError(
+          ERROR_CODES.FORBIDDEN,
+          'No tienes permisos para ver notas de este negocio'
+        );
+      }
+
+      // Obtener las notas de la base de datos
+      const notes = await this.prisma.clientNote.findMany({
+        where: {
+          clientId: clientId,
+          brandId: brandId
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      console.log('✅ Notas obtenidas:', notes.length);
+      return BaseResponseDto.success({ notes });
+
+    } catch (error) {
+      console.error('Error en getClientNotes:', error);
       return BaseResponseDto.singleError(
-        ERROR_CODES.FORBIDDEN,
-        'No tienes permisos para ver notas de este negocio'
+        ERROR_CODES.INTERNAL_ERROR,
+        ERROR_MESSAGES.INTERNAL_ERROR
       );
     }
+  }
 
-    // Obtener las notas de la base de datos
-    const notes = await this.prisma.clientNote.findMany({
-      where: {
-        clientId: clientId,
-        brandId: brandId
-      },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
+  async addClientNote(
+    brandId: number,
+    clientId: number,
+    note: string,
+    isPrivate: boolean,
+    ownerId: number
+  ): Promise<BaseResponseDto<any>> {
+    console.log('\n🔍 === AGREGAR NOTA AL CLIENTE ===');
+    console.log('🏢 BrandId:', brandId);
+    console.log('👤 ClientId:', clientId);
+    console.log('📝 Nota:', note);
+
+    try {
+      // Verificar permisos
+      const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
+      if (!hasPermission) {
+        return BaseResponseDto.singleError(
+          ERROR_CODES.FORBIDDEN,
+          'No tienes permisos para agregar notas en este negocio'
+        );
+      }
+
+      // Verificar que el cliente existe
+      const client = await this.prisma.user.findUnique({
+        where: { id: clientId }
+      });
+
+      if (!client) {
+        return BaseResponseDto.singleError(
+          ERROR_CODES.USER_NOT_FOUND,
+          'Cliente no encontrado'
+        );
+      }
+
+      // Crear la nota en la base de datos
+      const newNote = await this.prisma.clientNote.create({
+        data: {
+          clientId: clientId,
+          brandId: brandId,
+          note: note,
+          isPrivate: isPrivate,
+          createdBy: ownerId
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
           }
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+      });
 
-    console.log('✅ Notas obtenidas:', notes.length);
-    return BaseResponseDto.success({ notes });
+      console.log('✅ Nota agregada con ID:', newNote.id);
+      return BaseResponseDto.success(newNote);
 
-  } catch (error) {
-    console.error('Error en getClientNotes:', error);
-    return BaseResponseDto.singleError(
-      ERROR_CODES.INTERNAL_ERROR,
-      ERROR_MESSAGES.INTERNAL_ERROR
-    );
+    } catch (error) {
+      console.error('Error en addClientNote:', error);
+      return BaseResponseDto.singleError(
+        ERROR_CODES.INTERNAL_ERROR,
+        ERROR_MESSAGES.INTERNAL_ERROR
+      );
+    }
   }
-}
 
-async addClientNote(
-  brandId: number,
-  clientId: number,
-  note: string,
-  isPrivate: boolean,
-  ownerId: number
-): Promise<BaseResponseDto<any>> {
-  console.log('\n🔍 === AGREGAR NOTA AL CLIENTE ===');
-  console.log('🏢 BrandId:', brandId);
-  console.log('👤 ClientId:', clientId);
-  console.log('📝 Nota:', note);
+  async deleteClientNote(
+    brandId: number,
+    clientId: number,
+    noteId: number,
+    ownerId: number
+  ): Promise<void> {
+    console.log('\n🔍 === ELIMINAR NOTA DEL CLIENTE ===');
+    console.log('🏢 BrandId:', brandId);
+    console.log('👤 ClientId:', clientId);
+    console.log('📝 NoteId:', noteId);
 
-  try {
-    // Verificar permisos
-    const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
-    if (!hasPermission) {
-      return BaseResponseDto.singleError(
-        ERROR_CODES.FORBIDDEN,
-        'No tienes permisos para agregar notas en este negocio'
-      );
-    }
+    try {
+      // Verificar permisos
+      const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
+      if (!hasPermission) {
+        throw new Error('No tienes permisos para eliminar notas en este negocio');
+      }
 
-    // Verificar que el cliente existe
-    const client = await this.prisma.user.findUnique({
-      where: { id: clientId }
-    });
-
-    if (!client) {
-      return BaseResponseDto.singleError(
-        ERROR_CODES.USER_NOT_FOUND,
-        'Cliente no encontrado'
-      );
-    }
-
-    // Crear la nota en la base de datos
-    const newNote = await this.prisma.clientNote.create({
-      data: {
-        clientId: clientId,
-        brandId: brandId,
-        note: note,
-        isPrivate: isPrivate,
-        createdBy: ownerId
-      },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
+      // Verificar que la nota existe y pertenece al brand/cliente correcto
+      const existingNote = await this.prisma.clientNote.findFirst({
+        where: {
+          id: noteId,
+          clientId: clientId,
+          brandId: brandId
         }
+      });
+
+      if (!existingNote) {
+        throw new Error('Nota no encontrada o no tienes permisos para eliminarla');
       }
-    });
 
-    console.log('✅ Nota agregada con ID:', newNote.id);
-    return BaseResponseDto.success(newNote);
+      // Eliminar la nota
+      await this.prisma.clientNote.delete({
+        where: {
+          id: noteId
+        }
+      });
 
-  } catch (error) {
-    console.error('Error en addClientNote:', error);
-    return BaseResponseDto.singleError(
-      ERROR_CODES.INTERNAL_ERROR,
-      ERROR_MESSAGES.INTERNAL_ERROR
-    );
-  }
-}
+      console.log('✅ Nota eliminada');
 
-async deleteClientNote(
-  brandId: number,
-  clientId: number,
-  noteId: number,
-  ownerId: number
-): Promise<void> {
-  console.log('\n🔍 === ELIMINAR NOTA DEL CLIENTE ===');
-  console.log('🏢 BrandId:', brandId);
-  console.log('👤 ClientId:', clientId);
-  console.log('📝 NoteId:', noteId);
-
-  try {
-    // Verificar permisos
-    const hasPermission = await this.clientValidationService.validateBrandOwnership(ownerId, brandId);
-    if (!hasPermission) {
-      throw new Error('No tienes permisos para eliminar notas en este negocio');
+    } catch (error) {
+      console.error('Error en deleteClientNote:', error);
+      throw error;
     }
-
-    // Verificar que la nota existe y pertenece al brand/cliente correcto
-    const existingNote = await this.prisma.clientNote.findFirst({
-      where: {
-        id: noteId,
-        clientId: clientId,
-        brandId: brandId
-      }
-    });
-
-    if (!existingNote) {
-      throw new Error('Nota no encontrada o no tienes permisos para eliminarla');
-    }
-
-    // Eliminar la nota
-    await this.prisma.clientNote.delete({
-      where: {
-        id: noteId
-      }
-    });
-
-    console.log('✅ Nota eliminada');
-
-  } catch (error) {
-    console.error('Error en deleteClientNote:', error);
-    throw error;
   }
-}
 
   // ==================== UPDATE CLIENT PROFILE (SELF) ====================
 
@@ -1304,7 +1311,7 @@ async deleteClientNote(
       // Validar email único si se está actualizando
       if (updateClientProfileDto.email && updateClientProfileDto.email !== userBrand.user.email) {
         const emailValidation = await this.clientValidationService.validateEmailForBrand(
-          updateClientProfileDto.email, 
+          updateClientProfileDto.email,
           brandId,
           clientId // Excluir el cliente actual de la verificación
         );
@@ -1331,15 +1338,15 @@ async deleteClientNote(
 
       // Actualizar datos del usuario
       const updateData: any = {};
-      
+
       if (updateClientProfileDto.firstName !== undefined) {
         updateData.firstName = updateClientProfileDto.firstName;
       }
-      
+
       if (updateClientProfileDto.lastName !== undefined) {
         updateData.lastName = updateClientProfileDto.lastName;
       }
-      
+
       if (updateClientProfileDto.email !== undefined) {
         updateData.email = updateClientProfileDto.email;
       }
@@ -1578,7 +1585,7 @@ async deleteClientNote(
   private async sendWelcomeClientEmail(user: any, brand: any, tempPassword: string): Promise<void> {
     try {
       console.log('📧 Enviando email de bienvenida a:', user.email);
-      
+
       await this.emailService.sendEmail({
         to: user.email,
         subject: `Bienvenido a ${brand.name}`,
