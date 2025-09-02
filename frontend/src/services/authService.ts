@@ -44,14 +44,17 @@ export interface IAuthService {
   isAuthenticated(): Promise<boolean>;
   getCurrentUser(): Promise<any>;
   autoRefreshToken(): Promise<boolean>;
+  // Métodos de perfil
+  updateProfile(data: EditProfileData): Promise<any>;
 }
 
 class AuthService implements IAuthService {
   private baseURL: string;
   private refreshInterval: any = null; // Usar any para compatibilidad cross-platform
 
-  constructor(baseURL: string = process.env.API_URL || 'http://localhost:3000') {
+  constructor(baseURL: string = process.env.EXPO_PUBLIC_API_BASE_URL_DEV || 'http://localhost:3000') {
     this.baseURL = baseURL;
+    console.log('🌐 AuthService usando URL:', this.baseURL);
   }
 
   /**
