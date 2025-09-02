@@ -53,7 +53,7 @@ class PlanService {
   async getPlans(): Promise<Plan[]> {
     try {
       const response = await fetch(`${this.baseURL}/plans`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch plans');
       }
