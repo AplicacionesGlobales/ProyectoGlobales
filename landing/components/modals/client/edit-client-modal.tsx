@@ -244,7 +244,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
         onClose={cancelDiscard}
         title="¿Descartar cambios?"
         description="Tienes cambios sin guardar que se perderán si continúas."
-        titleIcon={<AlertCircle className="h-5 w-5 text-orange-500" />}
+        titleIcon={<AlertCircle className="w-5 h-5 text-orange-500" />}
         size="sm"
         primaryButton={{
           text: "Descartar",
@@ -271,7 +271,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
       onClose={handleClose}
       title="Editar Cliente"
       description={`Modificar información de ${client.firstName} ${client.lastName}`}
-      titleIcon={<Edit3 className="h-5 w-5" />}
+      titleIcon={<Edit3 className="w-5 h-5" />}
       size="md"
       maxHeight="85vh"
       primaryButton={{
@@ -286,26 +286,25 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
         disabled: loading
       }}
     >
-      <div className="space-y-6">
-        {/* Header con información del cliente */}
-        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-          <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
+      <div className="px-4 py-2 space-y-6">        {/* Header con información del cliente */}
+        <div className="flex items-center gap-4 p-4 rounded-lg bg-gray-50">
+          <div className="flex items-center justify-center w-12 h-12 text-sm font-bold text-white bg-blue-500 rounded-full">
             {client.firstName[0]}{client.lastName[0]}
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900">
               {client.firstName} {client.lastName}
             </h3>
-            <p className="text-sm text-gray-600 flex items-center gap-1">
-              <Mail className="h-3 w-3" />
+            <p className="flex items-center gap-1 text-sm text-gray-600">
+              <Mail className="w-3 h-3" />
               {client.email}
             </p>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant={client.isActive ? "default" : "secondary"} className="text-xs">
                 {client.isActive ? 'Activo' : 'Inactivo'}
               </Badge>
-              <span className="text-xs text-gray-500 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Clock className="w-3 h-3" />
                 ID: #{client.id}
               </span>
             </div>
@@ -315,14 +314,14 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
         {/* Mensajes de estado */}
         {currentError && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <AlertCircle className="w-4 h-4" />
             <AlertDescription>{currentError}</AlertDescription>
           </Alert>
         )}
 
         {currentSuccess && (
           <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CheckCircle className="w-4 h-4 text-green-600" />
             <AlertDescription className="text-green-800">{currentSuccess}</AlertDescription>
           </Alert>
         )}
@@ -330,7 +329,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
         {/* Indicador de cambios */}
         {hasChanges && (
           <Alert className="border-blue-200 bg-blue-50">
-            <Edit3 className="h-4 w-4 text-blue-600" />
+            <Edit3 className="w-4 h-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
               Has realizado cambios. Recuerda guardar antes de cerrar.
             </AlertDescription>
@@ -343,7 +342,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName" className="flex items-center gap-1">
-                <User className="h-3 w-3" />
+                <User className="w-3 h-3" />
                 Nombre *
               </Label>
               <Input
@@ -360,7 +359,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName" className="flex items-center gap-1">
-                <User className="h-3 w-3" />
+                <User className="w-3 h-3" />
                 Apellido *
               </Label>
               <Input
@@ -380,7 +379,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
           {/* Información de contacto */}
           <div className="space-y-2">
             <Label htmlFor="email" className="flex items-center gap-1">
-              <Mail className="h-3 w-3" />
+              <Mail className="w-3 h-3" />
               Email *
             </Label>
             <Input
@@ -399,7 +398,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="phone" className="flex items-center gap-1">
-              <Phone className="h-3 w-3" />
+              <Phone className="w-3 h-3" />
               Teléfono
             </Label>
             <Input
@@ -418,7 +417,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
           {/* Notas */}
           <div className="space-y-2">
             <Label htmlFor="notes" className="flex items-center gap-1">
-              <FileText className="h-3 w-3" />
+              <FileText className="w-3 h-3" />
               Notas
             </Label>
             <Textarea
@@ -430,11 +429,11 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               disabled={loading}
               className={validationErrors.notes ? 'border-red-500' : ''}
             />
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               {validationErrors.notes && (
                 <p className="text-xs text-red-600">{validationErrors.notes}</p>
               )}
-              <p className="text-xs text-gray-500 ml-auto">
+              <p className="ml-auto text-xs text-gray-500">
                 {formData.notes.length}/500 caracteres
               </p>
             </div>
