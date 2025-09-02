@@ -39,4 +39,4 @@ yarn-error.*
 app-example
 
 # Android build files
-android/
+frontend/android/
