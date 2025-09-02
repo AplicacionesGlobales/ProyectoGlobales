@@ -357,6 +357,75 @@ class AuthService implements IAuthService {
       throw error;
     }
   }
+
+  async updateProfile(data: EditProfileData): Promise<any> {
+    try {
+      const accessToken = await secureStorage.getAccessToken();
+      const userData = await secureStorage.getUserData();
+
+      if (!accessToken || !userData?.user) {
+        throw new Error('No authenticated user found');
+      }
+
+      // Obtener brandId del app.json
+      const brandId = getBrandId();
+
+      console.log('🔄 Actualizando perfil...');
+      console.log('📍 URL:', `${this.baseURL}/brands/${brandId}/profile`);
+      console.log('📝 Datos a enviar:', data);
+
+      // Preparar datos para el backend (sin notes por ahora)
+      const profileUpdateData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        // Solo incluir phone si no está vacío
+        ...(data.phone && data.phone.trim() !== '' && { phone: data.phone }),
+        // notes no está soportado en el backend aún
+      };
+
+      const response = await fetch(`${this.baseURL}/brands/${brandId}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(profileUpdateData),
+      });
+
+      console.log('📡 Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Error actualizando perfil:', errorData);
+        throw new Error(errorData.message || 'Profile update failed');
+      }
+
+      const result = await response.json();
+      console.log('✅ Perfil actualizado exitosamente');
+
+      // Actualizar datos del usuario en el almacenamiento local
+      const updatedUserData = {
+        ...userData,
+        user: {
+          ...userData.user,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          // notes: data.notes, // Comentado hasta que se agregue al backend
+        }
+      };
+
+      const rememberMe = await secureStorage.getRememberMe();
+      await secureStorage.storeUserData(updatedUserData, rememberMe);
+
+      return result;
+    } catch (error) {
+      console.error('❌ Error en updateProfile:', error);
+      throw error;
+    }
+  }
 }
 
 export const authService = new AuthService();
