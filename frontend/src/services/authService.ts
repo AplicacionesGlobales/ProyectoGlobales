@@ -379,8 +379,7 @@ class AuthService implements IAuthService {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
-        // Solo incluir phone si no está vacío
-        ...(data.phone && data.phone.trim() !== '' && { phone: data.phone }),
+        phone: data.phone,
         // notes no está soportado en el backend aún
       };
 
