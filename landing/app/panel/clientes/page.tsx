@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Users, Plus, Phone, Mail, Eye, AlertCircle, CheckCircle } from "lucide-react"
@@ -9,42 +10,145 @@ import { CreateClientModal, ClientDetailModal } from "@/components/modals/client
 import { PageHeader } from "@/components/reusable-components/PageHeader"
 import { SearchBar } from "@/components/reusable-components/SearchBar"
 import { DataTable, ColumnConfig, RowAction } from "@/components/reusable-components/DateTable"
+import { SmartPagination } from "@/components/reusable-components/SmartPagination"
 
-// Hook personalizado
-import { useClients } from "@/hooks/use-clients"
-import { Client } from "@/services/client.service"
+// Hooks y servicios
+import { usePagination } from "@/hooks/usePagination"
+import { ClientPaginationService, clientsService } from "@/services/client-pagination.adapter"
+import { Client, CreateClientData, ClientNote, ClientActivity } from "@/services/client.service"
+
+interface FormData {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  notes: string
+  createAccess: boolean
+  tempPassword: string
+}
 
 export default function ClientesPage() {
+  // Estados locales para modales y búsqueda
+  const [searchTerm, setSearchTerm] = useState("")
+  const [brandId, setBrandId] = useState<number | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [clientNotes, setClientNotes] = useState<ClientNote[]>([])
+  const [clientActivity, setClientActivity] = useState<ClientActivity[]>([])
+  const [modalLoading, setModalLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  // Hook de paginación
   const {
-    // Estado de datos
-    filteredClients,
-    selectedClient,
-    clientNotes,
-    clientActivity,
-    
-    // Estados de UI
+    data: clients,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
     loading,
-    modalLoading,
-    error,
-    success,
+    goToPage,
+    changeItemsPerPage,
+    refresh,
+    setError: setPaginationError
+  } = usePagination<Client>({
+    initialItemsPerPage: 25,
+    onFetch: (page, limit) => ClientPaginationService.getClientsPaginated(brandId!, page, limit, searchTerm),
+    dependencies: [brandId, searchTerm]
+  })
+
+  // Inicializar brandId
+  useEffect(() => {
+    const brandData = localStorage.getItem('brand_data')
+    if (brandData) {
+      const brand = JSON.parse(brandData)
+      setBrandId(brand.id)
+    }
+  }, [])
+
+  // Funciones de utilidad
+  const clearMessages = () => {
+    setError(null)
+    setSuccess(null)
+    setPaginationError(null)
+  }
+
+  // Manejar creación de cliente
+  const handleCreateClient = async (formData: FormData) => {
+    if (!brandId) return
     
-    // Estados de modales
-    showCreateModal,
-    showDetailModal,
+    try {
+      setModalLoading(true)
+      clearMessages()
+      
+      const clientData: CreateClientData = {
+        email: formData.email.trim(),
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        phone: formData.phone.trim() || undefined,
+        notes: formData.notes.trim() || undefined,
+        createAccess: formData.createAccess,
+        tempPassword: formData.createAccess ? formData.tempPassword.trim() : undefined
+      }
+      
+      const response = await clientsService.createClient(brandId, clientData)
+      
+      if (response.success) {
+        setSuccess('Cliente creado exitosamente')
+        setShowCreateModal(false)
+        refresh() // Refrescar la lista paginada
+      } else {
+        const errorMsg = response.errors?.[0]?.description || 'Error creando cliente'
+        setError(errorMsg)
+        throw new Error(errorMsg)
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Error de conexión'
+      setError(errorMsg)
+      throw error
+    } finally {
+      setModalLoading(false)
+    }
+  }
+
+  // Manejar visualización de cliente
+  const handleViewClient = async (client: Client) => {
+    if (!brandId) return
     
-    // Estado de búsqueda
-    searchTerm,
-    
-    // Acciones principales
-    handleCreateClient,
-    handleViewClient,
-    
-    // Controles de UI
-    setSearchTerm,
-    setShowCreateModal,
-    setShowDetailModal,
-    clearMessages
-  } = useClients()
+    try {
+      setModalLoading(true)
+      
+      // Cargar detalles del cliente
+      const [clientResponse, notesResponse, activityResponse] = await Promise.all([
+        clientsService.getClient(brandId, client.id),
+        clientsService.getClientNotes(brandId, client.id),
+        clientsService.getClientActivity(brandId, client.id)
+      ])
+      
+      if (clientResponse.success && clientResponse.data) {
+        setSelectedClient(clientResponse.data)
+      }
+      
+      if (notesResponse.success && notesResponse.data) {
+        setClientNotes(notesResponse.data.notes)
+      } else {
+        setClientNotes([])
+      }
+      
+      if (activityResponse.success && activityResponse.data) {
+        setClientActivity(activityResponse.data.activities)
+      } else {
+        setClientActivity([])
+      }
+      
+      setShowDetailModal(true)
+    } catch (error) {
+      setError('Error cargando detalles del cliente')
+    } finally {
+      setModalLoading(false)
+    }
+  }
 
   // Configuración de columnas para la tabla
   const columns: ColumnConfig<Client>[] = [
@@ -155,7 +259,7 @@ export default function ClientesPage() {
 
       {/* Tabla de datos */}
       <DataTable
-        data={filteredClients}
+        data={clients}
         columns={columns}
         keyExtractor={(client) => client.id.toString()}
         title="Lista de Clientes"
@@ -176,6 +280,19 @@ export default function ClientesPage() {
         avatar={avatarConfig}
         actions={rowActions}
         hover={true}
+      />
+
+      {/* Paginación */}
+      <SmartPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={goToPage}
+        onItemsPerPageChange={changeItemsPerPage}
+        loading={loading}
+        showItemsPerPage={true}
+        showResultsInfo={true}
       />
 
       {/* Modales */}
