@@ -3,8 +3,9 @@ import { Plan, PlanSelectionResponse, BusinessSetupData } from '../types/plan.ty
 class PlanService {
   private baseURL: string;
 
-  constructor(baseURL: string = process.env.API_URL || 'http://localhost:3000') {
+  constructor(baseURL: string = process.env.EXPO_PUBLIC_API_BASE_URL_DEV || 'http://localhost:3000') {
     this.baseURL = baseURL;
+    console.log('🌐 PlanService usando URL:', this.baseURL);
   }
 
   async selectPlan(planId: string, userId: number): Promise<PlanSelectionResponse> {
