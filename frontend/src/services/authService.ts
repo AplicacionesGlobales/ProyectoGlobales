@@ -19,12 +19,15 @@ import {
   ResetPasswordResponse
 } from '../api/types';
 import { RegisterFormData, LoginFormData, AuthResponse, RefreshTokenResponse, TokenRefreshResult } from '../types/auth.types';
+import { EditProfileData } from '../types/profile.types';
 import { secureStorage, TokenUtils } from '../utils/secureStorage';
 import Constants from 'expo-constants';
 
-// Obtener brandId del app.json
+// Obtener brandId del .env
 const getBrandId = (): number => {
-  return parseInt(Constants.expoConfig?.extra?.brand_id || '1');
+  const brandId = process.env.EXPO_PUBLIC_BRAND_ID || Constants.expoConfig?.extra?.brand_id || '1';
+  console.log('🏷️ Usando brandId:', brandId);
+  return parseInt(brandId);
 };
 
 export interface IAuthService {
