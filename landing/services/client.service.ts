@@ -28,6 +28,14 @@ export interface CreateClientData {
   tempPassword?: string;
 }
 
+export interface UpdateClientData {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  notes?: string;
+}
+
 export interface ClientNote {
   id: number;
   clientId: number;
@@ -204,6 +212,55 @@ class ClientsService {
         errors: [{
           code: 'CLIENT_CREATE_ERROR',
           description: 'Error creando cliente'
+        }]
+      };
+    }
+  }
+
+  // Actualizar cliente existente
+  async updateClient(brandId: number, clientId: number, data: Partial<CreateClientData>): Promise<ApiResponse<Client>> {
+    try {
+      console.log('🚀 Updating client:', { brandId, clientId, data });
+      
+      const response = await apiClient.put<Client>(
+        API_ENDPOINTS.CLIENTS.UPDATE(brandId, clientId),
+        data,
+        { headers: this.getAuthHeaders() }
+      );
+      
+      console.log('✅ Client update response:', response);
+      return response;
+      
+    } catch (error: any) {
+      console.error('❌ Client update error:', error);
+      
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        
+        if (errorData.success === false && errorData.errors) {
+          return {
+            success: false,
+            errors: errorData.errors
+          };
+        }
+        
+        if (errorData.message) {
+          const messages = Array.isArray(errorData.message) ? errorData.message : [errorData.message];
+          return {
+            success: false,
+            errors: messages.map((msg: string) => ({
+              code: 'VALIDATION_ERROR',
+              description: msg
+            }))
+          };
+        }
+      }
+      
+      return {
+        success: false,
+        errors: [{
+          code: 'CLIENT_UPDATE_ERROR',
+          description: 'Error actualizando cliente'
         }]
       };
     }
