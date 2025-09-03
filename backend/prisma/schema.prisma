@@ -58,6 +58,7 @@ model Brand {
   appointments        Appointment[]
   clientNotes         ClientNote[]
   clientActivities    ClientActivity[]
+  serviceTypes        ServiceType[] 
 
   @@map("brands")
 }
@@ -260,7 +261,7 @@ model AppointmentSettings {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
   brand                  Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
-
+  useServiceTypes        Boolean  @default(false)
   @@map("appointment_settings")
 }
 
@@ -285,6 +286,8 @@ model File {
 
 model Appointment {
   id          Int              @id @default(autoincrement())
+  serviceTypeId Int?           // NUEVO CAMPO
+  price       Decimal?         @db.Decimal(10, 2) // NUEVO CAMPO
   brandId     Int
   clientId    Int?
   createdById Int
@@ -298,8 +301,11 @@ model Appointment {
   
   brand       Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
   client      User?            @relation("ClientAppointments", fields: [clientId], references: [id], onDelete: Cascade)
-  createdBy   User             @relation("CreatedAppointments", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy   User             @relation("CreatedAppointments", fields: [createdById], references: [id], onDelete: Cascade)  
+  serviceType ServiceType?     @relation(fields: [serviceTypeId], references: [id])
   
+
+  @@index([serviceTypeId])    
   @@index([brandId, startTime])
   @@index([clientId])
   @@index([createdById])
@@ -345,6 +351,28 @@ model ClientActivity {
   @@index([type])
   @@index([createdAt])
   @@map("client_activities")
+}
+
+model ServiceType {
+  id          Int      @id @default(autoincrement())
+  brandId     Int
+  name        String
+  description String?
+  duration    Int      // Duración en minutos
+  price       Decimal? @db.Decimal(10, 2)
+  color       String?  // Color hex para visualización
+  icon        String?  // Nombre del icono
+  isActive    Boolean  @default(true)
+  order       Int      @default(0) // Para ordenamiento
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  
+  @@unique([brandId, name])
+  @@index([brandId])
+  @@map("service_types")
 }
 
 enum ActivityType {

@@ -1,3 +1,4 @@
+// backend/src/brand-register/brand-registration.service.ts
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,7 +10,7 @@ import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { createAccessToken } from '../lib/crypto';
 
-// Response interface
+// Response interface actualizada
 interface BrandRegistrationResponse {
   user: {
     id: number;
@@ -41,6 +42,11 @@ interface BrandRegistrationResponse {
     price: number;
     features: string[];
     billingPeriod: string;
+  };
+  appointmentSettings?: {
+    useServiceTypes: boolean;
+    defaultDuration: number;
+    serviceTypesCreated: number;
   };
   payment?: {
     status: string;
@@ -124,6 +130,19 @@ export class BrandRegistrationService {
         });
       }
 
+      // Validar tipos de servicio si están configurados
+      if (createBrandDto.appointmentSettings?.useServiceTypes && 
+          createBrandDto.appointmentSettings?.serviceTypes) {
+        for (const serviceType of createBrandDto.appointmentSettings.serviceTypes) {
+          if (serviceType.duration % 15 !== 0) {
+            errors.push({
+              code: ERROR_CODES.VALIDATION_ERROR || 400,
+              description: `La duración de "${serviceType.name}" debe ser múltiplo de 15 minutos`
+            });
+          }
+        }
+      }
+
       // Validar precio total
       const calculatedPrice = this.calculateTotalPrice(plan, features, createBrandDto.planBillingPeriod);
       if (Math.abs(calculatedPrice - createBrandDto.totalPrice) > 0.01) {
@@ -161,17 +180,15 @@ export class BrandRegistrationService {
             name: createBrandDto.brandName,
             description: createBrandDto.brandDescription,
             phone: createBrandDto.brandPhone,
+            address: createBrandDto.brandAddress, // Agregar dirección si existe
             ownerId: user.id,
-            businessType: businessType?.key, // Usar el key del business type
-            selectedFeatures: features.map(f => f.key) // Usar los keys de las features
+            businessType: businessType?.key,
+            selectedFeatures: features.map(f => f.key)
           }
         });
         console.log('✅ Brand created:', brand.id);
 
-                // 3. Marca creada sin imágenes (se subirán después mediante endpoint de files)
-        const updatedBrand = brand;
-
-        // 4. Crear paleta de colores
+        // 3. Crear paleta de colores
         const colorPalette = await prisma.colorPalette.create({
           data: {
             brandId: brand.id,
@@ -184,7 +201,7 @@ export class BrandRegistrationService {
         });
         console.log('✅ Color palette created:', colorPalette.id);
 
-        // 5. Crear relaciones Brand-Feature
+        // 4. Crear relaciones Brand-Feature
         const brandFeatures = await Promise.all(
           features.map(feature =>
             prisma.brandFeature.create({
@@ -197,7 +214,7 @@ export class BrandRegistrationService {
         );
         console.log('✅ Brand features created:', brandFeatures.length);
 
-        // 6. Crear plan de suscripción
+        // 5. Crear plan de suscripción
         const brandPlan = await prisma.brandPlan.create({
           data: {
             brandId: brand.id,
@@ -208,21 +225,60 @@ export class BrandRegistrationService {
         });
         console.log('✅ Brand plan created:', brandPlan.id);
 
-        // 7. Procesar pago si es necesario
-        let paymentResult = null;
-        // if (Number(createBrandDto.totalPrice) > 0) {
-        //   paymentResult = await this.paymentService.processPaymentForPlan(
-        //     brand.id,
-        //     brandPlan.id,
-        //     Number(createBrandDto.totalPrice),
-        //     {
-        //       registrationDate: createBrandDto.registrationDate,
-        //       source: createBrandDto.source,
-        //       planId: createBrandDto.planId
-        //     }
-        //   );
-        //   console.log('✅ Payment processed:', paymentResult?.success);
-        // }
+        // 6. Crear configuración de citas
+        const appointmentSettings = await prisma.appointmentSettings.create({
+          data: {
+            brandId: brand.id,
+            useServiceTypes: createBrandDto.appointmentSettings?.useServiceTypes || false,
+            defaultDuration: createBrandDto.appointmentSettings?.defaultDuration || 30,
+            bufferTime: 5,
+            maxAdvanceBookingDays: 30,
+            minAdvanceBookingHours: 2,
+            allowSameDayBooking: true
+          }
+        });
+        console.log('✅ Appointment settings created:', appointmentSettings.id);
+
+        // 7. Crear tipos de servicio si están configurados
+        let serviceTypesCreated = 0;
+        if (createBrandDto.appointmentSettings?.useServiceTypes) {
+          if (createBrandDto.appointmentSettings.serviceTypes && 
+              createBrandDto.appointmentSettings.serviceTypes.length > 0) {
+            // Crear los tipos de servicio proporcionados
+            for (let i = 0; i < createBrandDto.appointmentSettings.serviceTypes.length; i++) {
+              const serviceType = createBrandDto.appointmentSettings.serviceTypes[i];
+              await prisma.serviceType.create({
+                data: {
+                  brandId: brand.id,
+                  name: serviceType.name,
+                  description: serviceType.description,
+                  duration: serviceType.duration,
+                  price: serviceType.price,
+                  color: serviceType.color,
+                  icon: serviceType.icon,
+                  isActive: true,
+                  order: i
+                }
+              });
+              serviceTypesCreated++;
+            }
+            console.log(`✅ ${serviceTypesCreated} service types created`);
+          } else {
+            // Crear tipo de servicio por defecto
+            await prisma.serviceType.create({
+              data: {
+                brandId: brand.id,
+                name: 'Cita General',
+                description: 'Servicio por defecto',
+                duration: appointmentSettings.defaultDuration,
+                isActive: true,
+                order: 0
+              }
+            });
+            serviceTypesCreated = 1;
+            console.log('✅ Default service type created');
+          }
+        }
 
         // 8. Crear UserBrand para el acceso del propietario
         const salt = randomBytes(32).toString('hex') + Date.now().toString();
@@ -237,12 +293,13 @@ export class BrandRegistrationService {
         console.log('✅ UserBrand relation created');
 
         return {
-          brand: updatedBrand,
+          brand,
           user,
           colorPalette,
           brandPlan: { ...brandPlan, plan },
-          paymentResult,
-          features
+          features,
+          appointmentSettings,
+          serviceTypesCreated
         };
       });
 
@@ -294,12 +351,12 @@ export class BrandRegistrationService {
         token
       };
 
-      // Agregar información de pago si existe
-      if (result.paymentResult && typeof result.paymentResult === 'object') {
-        response.payment = {
-          status: (result.paymentResult as any).success ? 'completed' : 'pending',
-          tilopayReference: (result.paymentResult as any).tilopayTransactionId,
-          processedAt: new Date().toISOString()
+      // Agregar información de configuración de citas si existe
+      if (result.appointmentSettings) {
+        response.appointmentSettings = {
+          useServiceTypes: result.appointmentSettings.useServiceTypes,
+          defaultDuration: result.appointmentSettings.defaultDuration,
+          serviceTypesCreated: result.serviceTypesCreated
         };
       }
 
