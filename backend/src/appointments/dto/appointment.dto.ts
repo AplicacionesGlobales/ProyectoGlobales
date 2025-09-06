@@ -9,7 +9,8 @@ import {
   Min, 
   Max,
   IsNotEmpty,
-  MinLength
+  MinLength,
+  MaxLength
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
@@ -84,33 +85,58 @@ export class CreateAppointmentDto {
   startTime: string;
 
   @ApiPropertyOptional({ 
-    example: 30, 
-    description: 'Duración en minutos (opcional, usa configuración por defecto)' 
+    example: 1,
+    description: 'ID del tipo de servicio a agendar (requerido si el negocio usa tipos de servicio)' 
   })
   @IsNumber()
-  @Min(15)
-  @Max(480)
   @IsOptional()
-  duration?: number;
+  serviceTypeId?: number;
 
   @ApiPropertyOptional({ 
-    example: 'Consulta general',
-    description: 'Notas de la cita'
+    example: 'Necesito consulta sobre...',
+    description: 'Notas adicionales para la cita'
   })
   @IsString()
   @IsOptional()
   @MinLength(3)
+  @MaxLength(500)
   notes?: string;
 }
 
-export class CreateAppointmentByRootDto extends CreateAppointmentDto {
+export class CreateAppointmentByRootDto {
+  @ApiPropertyOptional({
+    example: 123,
+    description: 'ID del cliente para asignar la cita (opcional)'
+  })
+  @IsOptional()
+  @IsNumber()
+  clientId?: number;
+
+  @ApiProperty({ 
+    example: '2024-08-20T10:00:00Z', 
+    description: 'Fecha y hora de inicio de la cita' 
+  })
+  @IsDateString()
+  @IsNotEmpty()
+  startTime: string;
+
   @ApiPropertyOptional({ 
-    example: 2, 
-    description: 'ID del cliente para asignar la cita (opcional)' 
+    example: 1,
+    description: 'ID del tipo de servicio a agendar (requerido si el negocio usa tipos de servicio)' 
   })
   @IsNumber()
   @IsOptional()
-  clientId?: number;
+  serviceTypeId?: number;
+
+  @ApiPropertyOptional({ 
+    example: 'Cita agendada por administrador',
+    description: 'Notas adicionales para la cita'
+  })
+  @IsString()
+  @IsOptional()
+  @MinLength(3)
+  @MaxLength(500)
+  notes?: string;
 }
 
 export class UpdateAppointmentDto {
@@ -195,6 +221,15 @@ export class GetAppointmentsQueryDto {
   @IsNumber()
   @Transform(({ value }) => parseInt(value))
   clientId?: number;
+
+  @ApiPropertyOptional({ 
+    example: 1, 
+    description: 'Filtrar por tipo de servicio' 
+  })
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => parseInt(value))
+  serviceTypeId?: number;
 
   @ApiPropertyOptional({ 
     example: 1, 

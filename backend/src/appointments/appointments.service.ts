@@ -199,31 +199,293 @@ export class AppointmentsService {
   }
 
   // Crear cita como cliente
-  async createAppointment(
-    brandId: number,
-    createData: CreateAppointmentDto,
-    clientId: number
-  ): Promise<BaseResponseDto<AppointmentDto>> {
-    try {
-      const { appointmentSettings } = await this.getBrandConfigurations(brandId);
+async createAppointment(
+  brandId: number,
+  createData: CreateAppointmentDto,
+  clientId: number
+): Promise<BaseResponseDto<AppointmentDto>> {
+  try {
+    const { appointmentSettings } = await this.getBrandConfigurations(brandId);
+    
+    let duration: number;
+    let serviceTypeId: number | undefined = createData.serviceTypeId;
+    
+    // Determinar la duración basada en la configuración del negocio
+    if (appointmentSettings.useServiceTypes) {
+      // El negocio usa tipos de servicio - serviceTypeId es REQUERIDO
+      if (!serviceTypeId) {
+        throw new BadRequestException(
+          'Debe seleccionar un tipo de servicio para agendar su cita'
+        );
+      }
       
-      const startTime = new Date(createData.startTime);
-      const duration = createData.duration || appointmentSettings.defaultDuration;
-      const endTime = new Date(startTime.getTime() + duration * 60000);
-
-      await this.validateAppointmentAvailability(brandId, startTime, endTime);
-
-      const appointment = await this.prisma.appointment.create({
-        data: {
+      // Obtener el tipo de servicio y validar
+      const serviceType = await this.prisma.serviceType.findFirst({
+        where: {
+          id: serviceTypeId,
           brandId,
-          clientId,
-          createdById: clientId,
-          startTime,
-          endTime,
-          duration,
-          notes: createData.notes,
-          status: AppointmentStatus.PENDING
+          isActive: true
+        }
+      });
+      
+      if (!serviceType) {
+        throw new NotFoundException(
+          'El tipo de servicio seleccionado no existe o no está disponible'
+        );
+      }
+      
+      // Usar la duración del tipo de servicio
+      duration = serviceType.duration;
+      
+    } else {
+      // El negocio NO usa tipos de servicio - no debe haber serviceTypeId
+      if (serviceTypeId) {
+        throw new BadRequestException(
+          'Este negocio no maneja tipos de servicio específicos'
+        );
+      }
+      
+      // Usar duración por defecto del negocio
+      duration = appointmentSettings.defaultDuration;
+      serviceTypeId = undefined;
+    }
+    
+    const startTime = new Date(createData.startTime);
+    const endTime = new Date(startTime.getTime() + duration * 60000);
+
+    await this.validateAppointmentAvailability(brandId, startTime, endTime);
+
+    const appointment = await this.prisma.appointment.create({
+      data: {
+        brandId,
+        clientId,
+        createdById: clientId,
+        serviceTypeId, // Se incluye solo si aplica
+        startTime,
+        endTime,
+        duration,
+        notes: createData.notes,
+        status: AppointmentStatus.PENDING
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
         },
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        serviceType: serviceTypeId ? {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            duration: true,
+            price: true,
+            color: true,
+            icon: true
+          }
+        } : false
+      }
+    });
+
+    return BaseResponseDto.success(this.mapToDto(appointment));
+  } catch (error) {
+    console.error('Error creating appointment:', error);
+    throw error;
+  }
+}
+
+// Crear cita como ROOT (puede asignar cliente o dejarlo vacío)
+async createAppointmentByRoot(
+  brandId: number,
+  createData: CreateAppointmentByRootDto,
+  rootUserId: number
+): Promise<BaseResponseDto<AppointmentDto>> {
+  try {
+    if (!(await this.isRootUser(brandId, rootUserId))) {
+      throw new ForbiddenException('Solo el ROOT puede crear citas para otros usuarios');
+    }
+
+    const { appointmentSettings } = await this.getBrandConfigurations(brandId);
+    
+    let duration: number;
+    let serviceTypeId: number | undefined = createData.serviceTypeId;
+    
+    // Determinar la duración basada en la configuración del negocio
+    if (appointmentSettings.useServiceTypes) {
+      // El negocio usa tipos de servicio - serviceTypeId es REQUERIDO
+      if (!serviceTypeId) {
+        throw new BadRequestException(
+          'Debe seleccionar un tipo de servicio para agendar la cita'
+        );
+      }
+      
+      // Obtener el tipo de servicio y validar
+      const serviceType = await this.prisma.serviceType.findFirst({
+        where: {
+          id: serviceTypeId,
+          brandId,
+          isActive: true
+        }
+      });
+      
+      if (!serviceType) {
+        throw new NotFoundException(
+          'El tipo de servicio seleccionado no existe o no está disponible'
+        );
+      }
+      
+      // Usar la duración del tipo de servicio
+      duration = serviceType.duration;
+      
+    } else {
+      // El negocio NO usa tipos de servicio - no debe haber serviceTypeId
+      if (serviceTypeId) {
+        throw new BadRequestException(
+          'Este negocio no maneja tipos de servicio específicos'
+        );
+      }
+      
+      // Usar duración por defecto del negocio
+      duration = appointmentSettings.defaultDuration;
+      serviceTypeId = undefined;
+    }
+    
+    const startTime = new Date(createData.startTime);
+    const endTime = new Date(startTime.getTime() + duration * 60000);
+
+    await this.validateAppointmentAvailability(brandId, startTime, endTime);
+
+    // Validar que el cliente existe si se proporciona
+    if (createData.clientId) {
+      const client = await this.prisma.user.findUnique({
+        where: { id: createData.clientId }
+      });
+      
+      if (!client) {
+        throw new NotFoundException('Cliente no encontrado');
+      }
+    }
+
+    const appointment = await this.prisma.appointment.create({
+      data: {
+        brandId,
+        clientId: createData.clientId,
+        createdById: rootUserId,
+        serviceTypeId, // Se incluye solo si aplica
+        startTime,
+        endTime,
+        duration,
+        notes: createData.notes,
+        status: AppointmentStatus.PENDING
+      },
+      include: {
+        client: createData.clientId ? {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        } : false,
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        serviceType: serviceTypeId ? {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            duration: true,
+            price: true,
+            color: true,
+            icon: true
+          }
+        } : false
+      }
+    });
+
+    return BaseResponseDto.success(this.mapToDto(appointment));
+  } catch (error) {
+    console.error('Error creating appointment by root:', error);
+    throw error;
+  }
+}
+
+  // Obtener citas (ROOT ve todas, cliente solo las suyas)
+async getAppointments(
+  brandId: number,
+  userId: number,
+  query: GetAppointmentsQueryDto
+): Promise<BaseResponseDto<{ appointments: AppointmentDto[], total: number, pages: number }>> {
+  try {
+    const isRoot = await this.isRootUser(brandId, userId);
+    
+    if (!isRoot) {
+      // Si no es ROOT, verificar que sea cliente con citas
+      const hasAppointments = await this.prisma.appointment.findFirst({
+        where: { brandId, clientId: userId }
+      });
+      
+      if (!hasAppointments) {
+        throw new ForbiddenException('No tiene acceso a las citas de este brand');
+      }
+    }
+
+    const where: any = { brandId };
+    
+    // Si no es ROOT, solo ver sus propias citas
+    if (!isRoot) {
+      where.clientId = userId;
+    }
+
+    // Aplicar filtros
+    if (query.startDate && query.endDate) {
+      where.startTime = {
+        gte: new Date(query.startDate),
+        lte: new Date(`${query.endDate}T23:59:59.999Z`)
+      };
+    } else if (query.startDate) {
+      where.startTime = { gte: new Date(query.startDate) };
+    } else if (query.endDate) {
+      where.startTime = { lte: new Date(`${query.endDate}T23:59:59.999Z`) };
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    if (query.clientId && isRoot) {
+      where.clientId = query.clientId;
+    }
+
+    // Filtro por tipo de servicio si se proporciona
+    if (query.serviceTypeId) {
+      where.serviceTypeId = query.serviceTypeId;
+    }
+
+    const limit = query.limit ?? 10;
+    const page = query.page ?? 1;
+    const skip = (page - 1) * limit;
+
+    const [appointments, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
         include: {
           client: {
             select: {
@@ -240,177 +502,38 @@ export class AppointmentsService {
               lastName: true,
               email: true
             }
-          }
-        }
-      });
-
-      return BaseResponseDto.success(this.mapToDto(appointment));
-    } catch (error) {
-      console.error('Error creating appointment:', error);
-      throw error;
-    }
-  }
-
-  // Crear cita como ROOT (puede asignar cliente o dejarlo vacío)
-  async createAppointmentByRoot(
-    brandId: number,
-    createData: CreateAppointmentByRootDto,
-    rootUserId: number
-  ): Promise<BaseResponseDto<AppointmentDto>> {
-    try {
-      if (!(await this.isRootUser(brandId, rootUserId))) {
-        throw new ForbiddenException('Solo el ROOT puede crear citas para otros usuarios');
-      }
-
-      const { appointmentSettings } = await this.getBrandConfigurations(brandId);
-      
-      const startTime = new Date(createData.startTime);
-      const duration = createData.duration || appointmentSettings.defaultDuration;
-      const endTime = new Date(startTime.getTime() + duration * 60000);
-
-      await this.validateAppointmentAvailability(brandId, startTime, endTime);
-
-      // Validar que el cliente existe si se proporciona
-      if (createData.clientId) {
-        const client = await this.prisma.user.findUnique({
-          where: { id: createData.clientId }
-        });
-        
-        if (!client) {
-          throw new NotFoundException('Cliente no encontrado');
-        }
-      }
-
-      const appointment = await this.prisma.appointment.create({
-        data: {
-          brandId,
-          clientId: createData.clientId,
-          createdById: rootUserId,
-          startTime,
-          endTime,
-          duration,
-          notes: createData.notes,
-          status: AppointmentStatus.PENDING
-        },
-        include: {
-          client: createData.clientId ? {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          } : false,
-          createdBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
-
-      return BaseResponseDto.success(this.mapToDto(appointment));
-    } catch (error) {
-      console.error('Error creating appointment by root:', error);
-      throw error;
-    }
-  }
-
-  // Obtener citas (ROOT ve todas, cliente solo las suyas)
-  async getAppointments(
-    brandId: number,
-    userId: number,
-    query: GetAppointmentsQueryDto
-  ): Promise<BaseResponseDto<{ appointments: AppointmentDto[], total: number, pages: number }>> {
-    try {
-      const isRoot = await this.isRootUser(brandId, userId);
-      
-      if (!isRoot) {
-        // Si no es ROOT, verificar que sea cliente con citas
-        const hasAppointments = await this.prisma.appointment.findFirst({
-          where: { brandId, clientId: userId }
-        });
-        
-        if (!hasAppointments) {
-          throw new ForbiddenException('No tiene acceso a las citas de este brand');
-        }
-      }
-
-      const where: any = { brandId };
-      
-      // Si no es ROOT, solo ver sus propias citas
-      if (!isRoot) {
-        where.clientId = userId;
-      }
-
-      // Aplicar filtros
-      if (query.startDate && query.endDate) {
-        where.startTime = {
-          gte: new Date(query.startDate),
-          lte: new Date(`${query.endDate}T23:59:59.999Z`)
-        };
-      } else if (query.startDate) {
-        where.startTime = { gte: new Date(query.startDate) };
-      } else if (query.endDate) {
-        where.startTime = { lte: new Date(`${query.endDate}T23:59:59.999Z`) };
-      }
-
-      if (query.status) {
-        where.status = query.status;
-      }
-
-      if (query.clientId && isRoot) {
-        where.clientId = query.clientId;
-      }
-
-      const limit = query.limit ?? 10;
-      const page = query.page ?? 1;
-      const skip = (page - 1) * limit;
-
-      const [appointments, total] = await Promise.all([
-        this.prisma.appointment.findMany({
-          where,
-          include: {
-            client: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true
-              }
-            },
-            createdBy: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true
-              }
-            }
           },
-          orderBy: { startTime: 'asc' },
-          skip,
-          take: limit
-        }),
-        this.prisma.appointment.count({ where })
-      ]);
+          serviceType: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              duration: true,
+              price: true,
+              color: true,
+              icon: true
+            }
+          }
+        },
+        orderBy: { startTime: 'asc' },
+        skip,
+        take: limit
+      }),
+      this.prisma.appointment.count({ where })
+    ]);
 
-      const pages = Math.ceil(total / limit);
+    const pages = Math.ceil(total / limit);
 
-      return BaseResponseDto.success({
-        appointments: appointments.map(this.mapToDto),
-        total,
-        pages
-      });
-    } catch (error) {
-      console.error('Error getting appointments:', error);
-      throw error;
-    }
+    return BaseResponseDto.success({
+      appointments: appointments.map(this.mapToDto),
+      total,
+      pages
+    });
+  } catch (error) {
+    console.error('Error getting appointments:', error);
+    throw error;
   }
-
+}
   // Actualizar cita
   async updateAppointment(
     brandId: number,
