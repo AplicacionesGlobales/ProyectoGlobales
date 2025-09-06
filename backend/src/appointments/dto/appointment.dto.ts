@@ -32,6 +32,33 @@ export class AppointmentDto {
 
   @ApiPropertyOptional({ example: 2, description: 'ID del cliente (opcional para citas sin asignar)' })
   clientId?: number;
+   @ApiPropertyOptional({ 
+    example: 8,
+    description: 'ID del tipo de servicio' 
+  })
+  serviceTypeId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Información del tipo de servicio',
+    example: {
+      id: 8,
+      name: 'Corte de Cabello',
+      description: 'Corte profesional',
+      duration: 30,
+      price: 15000,
+      color: '#3B82F6',
+      icon: 'scissors'
+    }
+  })
+  serviceType?: {
+    id: number;
+    name: string;
+    description?: string;
+    duration: number;
+    price?: number;
+    color?: string;
+    icon?: string;
+  };
 
   @ApiProperty({ example: '2024-08-20T10:00:00Z' })
   startTime: string;
