@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { FileService } from '../common/services/file.service';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
+import { ServiceTypeInitialDto, AppointmentSettingsInitialDto } from 'src/brand-register/dto';
 import { ERROR_CODES, ERROR_MESSAGES } from '../common/constants';
 import {
   BrandAdminResponseDto,
@@ -11,10 +12,11 @@ import {
   BrandUserResponseDto,
   UpdateBrandPlanDto,
   BrandPlanResponseDto,
-  BillingPeriod
+  BillingPeriod,
 } from './dto/index';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
+import { ServiceTypeResponseDto, AppointmentSettingsDto } from './dto/service-type.dto';
 
 @Injectable()
 export class BrandService {
@@ -24,220 +26,281 @@ export class BrandService {
   ) {}
 
   async getBrandAdminInfo(brandId: number, requestingUserId: number): Promise<BaseResponseDto<BrandAdminResponseDto>> {
-    try {
-      // Verificar que el usuario tenga acceso a este brand
-      await this.validateBrandAccess(brandId, requestingUserId);
+  try {
+    // Verificar que el usuario tenga acceso a este brand
+    await this.validateBrandAccess(brandId, requestingUserId);
 
-      const brand = await this.prisma.brand.findUnique({
-        where: { id: brandId },
-        include: {
-          // Usuarios del brand
-          userBrands: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  email: true,
-                  username: true,
-                  firstName: true,
-                  lastName: true,
-                  role: true,
-                  isActive: true,
-                  createdAt: true,
-                  updatedAt: true
-                }
+    const brand = await this.prisma.brand.findUnique({
+      where: { id: brandId },
+      include: {
+        // Usuarios del brand
+        userBrands: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true
               }
-            },
-            where: { isActive: true }
+            }
           },
-          // Features activas
-          brandFeatures: {
-            include: {
-              feature: {
-                select: {
-                  id: true,
-                  key: true,
-                  title: true,
-                  description: true,
-                  price: true,
-                  category: true,
-                  isRecommended: true,
-                  isPopular: true,
-                  isActive: true
-                }
+          where: { isActive: true }
+        },
+        // Features activas
+        brandFeatures: {
+          include: {
+            feature: {
+              select: {
+                id: true,
+                key: true,
+                title: true,
+                description: true,
+                price: true,
+                category: true,
+                isRecommended: true,
+                isPopular: true,
+                isActive: true
               }
-            },
-            where: { isActive: true }
+            }
           },
-          // Plan actual
-          brandPlans: {
-            include: {
-              plan: {
-                select: {
-                  id: true,
-                  type: true,
-                  name: true,
-                  description: true,
-                  basePrice: true
-                }
+          where: { isActive: true }
+        },
+        // Plan actual
+        brandPlans: {
+          include: {
+            plan: {
+              select: {
+                id: true,
+                type: true,
+                name: true,
+                description: true,
+                basePrice: true
               }
-            },
-            where: { isActive: true },
-            orderBy: { createdAt: 'desc' },
-            take: 1
+            }
           },
-          // Paleta de colores
-          colorPalette: true,
-          // Pagos recientes
-          payments: {
-            select: {
-              id: true,
-              amount: true,
-              currency: true,
-              status: true,
-              paymentMethod: true,
-              tilopayReference: true,
-              createdAt: true,
-              processedAt: true
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 5
-          }
+          where: { isActive: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        },
+        // Paleta de colores
+        colorPalette: true,
+        // Pagos recientes
+        payments: {
+          select: {
+            id: true,
+            amount: true,
+            currency: true,
+            status: true,
+            paymentMethod: true,
+            tilopayReference: true,
+            createdAt: true,
+            processedAt: true
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 5
+        },
+        // AGREGAR: Configuración de citas
+        appointmentSettings: true,
+        // AGREGAR: Tipos de servicio
+        serviceTypes: {
+          where: { isActive: true },
+          orderBy: [{ order: 'asc' }, { createdAt: 'asc' }]
         }
-      });
-
-      if (!brand) {
-        throw new NotFoundException('Brand not found');
       }
+    });
 
-      // Obtener información del tipo de negocio
-      let businessType: any = null;
-      if (brand.businessType) {
-        businessType = await this.prisma.businessType.findUnique({
-          where: { key: brand.businessType }
-        });
-      }
-
-      // Calcular estadísticas
-      const stats = await this.calculateBrandStats(brandId);
-
-      // Construir respuesta
-      const response: BrandAdminResponseDto = {
-        id: brand.id,
-        name: brand.name,
-        description: brand.description ?? undefined,
-        address: brand.address ?? undefined,
-        phone: brand.phone ?? undefined,
-        isActive: brand.isActive,
-        createdAt: brand.createdAt.toISOString(),
-        updatedAt: brand.updatedAt.toISOString(),
-
-        businessType: {
-          id: businessType?.id ?? 0,
-          key: businessType?.key ?? '',
-          title: businessType?.title ?? '',
-          subtitle: businessType?.subtitle ?? '',
-          description: businessType?.description ?? '',
-          icon: businessType?.icon ?? ''
-        },
-
-        users: brand.userBrands.map(ub => ({
-          id: ub.user.id,
-          email: ub.user.email,
-          username: ub.user.username,
-          firstName: ub.user.firstName ?? '',
-          lastName: ub.user.lastName ?? '',
-          role: ub.user.role,
-          isActive: ub.user.isActive,
-          createdAt: ub.user.createdAt.toISOString(),
-          lastLogin: undefined // TODO: Implementar tracking de último login
-        })),
-
-        features: brand.brandFeatures.map(bf => ({
-          id: bf.feature.id,
-          key: bf.feature.key,
-          title: bf.feature.title,
-          description: bf.feature.description,
-          price: Number(bf.feature.price),
-          category: bf.feature.category,
-          isRecommended: bf.feature.isRecommended,
-          isPopular: bf.feature.isPopular,
-          isActive: bf.feature.isActive,
-          activatedAt: bf.createdAt.toISOString()
-        })),
-
-        currentPlan: brand.brandPlans[0] ? {
-          id: brand.brandPlans[0].id,
-          planId: brand.brandPlans[0].plan.id,
-          planType: brand.brandPlans[0].plan.type,
-          planName: brand.brandPlans[0].plan.name,
-          planDescription: brand.brandPlans[0].plan.description || '',
-          basePrice: Number(brand.brandPlans[0].plan.basePrice),
-          currentPrice: Number(brand.brandPlans[0].price),
-          billingPeriod: brand.brandPlans[0].billingPeriod,
-          startDate: brand.brandPlans[0].startDate.toISOString(),
-          endDate: brand.brandPlans[0].endDate?.toISOString(),
-          isActive: brand.brandPlans[0].isActive,
-          nextBillingDate: this.calculateNextBillingDate(brand.brandPlans[0])?.toISOString()
-        } : {
-          id: 0,
-          planId: 0,
-          planType: '',
-          planName: '',
-          planDescription: '',
-          basePrice: 0,
-          currentPrice: 0,
-          billingPeriod: 'monthly',
-          startDate: new Date(0).toISOString(),
-          endDate: undefined,
-          isActive: false,
-          nextBillingDate: undefined
-        },
-
-        colorPalette: brand.colorPalette ? {
-          id: brand.colorPalette.id,
-          primary: brand.colorPalette.primary,
-          secondary: brand.colorPalette.secondary,
-          accent: brand.colorPalette.accent,
-          neutral: brand.colorPalette.neutral,
-          success: brand.colorPalette.success,
-          createdAt: brand.colorPalette.createdAt.toISOString(),
-          updatedAt: brand.colorPalette.updatedAt.toISOString()
-        } : {
-          id: 0,
-          primary: '',
-          secondary: '',
-          accent: '',
-          neutral: '',
-          success: '',
-          createdAt: new Date(0).toISOString(),
-          updatedAt: new Date(0).toISOString()
-        },
-
-        recentPayments: brand.payments.map(payment => ({
-          id: payment.id,
-          amount: Number(payment.amount),
-          currency: payment.currency,
-          status: payment.status,
-          paymentMethod: payment.paymentMethod ?? undefined,
-          tilopayReference: payment.tilopayReference ?? undefined,
-          createdAt: payment.createdAt.toISOString(),
-          processedAt: payment.processedAt?.toISOString()
-        })),
-
-        stats
-      };
-
-      return BaseResponseDto.success(response);
-
-    } catch (error) {
-      console.error('Error getting brand admin info:', error);
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
-        throw error;
-      }
-      throw new Error('Failed to get brand information');
+    if (!brand) {
+      throw new NotFoundException('Brand not found');
     }
+
+    // Obtener información del tipo de negocio
+    let businessType: any = null;
+    if (brand.businessType) {
+      businessType = await this.prisma.businessType.findUnique({
+        where: { key: brand.businessType }
+      });
+    }
+
+    // Calcular estadísticas actualizadas
+    const stats = await this.calculateBrandStats(brandId);
+
+    // Procesar tipos de servicio con contadores
+    let serviceTypesWithCount: ServiceTypeResponseDto[] = [];
+    if (brand.serviceTypes && brand.serviceTypes.length > 0) {
+      serviceTypesWithCount = await Promise.all(
+        brand.serviceTypes.map(async (st) => {
+          const [appointmentCount, futureAppointments] = await Promise.all([
+            this.prisma.appointment.count({
+              where: { serviceTypeId: st.id }
+            }),
+            this.prisma.appointment.count({
+              where: {
+                serviceTypeId: st.id,
+                startTime: { gte: new Date() },
+                status: { notIn: ['CANCELLED'] }
+              }
+            })
+          ]);
+
+          return {
+            id: st.id,
+            brandId: st.brandId,
+            name: st.name,
+            description: st.description ?? undefined,
+            duration: st.duration,
+            price: st.price ? Number(st.price) : undefined,
+            color: st.color ?? undefined,
+            icon: st.icon ?? undefined,
+            isActive: st.isActive,
+            order: st.order,
+            createdAt: st.createdAt.toISOString(),
+            updatedAt: st.updatedAt.toISOString(),
+            appointmentCount,
+            hasFutureAppointments: futureAppointments > 0
+          };
+        })
+      );
+    }
+
+    // Construir respuesta
+    const response: BrandAdminResponseDto = {
+      id: brand.id,
+      name: brand.name,
+      description: brand.description ?? undefined,
+      address: brand.address ?? undefined,
+      phone: brand.phone ?? undefined,
+      isActive: brand.isActive,
+      createdAt: brand.createdAt.toISOString(),
+      updatedAt: brand.updatedAt.toISOString(),
+
+      businessType: {
+        id: businessType?.id ?? 0,
+        key: businessType?.key ?? '',
+        title: businessType?.title ?? '',
+        subtitle: businessType?.subtitle ?? '',
+        description: businessType?.description ?? '',
+        icon: businessType?.icon ?? ''
+      },
+
+      users: brand.userBrands.map(ub => ({
+        id: ub.user.id,
+        email: ub.user.email,
+        username: ub.user.username,
+        firstName: ub.user.firstName ?? '',
+        lastName: ub.user.lastName ?? '',
+        role: ub.user.role,
+        isActive: ub.user.isActive,
+        createdAt: ub.user.createdAt.toISOString(),
+        lastLogin: undefined
+      })),
+
+      features: brand.brandFeatures.map(bf => ({
+        id: bf.feature.id,
+        key: bf.feature.key,
+        title: bf.feature.title,
+        description: bf.feature.description,
+        price: Number(bf.feature.price),
+        category: bf.feature.category,
+        isRecommended: bf.feature.isRecommended,
+        isPopular: bf.feature.isPopular,
+        isActive: bf.feature.isActive,
+        activatedAt: bf.createdAt.toISOString()
+      })),
+
+      currentPlan: brand.brandPlans[0] ? {
+        id: brand.brandPlans[0].id,
+        planId: brand.brandPlans[0].plan.id,
+        planType: brand.brandPlans[0].plan.type,
+        planName: brand.brandPlans[0].plan.name,
+        planDescription: brand.brandPlans[0].plan.description || '',
+        basePrice: Number(brand.brandPlans[0].plan.basePrice),
+        currentPrice: Number(brand.brandPlans[0].price),
+        billingPeriod: brand.brandPlans[0].billingPeriod,
+        startDate: brand.brandPlans[0].startDate.toISOString(),
+        endDate: brand.brandPlans[0].endDate?.toISOString(),
+        isActive: brand.brandPlans[0].isActive,
+        nextBillingDate: this.calculateNextBillingDate(brand.brandPlans[0])?.toISOString()
+      } : {
+        id: 0,
+        planId: 0,
+        planType: '',
+        planName: '',
+        planDescription: '',
+        basePrice: 0,
+        currentPrice: 0,
+        billingPeriod: 'monthly',
+        startDate: new Date(0).toISOString(),
+        endDate: undefined,
+        isActive: false,
+        nextBillingDate: undefined
+      },
+
+      colorPalette: brand.colorPalette ? {
+        id: brand.colorPalette.id,
+        primary: brand.colorPalette.primary,
+        secondary: brand.colorPalette.secondary,
+        accent: brand.colorPalette.accent,
+        neutral: brand.colorPalette.neutral,
+        success: brand.colorPalette.success,
+        createdAt: brand.colorPalette.createdAt.toISOString(),
+        updatedAt: brand.colorPalette.updatedAt.toISOString()
+      } : {
+        id: 0,
+        primary: '',
+        secondary: '',
+        accent: '',
+        neutral: '',
+        success: '',
+        createdAt: new Date(0).toISOString(),
+        updatedAt: new Date(0).toISOString()
+      },
+
+      // NUEVO: Configuración de citas
+      appointmentSettings: brand.appointmentSettings ? {
+        id: brand.appointmentSettings.id,
+        useServiceTypes: brand.appointmentSettings.useServiceTypes,
+        defaultDuration: brand.appointmentSettings.defaultDuration,
+        bufferTime: brand.appointmentSettings.bufferTime,
+        maxAdvanceBookingDays: brand.appointmentSettings.maxAdvanceBookingDays,
+        minAdvanceBookingHours: brand.appointmentSettings.minAdvanceBookingHours,
+        allowSameDayBooking: brand.appointmentSettings.allowSameDayBooking,
+        createdAt: brand.appointmentSettings.createdAt.toISOString(),
+        updatedAt: brand.appointmentSettings.updatedAt.toISOString()
+      } : undefined,
+
+      // NUEVO: Tipos de servicio
+      serviceTypes: serviceTypesWithCount.length > 0 ? serviceTypesWithCount : undefined,
+
+      recentPayments: brand.payments.map(payment => ({
+        id: payment.id,
+        amount: Number(payment.amount),
+        currency: payment.currency,
+        status: payment.status,
+        paymentMethod: payment.paymentMethod ?? undefined,
+        tilopayReference: payment.tilopayReference ?? undefined,
+        createdAt: payment.createdAt.toISOString(),
+        processedAt: payment.processedAt?.toISOString()
+      })),
+
+      stats
+    };
+
+    return BaseResponseDto.success(response);
+
+  } catch (error) {
+    console.error('Error getting brand admin info:', error);
+    if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+      throw error;
+    }
+    throw new Error('Failed to get brand information');
   }
+}
 
   async updateBrand(
     brandId: number, 
