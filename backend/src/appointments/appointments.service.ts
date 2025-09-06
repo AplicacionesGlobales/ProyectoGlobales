@@ -1300,6 +1300,16 @@ async getAppointments(
       id: appointment.id,
       brandId: appointment.brandId,
       clientId: appointment.clientId,
+      serviceTypeId: appointment.serviceTypeId, // Agregar este campo
+      serviceType: appointment.serviceType ? { // Agregar información completa del servicio
+      id: appointment.serviceType.id,
+      name: appointment.serviceType.name,
+      description: appointment.serviceType.description,
+      duration: appointment.serviceType.duration,
+      price: appointment.serviceType.price ? Number(appointment.serviceType.price) : undefined,
+      color: appointment.serviceType.color,
+      icon: appointment.serviceType.icon
+    } : undefined,
       startTime: appointment.startTime.toISOString(),
       endTime: appointment.endTime.toISOString(),
       duration: appointment.duration,
