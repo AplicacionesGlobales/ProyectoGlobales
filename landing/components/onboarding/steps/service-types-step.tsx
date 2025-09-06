@@ -96,14 +96,6 @@ export function ServiceTypesStep({
   const [defaultDuration, setDefaultDuration] = useState(appointmentSettings.defaultDuration)
   const [errors, setErrors] = useState<Record<number, string>>({})
 
-  // Auto-sugerir servicios basados en el tipo de negocio
-  useEffect(() => {
-    if (serviceTypes.length === 0 && businessType && SERVICE_SUGGESTIONS[businessType]) {
-      setServiceTypes(SERVICE_SUGGESTIONS[businessType])
-      setUseServiceTypes(true)
-    }
-  }, [businessType])
-
   const handleUseServiceTypesChange = (checked: boolean) => {
     setUseServiceTypes(checked)
     if (checked && serviceTypes.length === 0) {
