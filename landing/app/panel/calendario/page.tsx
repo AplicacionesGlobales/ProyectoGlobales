@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Plus } from "lucide-react"
 import { AppointmentCalendar } from "@/components/panel/appointments/appointmentCalendar"
-import { AppointmentList } from "@/components/panel/appointments/appointmentList"
+import { AppointmentList } from "@/components/panel/appointments/AppointmentList"
 import { CreateAppointmentModal } from "@/components/modals/appointment/create-appointment-modal"
 import { PageHeader } from "@/components/reusable-components/PageHeader"
 import { useAppointments } from "@/hooks/use-appointments"
