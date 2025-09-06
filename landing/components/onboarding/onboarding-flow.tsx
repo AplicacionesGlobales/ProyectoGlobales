@@ -12,6 +12,7 @@ import { PricingStep } from "./steps/pricing-step"
 import { ConfirmationStep } from "./steps/confirmation-step"
 import PaymentStep from "./steps/payment-step"
 import { SuccessStep } from "./steps/success-step"
+import { ServiceTypesStep } from "./steps/service-types-step"
 
 export interface OnboardingData {
   personalInfo: {
@@ -34,6 +35,18 @@ export interface OnboardingData {
     isotopoUrl?: File
     imagotipoUrl?: File
   }
+  appointmentSettings: {
+    useServiceTypes: boolean
+    defaultDuration: number
+    serviceTypes: Array<{
+      name: string
+      description?: string
+      duration: number
+      price?: number
+      color?: string
+      icon?: string
+    }>
+  }
   plan: {
     type: "web" | "app" | "complete"
     features: string[]
@@ -46,11 +59,12 @@ const steps = [
   { id: 1, title: "Información Personal", description: "Cuéntanos sobre ti" },
   { id: 2, title: "Tu Servicio", description: "Detalles de tu negocio" },
   { id: 3, title: "Funciones", description: "¿Qué necesitas en tu app?" },
-  { id: 4, title: "Personalización", description: "Colores y diseño" },
-  { id: 5, title: "Plan", description: "Elige tu modalidad" },
-  { id: 6, title: "Confirmación", description: "¡Casi listo!" },
-  { id: 7, title: "Pago", description: "Procesar suscripción" },
-  { id: 8, title: "¡Listo!", description: "Registro completado" },
+  { id: 4, title: "Servicios", description: "Configura tus servicios" }, // NUEVO
+  { id: 5, title: "Personalización", description: "Colores y diseño" },
+  { id: 6, title: "Plan", description: "Elige tu modalidad" },
+  { id: 7, title: "Confirmación", description: "¡Casi listo!" },
+  { id: 8, title: "Pago", description: "Procesar suscripción" },
+  { id: 9, title: "¡Listo!", description: "Registro completado" },
 ]
 
 export function OnboardingFlow() {
@@ -72,6 +86,11 @@ export function OnboardingFlow() {
     customization: {
       colorPalette: "",
       customColors: ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"]
+    },
+     appointmentSettings: {
+    useServiceTypes: false,
+    defaultDuration: 30,
+    serviceTypes: []
     },
     plan: {
       type: "web",
@@ -183,6 +202,15 @@ export function OnboardingFlow() {
         />
       ),
       4: (
+      <ServiceTypesStep
+        appointmentSettings={data.appointmentSettings}
+        businessType={data.businessType}
+        onChange={(settings) => updateData(settings)}
+        onNext={nextStep}
+        onPrev={prevStep}
+      />
+      ),
+      5: (
         <div className="space-y-6">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900">Personaliza tu App</h2>
@@ -218,7 +246,7 @@ export function OnboardingFlow() {
           </div>
         </div>
       ),
-      5: (
+      6: (
         <PricingStep
           plan={data.plan}
           selectedFeatures={data.selectedFeatures}
@@ -227,21 +255,21 @@ export function OnboardingFlow() {
           onPrev={prevStep}
         />
       ),
-      6: (
+      7: (
         <ConfirmationStep
           data={data}
           onNext={nextStep}
           onPrev={prevStep}
         />
       ),
-      7: (
+      8: (
         <PaymentStep
           data={data}
           onComplete={handleComplete}
           onPrev={prevStep}
         />
       ),
-      8: (
+      9: (
         <SuccessStep
           data={data}
         />

@@ -19,6 +19,19 @@ export interface BrandRegistrationData {
   // Business details - ONLY IDs
   businessTypeId: number;
   selectedFeatureIds: number[];
+
+  appointmentSettings?: {
+    useServiceTypes: boolean
+    defaultDuration: number
+    serviceTypes?: Array<{
+      name: string
+      description?: string
+      duration: number
+      price?: number
+      color?: string
+      icon?: string
+    }>
+  }
   
   // Customization
   colorPalette: {
