@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { AppointmentSettingsDto, ServiceTypeResponseDto } from './service-type.dto';
 
 export class BrandUserDto {
   @ApiProperty({ example: 123 })
@@ -173,6 +174,15 @@ export class BrandStatsDto {
   @ApiProperty({ example: true })
   isSubscriptionActive: boolean;
 
+  @ApiProperty({ example: 4, description: 'Total de tipos de servicio configurados' })
+  totalServiceTypes: number;
+
+  @ApiProperty({ example: 3, description: 'Tipos de servicio activos' })
+  activeServiceTypes: number;
+
+  @ApiProperty({ example: 150, description: 'Total de citas registradas' })
+  totalAppointments: number;
+
   @ApiProperty({ example: '2024-01-15T10:30:00Z' })
   lastActivity: string;
 }
@@ -236,6 +246,64 @@ export class BrandAdminResponseDto {
 
   @ApiProperty({ type: BrandColorPaletteDto })
   colorPalette: BrandColorPaletteDto;
+
+  @ApiPropertyOptional({ 
+    type: AppointmentSettingsDto,
+    description: 'Configuración de citas del brand',
+    example: {
+      id: 1,
+      brandId: 456,
+      useServiceTypes: true,
+      defaultDuration: 30,
+      bufferTime: 5,
+      maxAdvanceBookingDays: 30,
+      minAdvanceBookingHours: 2,
+      allowSameDayBooking: true,
+      createdAt: '2024-01-15T10:30:00Z',
+      updatedAt: '2024-01-15T10:30:00Z'
+    }
+  })
+  appointmentSettings?: AppointmentSettingsDto;
+
+  @ApiPropertyOptional({ 
+    type: [ServiceTypeResponseDto],
+    description: 'Tipos de servicio configurados para el brand',
+    example: [
+      {
+        id: 1,
+        brandId: 456,
+        name: 'Corte de Cabello',
+        description: 'Corte clásico para caballeros',
+        duration: 30,
+        price: 15000,
+        color: '#3B82F6',
+        icon: 'scissors',
+        isActive: true,
+        order: 0,
+        createdAt: '2024-01-15T10:30:00Z',
+        updatedAt: '2024-01-15T10:30:00Z',
+        appointmentCount: 25,
+        hasFutureAppointments: true
+      },
+      {
+        id: 2,
+        brandId: 456,
+        name: 'Barba',
+        description: 'Arreglo profesional de barba',
+        duration: 15,
+        price: 8000,
+        color: '#10B981',
+        icon: 'razor',
+        isActive: true,
+        order: 1,
+        createdAt: '2024-01-15T10:30:00Z',
+        updatedAt: '2024-01-15T10:30:00Z',
+        appointmentCount: 15,
+        hasFutureAppointments: false
+      }
+    ]
+  })
+  serviceTypes?: ServiceTypeResponseDto[];
 
   @ApiProperty({ type: [BrandPaymentDto] })
   recentPayments: BrandPaymentDto[];
