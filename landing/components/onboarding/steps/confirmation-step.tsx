@@ -3,7 +3,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle, Sparkles } from "lucide-react"
+import { ArrowLeft, Check, User, Mail, Phone, Building, Palette, CreditCard, Loader2, AlertCircle, Sparkles, Clock } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { authService, BrandRegistrationData } from "@/services/auth.service"
 import { filesService } from "@/services/files.service"
@@ -32,6 +32,18 @@ interface ConfirmationStepProps {
       logoUrl?: File
       isotopoUrl?: File
       imagotipoUrl?: File
+    }
+    appointmentSettings: {
+      useServiceTypes: boolean
+      defaultDuration: number
+      serviceTypes: Array<{
+        name: string
+        description?: string
+        duration: number
+        price?: number
+        color?: string
+        icon?: string
+      }>
     }
     plan: {
       type: "web" | "app" | "complete"
@@ -216,6 +228,13 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
         
         // Customization
         colorPalette: finalColorPalette,
+
+        // Configuracion de citas
+        appointmentSettings: data.appointmentSettings ? {
+          useServiceTypes: data.appointmentSettings.useServiceTypes,
+          defaultDuration: data.appointmentSettings.defaultDuration,
+          serviceTypes: data.appointmentSettings.serviceTypes
+        } : undefined,
         
         // Plan information - ONLY NUMERIC ID
         planId: planId,
@@ -415,7 +434,80 @@ export function ConfirmationStep({ data, onNext, onPrev }: ConfirmationStepProps
             ))}
           </div>
         </Card>
+        {/* Service Types */}
+        {data.appointmentSettings?.useServiceTypes && data.appointmentSettings.serviceTypes.length > 0 && (
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Clock className="w-5 h-5 text-indigo-500" />
+              <h3 className="font-semibold text-gray-900">Tipos de Servicio</h3>
+            </div>
+            
+            <div className="space-y-3">
+              {data.appointmentSettings.serviceTypes.map((service, index) => (
+                <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  {/* Color indicator */}
+                  {service.color && (
+                    <div 
+                      className="w-2 h-full rounded-full mt-1" 
+                      style={{ backgroundColor: service.color }}
+                    />
+                  )}
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-gray-900">{service.name}</p>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="flex items-center gap-1 text-gray-600">
+                          <Clock className="w-3 h-3" />
+                          {service.duration} min
+                        </span>
+                        {service.price && (
+                          <span className="font-medium text-green-600">
+                            ${service.price.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {service.description && (
+                      <p className="text-sm text-gray-500 mt-1">{service.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Summary */}
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Total de servicios:</span>
+                  <span className="font-medium">{data.appointmentSettings.serviceTypes.length}</span>
+                </div>
+                {data.appointmentSettings.serviceTypes.some(s => s.price) && (
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="text-gray-600">Rango de precios:</span>
+                    <span className="font-medium">
+                      ${Math.min(...data.appointmentSettings.serviceTypes.filter(s => s.price).map(s => s.price!)).toLocaleString()} - 
+                      ${Math.max(...data.appointmentSettings.serviceTypes.filter(s => s.price).map(s => s.price!)).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
 
+        {/* Default Duration - cuando NO usa tipos de servicio */}
+        {data.appointmentSettings && !data.appointmentSettings.useServiceTypes && (
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Clock className="w-5 h-5 text-indigo-500" />
+              <h3 className="font-semibold text-gray-900">Configuración de Citas</h3>
+            </div>
+            <div>
+              <p className="text-gray-500">Duración por defecto</p>
+              <p className="font-medium">{data.appointmentSettings.defaultDuration} minutos</p>
+            </div>
+          </Card>
+        )}
         {/* Customization */}
         <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
