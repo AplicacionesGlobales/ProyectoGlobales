@@ -16,6 +16,7 @@ export default function AdminAppointmentsPage() {
     appointments, 
     monthAppointments,
     clients, 
+    serviceTypes,
     selectedDate,
     currentMonth,
     loading,
@@ -102,6 +103,7 @@ export default function AdminAppointmentsPage() {
           onClose={handleCloseCreateModal}
           onSubmit={handleCreateAppointmentWithModal}
           clients={clients}
+          serviceTypes={serviceTypes}
           loading={createLoading}
           error={createError}
           success={createSuccess}

@@ -19,9 +19,16 @@ interface Client {
 
 interface FormData {
   startTime: string
-  duration: number
   notes: string
   clientId: number | null
+  serviceTypeId: number | null
+}
+
+interface ServiceType {
+  id: number
+  name: string
+  duration: number
+  price: number | null
 }
 
 interface CreateAppointmentModalProps {
@@ -29,6 +36,7 @@ interface CreateAppointmentModalProps {
   onClose: () => void
   onSubmit: (data: FormData) => Promise<void>
   clients: Client[]
+  serviceTypes: ServiceType[]
   loading?: boolean
   error?: string | null
   success?: string | null
@@ -39,15 +47,16 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
   onClose,
   onSubmit,
   clients,
+  serviceTypes,
   loading = false,
   error = null,
   success = null
 }) => {
   const [formData, setFormData] = useState<FormData>({
-    startTime: '', // Se usará solo al enviar
-    duration: 30,
+    startTime: '',
     notes: '',
-    clientId: null
+    clientId: null,
+    serviceTypeId: null
   })
   const [date, setDate] = useState<string>(() => {
     const today = new Date()
@@ -104,7 +113,7 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
   const validateForm = (): string | null => {
     if (!date || !time) return 'Fecha y hora son requeridas'
     if (!formData.clientId) return 'Cliente es requerido'
-    if (formData.duration <= 0) return 'Duración debe ser mayor a 0'
+    if (!formData.serviceTypeId) return 'Tipo de servicio es requerido'
     // Validar que la fecha no sea en el pasado
     const appointmentDate = new Date(getStartTimeISO())
     const now = new Date()
@@ -138,9 +147,9 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
   const resetForm = () => {
     setFormData({
       startTime: '',
-      duration: 30,
       notes: '',
-      clientId: null
+      clientId: null,
+      serviceTypeId: null
     })
     setDate(getCurrentDate())
     setTime('')
@@ -251,6 +260,27 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
             </Popover>
           </div>
 
+          {/* Tipo de Servicio */}
+          <div className="space-y-2">
+            <Label>Tipo de Servicio *</Label>
+            <Select
+              value={formData.serviceTypeId ? formData.serviceTypeId.toString() : ""}
+              onValueChange={(value) => handleInputChange('serviceTypeId', parseInt(value))}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar servicio" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {serviceTypes.map((service) => (
+                  <SelectItem key={service.id} value={service.id.toString()}>
+                    {service.name} {service.price ? `($${service.price})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Fecha y Hora */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -284,27 +314,7 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
             </div>
           </div>
 
-          {/* Duración */}
-          <div className="space-y-2">
-            <Label>Duración (minutos) *</Label>
-            <Select
-              value={formData.duration.toString()}
-              onValueChange={(value) => handleInputChange('duration', parseInt(value))}
-              disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 minutos</SelectItem>
-                <SelectItem value="30">30 minutos</SelectItem>
-                <SelectItem value="45">45 minutos</SelectItem>
-                <SelectItem value="60">1 hora</SelectItem>
-                <SelectItem value="90">1.5 horas</SelectItem>
-                <SelectItem value="120">2 horas</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* ...eliminado campo duración... */}
 
           {/* Notas */}
           <div className="space-y-2">

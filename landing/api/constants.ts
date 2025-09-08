@@ -173,6 +173,10 @@ export const API_ENDPOINTS = {
     BRAND_LOGO: (brandId: number) => `/brand/${brandId}/upload/logo`,
     BRAND_IMAGES: (brandId: number) => `/brand/${brandId}/upload/images`,
   },
+
+  SERVICES_TYPES: {
+    GET: (brandId: number) => `/brand/${brandId}/service-types`,
+  },
   
   // Health check
   HEALTH: '/health',
