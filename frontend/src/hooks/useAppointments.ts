@@ -47,14 +47,6 @@ export const useAppointments = () => {
       // Convertir a ISO string (UTC)
       const startTime = selectedDate.toISOString();
 
-      console.log('📅 Creando cita:', {
-        service: service.name,
-        date: selectedDate.toLocaleDateString(),
-        time: appointmentData.selectedTime,
-        startTime,
-        notes: appointmentData.notes
-      });
-
       const requestData: CreateAppointmentRequest = {
         startTime,
         serviceTypeId: appointmentData.serviceTypeId,
@@ -67,8 +59,6 @@ export const useAppointments = () => {
       
       return response;
     } catch (err) {
-      console.error('❌ Error creando cita:', err);
-      
       const errorMessage = err instanceof Error ? err.message : 'Error al crear la cita';
       
       // Manejar errores específicos
