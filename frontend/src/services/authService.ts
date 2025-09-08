@@ -23,9 +23,8 @@ import { EditProfileData } from '../types/profile.types';
 import { secureStorage, TokenUtils } from '../utils/secureStorage';
 import Constants from 'expo-constants';
 
-// Obtener brandId del .env
 const getBrandId = (): number => {
-  const brandId = process.env.EXPO_PUBLIC_BRAND_ID || Constants.expoConfig?.extra?.brand_id || '1';
+  const brandId = process.env.EXPO_PUBLIC_BRAND_ID || Constants.expoConfig?.extra?.brand_id;
   console.log('🏷️ Usando brandId:', brandId);
   return parseInt(brandId);
 };

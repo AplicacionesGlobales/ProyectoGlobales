@@ -15,22 +15,42 @@ import {
   BaseResponseDto,
   ColorPaletteResponse,
   BrandResponse,
-  BrandImagesResponse
+  BrandImagesResponse,
+  ServiceTypesResponse,
+  CreateAppointmentRequest,
+  CreateAppointmentResponse
 } from './types';
+import { secureStorage } from '../utils/secureStorage';
 
-// Función helper para hacer requests
 const apiRequest = async <T>(
   endpoint: string,
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-  body?: any
+  body?: any,
+  requiresAuth: boolean = false
 ): Promise<T> => {
   const url = `${BASE_URL}${endpoint}`;
   
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Agregar token de autorización si es requerido
+  if (requiresAuth) {
+    try {
+      const accessToken = await secureStorage.getAccessToken();
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      } else {
+        throw new Error('No access token available');
+      }
+    } catch (error) {
+      throw new Error('Authentication required but no valid token found');
+    }
+  }
+
   const config: RequestInit = {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
   };
 
   if (body && method !== 'GET') {
@@ -47,23 +67,26 @@ const apiRequest = async <T>(
   return response.json();
 };
 
-// Health Endpoints
+// Health Endpoints (sin autenticación)
 export const healthCheck = async (): Promise<HealthResponse> => {
   const response = await apiRequest<HealthResponse>(
     API_ENDPOINTS.HEALTH,
-    'GET'
+    'GET',
+    undefined,
+    false // No requiere autenticación
   );
   
   console.log('Health check response:', response.status);
   return response;
 };
 
-// Auth Endpoints
+// Auth Endpoints (sin autenticación)
 export const registerUser = async (data: RegisterRequest): Promise<RegisterResponse> => {
   return apiRequest<RegisterResponse>(
     API_ENDPOINTS.AUTH.REGISTER,
     'POST',
-    data
+    data,
+    false // No requiere autenticación
   );
 };
 
@@ -71,7 +94,8 @@ export const loginUser = async (data: LoginRequest): Promise<LoginResponse> => {
   return apiRequest<LoginResponse>(
     API_ENDPOINTS.AUTH.LOGIN,
     'POST',
-    data
+    data,
+    false // No requiere autenticación
   );
 };
 
@@ -79,7 +103,8 @@ export const validateEmail = async (email: string, brandId?: number): Promise<Va
   return apiRequest<ValidateEmailResponse>(
     API_ENDPOINTS.VALIDATE.EMAIL,
     'POST',
-    { email, brandId }
+    { email, brandId },
+    false // No requiere autenticación
   );
 };
 
@@ -87,7 +112,8 @@ export const validateUsername = async (username: string): Promise<ValidateUserna
   return apiRequest<ValidateUsernameResponse>(
     API_ENDPOINTS.VALIDATE.USERNAME,
     'POST',
-    { username }
+    { username },
+    false // No requiere autenticación
   );
 };
 
@@ -95,7 +121,8 @@ export const forgotPassword = async (email: string): Promise<ForgotPasswordRespo
   const apiResponse = await apiRequest<BaseResponseDto<ForgotPasswordResponse>>(
     API_ENDPOINTS.AUTH.FORGOT_PASSWORD,
     'POST',
-    { email }
+    { email },
+    false // No requiere autenticación
   );
   
   // Extraer la data del wrapper BaseResponseDto
@@ -108,12 +135,13 @@ export const forgotPassword = async (email: string): Promise<ForgotPasswordRespo
   }
 };
 
-// Nuevos endpoints para reset password
+// Endpoints para reset password (sin autenticación)
 export const validateResetCode = async (data: ValidateResetCodeRequest): Promise<ValidateResetCodeResponse> => {
   const apiResponse = await apiRequest<BaseResponseDto<ValidateResetCodeResponse>>(
     API_ENDPOINTS.AUTH.VALIDATE_RESET_CODE,
     'POST',
-    data
+    data,
+    false // No requiere autenticación
   );
   
   // Extraer la data del wrapper BaseResponseDto
@@ -130,7 +158,8 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
   const apiResponse = await apiRequest<BaseResponseDto<ResetPasswordResponse>>(
     API_ENDPOINTS.AUTH.RESET_PASSWORD,
     'POST',
-    data
+    data,
+    false // No requiere autenticación
   );
   
   // Extraer la data del wrapper BaseResponseDto
@@ -143,26 +172,48 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
   }
 };
 
-// NEW: Color Palette Endpoints
+// Endpoints que requieren autenticación
 export const getColorPaletteByBrand = async (brandId: number): Promise<ColorPaletteResponse> => {
   return apiRequest<ColorPaletteResponse>(
     `${API_ENDPOINTS.COLOR_PALETTES.BY_BRAND}/${brandId}`,
-    'GET'
+    'GET',
+    undefined,
+    false 
   );
 };
 
-// NEW: Brand Endpoints
 export const getBrandById = async (brandId: number): Promise<BrandResponse> => {
   return apiRequest<BrandResponse>(
     `${API_ENDPOINTS.BRANDS.BY_ID}/${brandId}`,
-    'GET'
+    'GET',
+    undefined,
+    false
   );
 };
 
-// NEW: Brand Images Endpoints
 export const getBrandImages = async (brandId: number): Promise<BrandImagesResponse> => {
   return apiRequest<BrandImagesResponse>(
     `${API_ENDPOINTS.BRAND_IMAGES.BY_BRAND}/${brandId}/images`,
-    'GET'
+    'GET',
+    undefined,
+    false 
+  );
+};
+
+export const getServicesTypes = async (brandId: number): Promise<ServiceTypesResponse> => {
+  return apiRequest<ServiceTypesResponse>(
+    `${API_ENDPOINTS.SERVICE_TYPES.BY_ID.replace('{brandId}', brandId.toString())}/service-types`,
+    'GET',
+    undefined,
+    true 
+  );
+};
+
+export const createAppointment = async (data: CreateAppointmentRequest, brandId: number): Promise<CreateAppointmentResponse> => {
+  return apiRequest<CreateAppointmentResponse>(
+    `${API_ENDPOINTS.APPOINTMENTS.CREATE.replace('{brandId}', brandId.toString())}/appointments`,
+    'POST',
+    data,
+    true
   );
 };
