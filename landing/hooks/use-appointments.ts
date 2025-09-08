@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react"
 import { appointmentsService, Appointment, AppointmentStatus } from "@/services/appointment.service"
 import { clientsService, Client } from "@/services/client.service"
+import { serviceTypesService, ServiceType } from "@/services/service_types.service"
 
 interface CreateAppointmentFormData {
   startTime: string
-  duration: number
   notes: string
   clientId: number | null
+  serviceTypeId: number | null
 }
 
 interface UseAppointmentsReturn {
@@ -14,6 +15,7 @@ interface UseAppointmentsReturn {
   appointments: Appointment[]
   monthAppointments: Appointment[]
   clients: Client[]
+  serviceTypes: ServiceType[]
   selectedDate: Date
   currentMonth: Date
   loading: boolean
@@ -21,8 +23,7 @@ interface UseAppointmentsReturn {
   createLoading: boolean
   createError: string | null
   createSuccess: string | null
-  brandId: number | null // Agregar brandId al return
-  
+  brandId: number | null
   // Actions
   setSelectedDate: (date: Date) => void
   setCurrentMonth: (date: Date) => void
@@ -55,7 +56,8 @@ export const useAppointments = ({
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [createSuccess, setCreateSuccess] = useState<string | null>(null)
-  const [brandId, setBrandId] = useState<number | null>(null) // Agregar brandId state
+  const [brandId, setBrandId] = useState<number | null>(null)
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([])
 
   // Inicialización del brandId
   useEffect(() => {
@@ -68,8 +70,24 @@ export const useAppointments = ({
       fetchDayAppointments()
       fetchMonthAppointments()
       fetchClients()
+      fetchServiceTypes()
     }
   }, [brandId, autoFetch])
+  // Fetch service types
+  const fetchServiceTypes = useCallback(async () => {
+    if (!brandId) return;
+    try {
+      const response = await serviceTypesService.getServiceTypesByBrand(brandId);
+      console.log('Service Types Response:', response);
+      if (response.data) {
+        setServiceTypes(response.data);
+      } else {
+        setServiceTypes([]);
+      }
+    } catch (error) {
+      setServiceTypes([]);
+    }
+  }, [brandId]);
 
   // Funciones internas
   const initializeData = () => {
@@ -255,7 +273,6 @@ export const useAppointments = ({
 
   const handleCreateAppointment = useCallback(async (data: CreateAppointmentFormData) => {
     if (!brandId) return
-    
     try {
       setCreateLoading(true)
       setCreateError(null)
@@ -264,12 +281,16 @@ export const useAppointments = ({
       if (!data.clientId) {
         throw new Error('Cliente es requerido')
       }
+      // Validate serviceTypeId
+      if (!data.serviceTypeId) {
+        throw new Error('Tipo de servicio es requerido')
+      }
 
       const appointmentData = {
         startTime: data.startTime,
-        duration: data.duration,
         notes: data.notes,
-        clientId: data.clientId
+        clientId: data.clientId,
+        serviceTypeId: data.serviceTypeId
       }
 
       // Use createAppointmentByRoot since we're creating as admin
@@ -277,18 +298,27 @@ export const useAppointments = ({
 
       if (response.success) {
         setCreateSuccess('Cita creada exitosamente')
-        
         // Refresh appointments
         await Promise.all([
           fetchDayAppointments(),
           fetchMonthAppointments()
         ])
-        
         return response.data
       } else {
-        const errorMessage = response.errors?.join(', ') || 'Error al crear la cita'
-        setCreateError(errorMessage)
-        throw new Error(errorMessage)
+        // Mejor manejo de errores: mostrar el mensaje del backend si existe
+        let errorMessage = 'Error al crear la cita';
+        if (response.errors && response.errors.length > 0) {
+          // Si el error es un objeto, intenta mostrar la propiedad 'description' o serializar el objeto
+          const err = response.errors[0];
+          if (typeof err === 'string') {
+            errorMessage = err;
+          } else if (typeof err === 'object') {
+            errorMessage = err.description || JSON.stringify(err);
+          }
+        }
+        console.log('Create appointment error:', errorMessage);
+        setCreateError(errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('Error creating appointment:', error)
@@ -331,6 +361,7 @@ export const useAppointments = ({
     appointments,
     monthAppointments,
     clients,
+    serviceTypes,
     selectedDate,
     currentMonth,
     loading,
@@ -339,7 +370,6 @@ export const useAppointments = ({
     createError,
     createSuccess,
     brandId,
-    
     // Actions
     setSelectedDate,
     setCurrentMonth,
