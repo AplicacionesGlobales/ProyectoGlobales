@@ -29,6 +29,12 @@ export const API_ENDPOINTS = {
   BRAND_IMAGES: {
     BY_BRAND: '/files/brand',
   },
+  SERVICE_TYPES: {
+    BY_ID: '/brand/{brandId}',
+  },
+  APPOINTMENTS: {
+    CREATE: '/brand/{brandId}',
+  }
 } as const;
 
 // Base URL (ajusta según tu servidor)

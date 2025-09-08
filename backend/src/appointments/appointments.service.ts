@@ -143,12 +143,6 @@ export class AppointmentsService {
     // 3. Validar restricciones de tiempo
     const now = new Date();
     const timeDiffHours = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
-    if (timeDiffHours < appointmentSettings.minAdvanceBookingHours) {
-      throw new BadRequestException(
-        `Debe reservar con al menos ${appointmentSettings.minAdvanceBookingHours} horas de anticipación`
-      );
-    }
 
     const daysDiff = Math.ceil(timeDiffHours / 24);
     if (daysDiff > appointmentSettings.maxAdvanceBookingDays) {
