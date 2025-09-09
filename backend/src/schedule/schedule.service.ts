@@ -29,7 +29,7 @@ export class ScheduleService {
       }
     });
 
-    if (!userBrand || (!['ROOT', 'ADMIN'].includes(userBrand.user.role))) {
+    if (!userBrand || (!['ROOT', 'ADMIN', 'CLIENT'].includes(userBrand.user.role))) {
       throw new ForbiddenException('Access denied to this brand');
     }
   }
