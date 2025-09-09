@@ -337,3 +337,175 @@ export const getTodayAgenda = async (
     true
   );
 };
+
+export const getMonthlyCalendarData = async (
+  brandId: number, 
+  month: string // YYYY-MM format
+): Promise<{ 
+  success: boolean; 
+  data: {
+    month: string;
+    summary: {
+      totalAppointments: number;
+      confirmedAppointments: number;
+      pendingAppointments: number;
+      completedAppointments: number;
+      cancelledAppointments: number;
+      totalOccupiedMinutes: number;
+      totalAvailableMinutes: number;
+      averageOccupancyPercentage: number;
+      businessDaysInMonth: number;
+      daysWithAppointments: number;
+    };
+    days: Array<{
+      date: string;
+      totalAppointments: number;
+      confirmedAppointments: number;
+      pendingAppointments: number;
+      completedAppointments: number;
+      cancelledAppointments: number;
+      totalOccupiedMinutes: number;
+      totalAvailableMinutes: number;
+      occupancyPercentage: number;
+      isBusinessOpen: boolean;
+    }>;
+  }
+}> => {
+  const url = `/brand/${brandId}/calendar/month/${month}`;
+  console.log('🔗 Fetching monthly calendar data:', url);
+  
+  return apiRequest<{ 
+    success: boolean; 
+    data: any;
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Endpoints para horarios de negocio
+export const getBusinessHours = async (
+  brandId: number
+): Promise<{
+  success: boolean;
+  data: Array<{
+    id: number;
+    dayOfWeek: number; // 0=Sunday, 1=Monday, etc.
+    dayName: string;
+    isOpen: boolean;
+    openTime?: string;
+    closeTime?: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}> => {
+  const url = `/brand/${brandId}/business-hours`;
+  console.log('🔗 Fetching business hours:', url);
+  
+  return apiRequest<{
+    success: boolean;
+    data: any[];
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Endpoints para horarios especiales
+export const getSpecialHours = async (
+  brandId: number,
+  startDate?: string,
+  endDate?: string
+): Promise<{
+  success: boolean;
+  data: Array<{
+    id: number;
+    date: string;
+    isOpen: boolean;
+    openTime?: string;
+    closeTime?: string;
+    reason?: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}> => {
+  let url = `/brand/${brandId}/special-hours`;
+  const params = new URLSearchParams();
+  
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  console.log('🔗 Fetching special hours:', url);
+  
+  return apiRequest<{
+    success: boolean;
+    data: any[];
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Endpoint para configuraciones de citas
+export const getAppointmentSettings = async (
+  brandId: number
+): Promise<{
+  success: boolean;
+  data: {
+    id: number;
+    defaultDuration: number;
+    bufferTime: number;
+    maxAdvanceBookingDays: number;
+    minAdvanceBookingHours: number;
+    allowSameDayBooking: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+}> => {
+  const url = `/brand/${brandId}/appointment-settings`;
+  console.log('🔗 Fetching appointment settings:', url);
+  
+  return apiRequest<{
+    success: boolean;
+    data: any;
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Mejorar el endpoint semanal existente
+export const getWeeklyCalendarData = async (
+  brandId: number,
+  startDate: string, // Fecha de inicio de la semana YYYY-MM-DD
+  endDate: string    // Fecha de fin de la semana YYYY-MM-DD
+): Promise<{ 
+  success: boolean; 
+  data: any[] 
+}> => {
+  // Para vista semanal, usar el endpoint de citas por rango
+  const url = `${API_ENDPOINTS.APPOINTMENTS.CALENDAR.replace('{brandId}', brandId.toString())}?startDate=${startDate}&endDate=${endDate}`;
+  console.log('🔗 Fetching weekly calendar data:', url);
+  
+  return apiRequest<{ 
+    success: boolean; 
+    data: any[] 
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
