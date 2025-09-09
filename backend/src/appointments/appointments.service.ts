@@ -528,6 +528,70 @@ async getAppointments(
     throw error;
   }
 }
+
+  // Obtener cita específica por ID
+  async getAppointmentById(
+    brandId: number,
+    appointmentId: number,
+    userId: number
+  ): Promise<BaseResponseDto<AppointmentDto>> {
+    try {
+      // Validar que appointmentId sea un número válido
+      if (!appointmentId || isNaN(appointmentId)) {
+        throw new BadRequestException('ID de cita inválido');
+      }
+      
+      const isRoot = await this.isRootUser(brandId, userId);
+      
+      const appointment = await this.prisma.appointment.findUnique({
+        where: { id: appointmentId },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          serviceType: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              duration: true,
+              price: true,
+              color: true,
+              icon: true
+            }
+          }
+        }
+      });
+
+      if (!appointment || appointment.brandId !== brandId) {
+        throw new NotFoundException('Cita no encontrada');
+      }
+
+      // Si no es ROOT, verificar que sea el cliente dueño de la cita
+      if (!isRoot && appointment.clientId !== userId) {
+        throw new ForbiddenException('No tiene acceso a esta cita');
+      }
+
+      return BaseResponseDto.success(this.mapToDto(appointment));
+    } catch (error) {
+      console.error('Error getting appointment by ID:', error);
+      throw error;
+    }
+  }
+
   // Actualizar cita
   async updateAppointment(
     brandId: number,

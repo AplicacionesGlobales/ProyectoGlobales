@@ -235,33 +235,4 @@ export interface CalendarInsights {
   upcomingBusyPeriods: Array<{ date: string; occupancyPercentage: number }>;
 }
 
-// Export all existing types and new ones
-export type {
-  // Existing exports...
-  TimeSlot,
-  CalendarDay,
-  CalendarWeek,
-  CalendarAppointment,
-  CalendarClient,
-  CalendarServiceType,
-  BusinessHours,
-  CalendarConfiguration,
-  CalendarInteractions,
-  CalendarNavigation,
-  CalendarError,
-  CalendarLoadingState,
-  
-  // New exports
-  DetailedBusinessHours,
-  SpecialHours,
-  AppointmentSettings,
-  MonthlyDayData,
-  MonthlySummary,
-  CalendarMonth,
-  MobileViewConfig,
-  CalendarDataContext,
-  CalendarViewState,
-  CalendarCacheEntry,
-  CalendarCache,
-  CalendarInsights
-};
+// All types are already exported with their interface declarations above

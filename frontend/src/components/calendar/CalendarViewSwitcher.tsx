@@ -153,12 +153,12 @@ const CalendarViewSwitcher: React.FC<CalendarViewSwitcherProps> = ({
     }
   };
 
-  const getViewIcon = (view: CalendarViewType): string => {
+  const getViewIcon = (view: CalendarViewType) => {
     switch (view) {
-      case 'day': return 'today-outline';
-      case 'week': return 'calendar-outline';
-      case 'month': return 'grid-outline';
-      default: return 'calendar-outline';
+      case 'day': return 'today-outline' as const;
+      case 'week': return 'calendar-outline' as const;
+      case 'month': return 'grid-outline' as const;
+      default: return 'calendar-outline' as const;
     }
   };
 

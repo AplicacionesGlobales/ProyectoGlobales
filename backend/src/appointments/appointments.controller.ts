@@ -187,51 +187,7 @@ export class AppointmentsController {
     );
   }
 
-  // Obtener una cita específica
-  @Get('appointments/:appointmentId')
-  @ApiOperation({
-    summary: 'Obtener cita específica',
-    description: 'Obtiene los detalles de una cita específica'
-  })
-  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
-  @ApiResponse({
-    status: 200,
-    description: 'Cita obtenida exitosamente',
-    type: BaseResponseDto
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Cita no encontrada'
-  })
-  async getAppointment(
-    @Param('brandId') brandId: string,
-    @Param('appointmentId') appointmentId: string,
-    @Request() req: any
-  ): Promise<BaseResponseDto<AppointmentDto>> {
-    // Esta funcionalidad se puede implementar si es necesaria
-    // Por ahora, usar el endpoint de lista con filtros
-    const query: GetAppointmentsQueryDto = { page: 1, limit: 1 };
-    const result = await this.appointmentsService.getAppointments(
-      parseInt(brandId),
-      req.user.userId,
-      query
-    );
-    
-    if (!result.data || !result.data.appointments) {
-      throw new Error('Cita no encontrada');
-    }
 
-    const appointment = result.data.appointments.find(
-      apt => apt.id === parseInt(appointmentId)
-    );
-    
-    if (!appointment) {
-      throw new Error('Cita no encontrada');
-    }
-    
-    return BaseResponseDto.success(appointment);
-  }
 
   // Actualizar estado de cita
   @Put('appointments/:appointmentId/status')
@@ -467,7 +423,12 @@ export class AppointmentsController {
       query
     );
     
-    return BaseResponseDto.success(result.data?.appointments || []);
+    // El servicio ya devuelve BaseResponseDto, extraemos los appointments
+    if (result.success && result.data) {
+      return BaseResponseDto.success(result.data.appointments || []);
+    } else {
+      throw new Error('Error al obtener las citas del calendario');
+    }
   }
 
   // Get complete day agenda with appointments and available slots
@@ -543,6 +504,35 @@ export class AppointmentsController {
       date,
       userId,
       query
+    );
+  }
+
+  // Obtener una cita específica (DEBE IR AL FINAL para evitar conflictos de rutas)
+  @Get('appointments/:appointmentId')
+  @ApiOperation({
+    summary: 'Obtener cita específica',
+    description: 'Obtiene los detalles de una cita específica'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+  @ApiResponse({
+    status: 200,
+    description: 'Cita obtenida exitosamente',
+    type: BaseResponseDto
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cita no encontrada'
+  })
+  async getAppointment(
+    @Param('brandId') brandId: string,
+    @Param('appointmentId') appointmentId: string,
+    @Request() req: any
+  ): Promise<BaseResponseDto<AppointmentDto>> {
+    return this.appointmentsService.getAppointmentById(
+      parseInt(brandId),
+      parseInt(appointmentId),
+      req.user.userId
     );
   }
 }
