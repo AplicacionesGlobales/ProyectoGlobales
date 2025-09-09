@@ -176,7 +176,7 @@ export default function ProfileScreen() {
 
   // Manejar historial completo
   const handleFullHistory = () => {
-    router.push('/(client-tabs)/history');
+    router.push('./history');
   };
 
   // Manejar historial de pagos
