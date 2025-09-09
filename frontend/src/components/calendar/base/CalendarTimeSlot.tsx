@@ -1,10 +1,9 @@
 // src/components/calendar/base/CalendarTimeSlot.tsx  
-// Principio de Responsabilidad Única (SRP)
-// Componente que solo renderiza un slot de tiempo individual
+// Componente TimeSlot con colores unificados del tema
 
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '@/contexts/ThemeContext';
 import type { CalendarAppointment } from '@/types/calendar';
 
 interface CalendarTimeSlotProps {
@@ -32,9 +31,7 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
   isCurrentTime = false,
   disabled = false
 }) => {
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const tintColor = useThemeColor({}, 'tint');
+  const { colors } = useTheme();
 
   const formatDisplayTime = (timeStr: string): string => {
     if (timeFormat === '12h') {
@@ -55,7 +52,7 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
   };
 
   const getAppointmentColor = () => {
-    if (!appointment) return tintColor;
+    if (!appointment) return colors.primary;
     
     switch (appointment.status) {
       case 'CONFIRMED':
@@ -67,7 +64,7 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
       case 'CANCELLED':
         return '#EF4444'; // red
       default:
-        return tintColor;
+        return colors.primary;
     }
   };
 
@@ -76,17 +73,17 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
       height,
       flexDirection: 'row',
       borderBottomWidth: 1,
-      borderBottomColor: textColor + '10',
+      borderBottomColor: colors.textSecondary + '10',
     },
     timeColumn: {
       width: 60,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: backgroundColor,
+      backgroundColor: colors.surface,
     },
     timeText: {
       fontSize: 12,
-      color: textColor + 'AA',
+      color: colors.textSecondary,
       fontWeight: '500',
     },
     slotContainer: {
@@ -97,26 +94,28 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
       justifyContent: 'center',
     },
     available: {
-      backgroundColor: backgroundColor,
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: textColor + '20',
+      borderColor: colors.textSecondary + '20',
       borderStyle: 'dashed',
     },
     unavailable: {
-      backgroundColor: textColor + '05',
+      backgroundColor: colors.textSecondary + '05',
     },
     occupied: {
       backgroundColor: getAppointmentColor() + '20',
       borderLeftWidth: 4,
       borderLeftColor: getAppointmentColor(),
+      borderRadius: 8,
     },
     currentTime: {
-      backgroundColor: tintColor + '10',
+      backgroundColor: colors.primary + '10',
       borderLeftWidth: 3,
-      borderLeftColor: tintColor,
+      borderLeftColor: colors.primary,
+      borderRadius: 8,
     },
     disabled: {
-      backgroundColor: textColor + '05',
+      backgroundColor: colors.textSecondary + '05',
       opacity: 0.5,
     },
     appointmentContent: {
@@ -125,16 +124,34 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
     appointmentTitle: {
       fontSize: 12,
       fontWeight: '600',
-      color: textColor,
+      color: colors.text,
     },
     appointmentSubtitle: {
       fontSize: 10,
-      color: textColor + 'AA',
+      color: colors.textSecondary,
       marginTop: 2,
+    },
+    appointmentStatus: {
+      fontSize: 9,
+      fontWeight: '500',
+      marginTop: 2,
+      textTransform: 'uppercase',
+    },
+    statusConfirmed: {
+      color: '#10B981',
+    },
+    statusPending: {
+      color: '#F59E0B',
+    },
+    statusCompleted: {
+      color: '#6B7280',
+    },
+    statusCancelled: {
+      color: '#EF4444',
     },
     availableText: {
       fontSize: 11,
-      color: textColor + '60',
+      color: colors.textSecondary + '60',
       textAlign: 'center',
       fontStyle: 'italic',
     },
@@ -142,6 +159,26 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
       borderRadius: 4,
     },
   });
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED': return styles.statusConfirmed;
+      case 'PENDING': return styles.statusPending;
+      case 'COMPLETED': return styles.statusCompleted;
+      case 'CANCELLED': return styles.statusCancelled;
+      default: return styles.statusPending;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED': return 'Confirmada';
+      case 'PENDING': return 'Pendiente';
+      case 'COMPLETED': return 'Completada';
+      case 'CANCELLED': return 'Cancelada';
+      default: return status;
+    }
+  };
 
   const handlePress = () => {
     if (!disabled && onPress) {
@@ -172,7 +209,7 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
         onPress={handlePress}
         onLongPress={handleLongPress}
         disabled={disabled}
-        android_ripple={{ color: tintColor + '20' }}
+        android_ripple={{ color: colors.primary + '20' }}
       >
         {appointment ? (
           <View style={styles.appointmentContent}>
@@ -184,6 +221,9 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
                 {appointment.serviceType.name}
               </Text>
             )}
+            <Text style={[styles.appointmentStatus, getStatusStyle(appointment.status)]}>
+              {getStatusText(appointment.status)}
+            </Text>
           </View>
         ) : isAvailable ? (
           <Text style={styles.availableText}>
