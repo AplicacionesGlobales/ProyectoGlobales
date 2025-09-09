@@ -38,7 +38,15 @@ export const API_ENDPOINTS = {
     CALENDAR: '/brand/{brandId}/appointments/calendar',
     DAY_AGENDA: '/brand/{brandId}/calendar/today/agenda',
     DATE_AGENDA: '/brand/{brandId}/calendar/date/{date}/agenda',
+  },
+  CALENDAR: {
+    MONTH: '/brand/{brandId}/calendar/month/{month}',
+    WEEK: '/brand/{brandId}/appointments/calendar', // Using existing with date range
+    BUSINESS_HOURS: '/brand/{brandId}/business-hours',
+    SPECIAL_HOURS: '/brand/{brandId}/special-hours',
+    APPOINTMENT_SETTINGS: '/brand/{brandId}/appointment-settings',
   }
+
 } as const;
 
 // Base URL (ajusta según tu servidor)
