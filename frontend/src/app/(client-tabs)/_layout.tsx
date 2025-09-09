@@ -1,3 +1,4 @@
+// frontend\src\app\(client-tabs)\_layout.tsx
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
@@ -44,6 +45,13 @@ export default function ClientTabLayout() {
         options={{
           title: 'Historial',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="clock.fill" color={color} />,
+                  }}
+      />
+     <Tabs.Screen
+        name="booking"
+        options={{
+          title: 'Agendar',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
         }}
       />
       <Tabs.Screen
