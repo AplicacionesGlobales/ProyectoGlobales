@@ -34,6 +34,9 @@ export const API_ENDPOINTS = {
   },
   APPOINTMENTS: {
     CREATE: '/brand/{brandId}',
+    CALENDAR: '/brand/{brandId}/appointments/calendar',
+    DAY_AGENDA: '/brand/{brandId}/calendar/today/agenda',
+    DATE_AGENDA: '/brand/{brandId}/calendar/date/{date}/agenda',
   }
 } as const;
 

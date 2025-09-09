@@ -217,3 +217,110 @@ export const createAppointment = async (data: CreateAppointmentRequest, brandId:
     true
   );
 };
+
+// Calendar endpoints
+export const getCalendarAppointments = async (
+  brandId: number, 
+  startDate: string, 
+  endDate: string
+): Promise<{ success: boolean; data: any[] }> => {
+  const url = `${API_ENDPOINTS.APPOINTMENTS.CALENDAR.replace('{brandId}', brandId.toString())}?startDate=${startDate}&endDate=${endDate}`;
+  return apiRequest<{ success: boolean; data: any[] }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+export const getDayAgenda = async (
+  brandId: number, 
+  date: string
+): Promise<{ 
+  success: boolean; 
+  data: {
+    date: string;
+    businessHours: { 
+      start: string; 
+      end: string; 
+      isClosed: boolean; 
+    };
+    agenda: Array<{
+      startTime: string;
+      endTime: string;
+      type: 'appointment' | 'available';
+      duration: number;
+      isBookable?: boolean;
+      appointment?: any;
+    }>;
+    totalAppointments: number;
+    totalAvailableSlots: number;
+    slotDuration: number;
+    totalAvailableTime: number;
+    totalBookedTime: number;
+  }
+}> => {
+  // Usar el nuevo endpoint que acepta fechas específicas
+  const url = `${API_ENDPOINTS.APPOINTMENTS.DATE_AGENDA
+    .replace('{brandId}', brandId.toString())
+    .replace('{date}', date)}`;
+  
+  console.log('🔗 Fetching day agenda for date:', url, `(date: ${date})`);
+  
+  return apiRequest<{ 
+    success: boolean; 
+    data: {
+      date: string;
+      businessHours: { 
+        start: string; 
+        end: string; 
+        isClosed: boolean; 
+      };
+      agenda: Array<{
+        startTime: string;
+        endTime: string;
+        type: 'appointment' | 'available';
+        duration: number;
+        isBookable?: boolean;
+        appointment?: any;
+      }>;
+      totalAppointments: number;
+      totalAvailableSlots: number;
+      slotDuration: number;
+      totalAvailableTime: number;
+      totalBookedTime: number;
+    }
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Mantener la función original para compatibilidad (solo para "today")
+export const getTodayAgenda = async (
+  brandId: number
+): Promise<{ 
+  success: boolean; 
+  data: {
+    businessHours: { start: string; end: string };
+    agenda: any[];
+  }
+}> => {
+  const url = API_ENDPOINTS.APPOINTMENTS.DAY_AGENDA.replace('{brandId}', brandId.toString());
+  console.log('🔗 Fetching today agenda:', url);
+  
+  return apiRequest<{ 
+    success: boolean; 
+    data: {
+      businessHours: { start: string; end: string };
+      agenda: any[];
+    }
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
