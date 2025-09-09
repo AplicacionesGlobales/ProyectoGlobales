@@ -118,7 +118,6 @@ export default function BookingScreen() {
             config={calendarConfig}
             interactions={calendarInteractions}
             showHeader={false}
-            showCurrentTimeIndicator={true}
           />
         );
       case 'month':
