@@ -85,13 +85,16 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     startDate.setDate(firstDay.getDate() - daysToSubtract);
 
     const grid: DayData[] = [];
-    const today = new Date().toISOString().split('T')[0];
+    // Obtener fecha actual sin problemas de zona horaria
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     for (let i = 0; i < 42; i++) { // 6 semanas x 7 días
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
       
-      const dateStr = currentDate.toISOString().split('T')[0];
+      // Formatear fecha local sin problemas de zona horaria
+      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
       const dayInfo = monthData.days.find(d => d.date === dateStr);
       
       grid.push({
@@ -128,7 +131,9 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
   };
 
   const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
+    // Evitar problemas de zona horaria creando fecha local explícita
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     return date.toLocaleDateString('es-ES', {
       weekday: 'long',
       day: 'numeric',
@@ -458,7 +463,12 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                     dayData.isToday && styles.dayNumberToday,
                     isInactive && styles.dayNumberInactive,
                   ]}>
-                    {new Date(dayData.date).getDate()}
+                    {(() => {
+                      // Evitar problemas de zona horaria creando fecha local explícita
+                      const [year, month, day] = dayData.date.split('-').map(Number);
+                      const date = new Date(year, month - 1, day);
+                      return date.getDate();
+                    })()}
                   </Text>
 
                   {/* Indicadores de ocupación */}

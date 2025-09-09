@@ -69,6 +69,25 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
 
   const visibleDays = getVisibleDays();
 
+  // Función auxiliar para comparar fechas sin problemas de zona horaria
+  const isSameDate = (date1: string, date2: string): boolean => {
+    try {
+      // Normalizar ambas fechas a formato YYYY-MM-DD
+      const normalizeDate = (dateStr: string): string => {
+        const date = new Date(dateStr + 'T12:00:00.000'); // Usar mediodía para evitar problemas de zona
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      return normalizeDate(date1) === normalizeDate(date2);
+    } catch (error) {
+      console.error('Error comparing dates:', error, { date1, date2 });
+      return false;
+    }
+  };
+
   // Procesar datos para cada día de la semana
   const processWeekData = (): WeekDayData[] => {
     return visibleDays.map(day => {
@@ -82,7 +101,9 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       const occupiedMinutes = appointments.reduce((total, apt) => total + apt.duration, 0);
       const occupancyPercentage = businessMinutes > 0 ? (occupiedMinutes / businessMinutes) * 100 : 0;
 
-      const today = new Date().toISOString().split('T')[0];
+      // Obtener fecha actual sin problemas de zona horaria
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
       return {
         date: day.date,
@@ -91,7 +112,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         pendingAppointments,
         occupancyPercentage,
         isBusinessOpen: !day.businessHours.isClosed,
-        isToday: day.date === today
+        isToday: isSameDate(day.date, todayStr)
       };
     });
   };
@@ -108,14 +129,18 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
   };
 
   const formatDayName = (date: string): string => {
-    const dateObj = new Date(date);
+    // Evitar problemas de zona horaria creando fecha local explícita
+    const [year, month, day] = date.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
     return dateObj.toLocaleDateString('es-ES', {
       weekday: 'short'
     });
   };
 
   const formatDayNumber = (date: string): string => {
-    const dateObj = new Date(date);
+    // Evitar problemas de zona horaria creando fecha local explícita
+    const [year, month, day] = date.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
     return dateObj.getDate().toString();
   };
 

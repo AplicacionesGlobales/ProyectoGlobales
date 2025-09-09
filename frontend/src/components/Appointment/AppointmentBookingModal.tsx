@@ -301,7 +301,7 @@ export const AppointmentBookingModal: React.FC<AppointmentBookingModalProps> = (
         <View style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Reservar Cita</Text>
+            <Text style={styles.title}>Reservar Citas</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>

@@ -7,14 +7,18 @@ import { ICalendarDateService } from './interfaces';
 export class CalendarDateService implements ICalendarDateService {
   
   getCurrentWeekDates(date: string, firstDayOfWeek: 0 | 1 = 1): string[] {
-    const targetDate = new Date(date);
+    // Evitar problemas de zona horaria creando fecha local explícita
+    const [year, month, day] = date.split('-').map(Number);
+    const targetDate = new Date(year, month - 1, day);
     const startOfWeek = this.getStartOfWeek(targetDate, firstDayOfWeek);
     
     const weekDates: string[] = [];
     for (let i = 0; i < 7; i++) {
       const currentDate = new Date(startOfWeek);
       currentDate.setDate(startOfWeek.getDate() + i);
-      weekDates.push(currentDate.toISOString().split('T')[0]);
+      // Formatear fecha local sin problemas de zona horaria
+      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+      weekDates.push(dateStr);
     }
     
     return weekDates;
@@ -29,9 +33,12 @@ export class CalendarDateService implements ICalendarDateService {
   }
 
   addDays(date: string, days: number): string {
-    const result = new Date(date);
+    // Evitar problemas de zona horaria creando fecha local explícita
+    const [year, month, day] = date.split('-').map(Number);
+    const result = new Date(year, month - 1, day);
     result.setDate(result.getDate() + days);
-    return result.toISOString().split('T')[0];
+    // Formatear fecha local sin problemas de zona horaria
+    return `${result.getFullYear()}-${String(result.getMonth() + 1).padStart(2, '0')}-${String(result.getDate()).padStart(2, '0')}`;
   }
 
   addWeeks(date: string, weeks: number): string {
@@ -39,7 +46,9 @@ export class CalendarDateService implements ICalendarDateService {
   }
 
   formatDate(date: string, format: string, locale: string = 'es'): string {
-    const dateObj = new Date(date);
+    // Evitar problemas de zona horaria creando fecha local explícita
+    const [year, month, day] = date.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
     
     switch (format) {
       case 'EEEE': // Full day name
@@ -73,7 +82,9 @@ export class CalendarDateService implements ICalendarDateService {
   }
 
   isToday(date: string): boolean {
-    const today = new Date().toISOString().split('T')[0];
+    // Obtener fecha actual en zona horaria local
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     return date === today;
   }
 

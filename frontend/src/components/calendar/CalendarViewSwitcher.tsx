@@ -123,31 +123,39 @@ const CalendarViewSwitcher: React.FC<CalendarViewSwitcherProps> = ({
   };
 
   const formatCurrentPeriod = (): string => {
-    const date = new Date(currentDate);
+    // Usar formato ISO para evitar problemas de zona horaria
+    const [year, month, day] = currentDate.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // Crear fecha local explícita
     
     switch (currentView) {
       case 'day':
-        return date.toLocaleDateString('es-ES', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long'
-        });
+        const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                          'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        
+        return `${dayNames[date.getDay()]}, ${day} de ${monthNames[date.getMonth()]}`;
+      
       case 'week':
         // Calcular inicio y fin de semana
         const startOfWeek = new Date(date);
-        const day = startOfWeek.getDay();
-        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Lunes como primer día
-        startOfWeek.setDate(diff);
+        const dayOfWeek = startOfWeek.getDay();
+        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Lunes como primer día
+        startOfWeek.setDate(startOfWeek.getDate() + diff);
         
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         
-        return `${startOfWeek.getDate()} - ${endOfWeek.getDate()} ${endOfWeek.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`;
+        const monthNames2 = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                           'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        
+        return `${startOfWeek.getDate()} - ${endOfWeek.getDate()} de ${monthNames2[endOfWeek.getMonth()]} ${endOfWeek.getFullYear()}`;
+      
       case 'month':
-        return date.toLocaleDateString('es-ES', {
-          month: 'long',
-          year: 'numeric'
-        });
+        const monthNames3 = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                           'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        
+        return `${monthNames3[date.getMonth()]} ${date.getFullYear()}`;
+      
       default:
         return '';
     }
