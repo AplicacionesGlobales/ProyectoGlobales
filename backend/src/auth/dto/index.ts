@@ -1,5 +1,6 @@
 export * from './register-client.dto';
 export * from './auth-response.dto';
+export * from './google-validate.dto';
 export * from './password-reset.dto';
 export * from './register-brand.dto';
 export * from './login-request.dto';

@@ -1,5 +1,5 @@
 import { API_ENDPOINTS, BASE_URL } from './constants';
-import { 
+import {
   HealthResponse,
   RegisterRequest,
   RegisterResponse,
@@ -29,7 +29,7 @@ const apiRequest = async <T>(
   requiresAuth: boolean = false
 ): Promise<T> => {
   const url = `${BASE_URL}${endpoint}`;
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -58,7 +58,7 @@ const apiRequest = async <T>(
   }
 
   const response = await fetch(url, config);
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `API Error: ${response.status}`);
@@ -75,7 +75,7 @@ export const healthCheck = async (): Promise<HealthResponse> => {
     undefined,
     false // No requiere autenticación
   );
-  
+
   console.log('Health check response:', response.status);
   return response;
 };
@@ -93,6 +93,19 @@ export const registerUser = async (data: RegisterRequest): Promise<RegisterRespo
 export const loginUser = async (data: LoginRequest): Promise<LoginResponse> => {
   return apiRequest<LoginResponse>(
     API_ENDPOINTS.AUTH.LOGIN,
+    'POST',
+    data,
+    false // No requiere autenticación
+  );
+};
+
+export const validateGoogleToken = async (data: {
+  idToken: string;
+  brandId: number;
+  rememberMe?: boolean;
+}): Promise<LoginResponse> => {
+  return apiRequest<LoginResponse>(
+    API_ENDPOINTS.AUTH.GOOGLE_VALIDATE,
     'POST',
     data,
     false // No requiere autenticación
@@ -124,7 +137,7 @@ export const forgotPassword = async (email: string): Promise<ForgotPasswordRespo
     { email },
     false // No requiere autenticación
   );
-  
+
   // Extraer la data del wrapper BaseResponseDto
   if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
@@ -143,7 +156,7 @@ export const validateResetCode = async (data: ValidateResetCodeRequest): Promise
     data,
     false // No requiere autenticación
   );
-  
+
   // Extraer la data del wrapper BaseResponseDto
   if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
@@ -161,7 +174,7 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
     data,
     false // No requiere autenticación
   );
-  
+
   // Extraer la data del wrapper BaseResponseDto
   if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
@@ -178,7 +191,7 @@ export const getColorPaletteByBrand = async (brandId: number): Promise<ColorPale
     `${API_ENDPOINTS.COLOR_PALETTES.BY_BRAND}/${brandId}`,
     'GET',
     undefined,
-    false 
+    false
   );
 };
 
@@ -196,7 +209,7 @@ export const getBrandImages = async (brandId: number): Promise<BrandImagesRespon
     `${API_ENDPOINTS.BRAND_IMAGES.BY_BRAND}/${brandId}/images`,
     'GET',
     undefined,
-    false 
+    false
   );
 };
 
@@ -205,7 +218,7 @@ export const getServicesTypes = async (brandId: number): Promise<ServiceTypesRes
     `${API_ENDPOINTS.SERVICE_TYPES.BY_ID.replace('{brandId}', brandId.toString())}/service-types`,
     'GET',
     undefined,
-    true 
+    true
   );
 };
 

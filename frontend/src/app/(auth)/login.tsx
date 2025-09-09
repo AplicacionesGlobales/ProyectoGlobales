@@ -2,6 +2,7 @@
 import { healthCheck } from '@/api';
 import { useApp } from '@/contexts/AppContext';
 import { authService } from '@/services/authService';
+import { googleAuthNativeService } from '@/services/googleAuth.native.service';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect, useRef } from 'react';
@@ -26,7 +27,7 @@ const { width: screenWidth } = Dimensions.get('window');
 export default function LoginScreen() {
   // Theme and app config
   const { colors, isConfigLoaded } = useTheme();
-  
+
   // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -164,9 +165,55 @@ export default function LoginScreen() {
     router.push('/(auth)/ForgotPassword');
   };
 
-  const handleGoogleLogin = () => {
-    // Implement Google login
-    showToast('Google login coming soon!', 'info', 'medium');
+  const handleGoogleLogin = async () => {
+    try {
+      console.log('🔍 Iniciando Google Sign-In...');
+
+      const result = await googleAuthNativeService.signIn();
+
+      if (!result.success) {
+        showToast(result.error || 'Google sign-in failed', 'error', 'high');
+        return;
+      }
+
+      if (!result.idToken) {
+        showToast('No se pudo obtener el token de Google', 'error', 'high');
+        return;
+      }
+
+      console.log('🔑 Token obtenido, autenticando con backend...');
+
+      // Usar el AuthService para autenticar con el backend
+      const authResponse = await authService.loginWithGoogle(result.idToken, rememberMe);
+
+      // Actualizar contexto
+      const success = await login(authResponse.user.email, ''); // Password no necesario para Google
+
+      if (success) {
+        const isAdmin = authResponse.user.role === 'ADMIN' || authResponse.user.role === 'ROOT';
+
+        showSuccess(`¡Bienvenido ${result.user?.name || authResponse.user.firstName}!`, 3000);
+
+        setTimeout(() => {
+          if (isAdmin) {
+            router.replace('/(admin-tabs)/appointments');
+          } else {
+            router.replace('/(client-tabs)');
+          }
+        }, 100);
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error en Google login:', error);
+
+      if (error.message?.includes('cancelled')) {
+        showToast('Sign-in cancelado', 'info', 'medium');
+      } else if (error.message?.includes('network')) {
+        showToast('Error de conexión. Verifique su internet.', 'error', 'high');
+      } else {
+        showToast(error.message || 'Error en Google sign-in', 'error', 'high');
+      }
+    }
   };
 
   const testHealthAPI = async () => {
@@ -182,11 +229,11 @@ export default function LoginScreen() {
   // Show loading state while config loads
   if (!isConfigLoaded) {
     return (
-      <StyledView style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
+      <StyledView style={{
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.background 
+        backgroundColor: colors.background
       }}>
         {/* You could add a loading spinner here */}
       </StyledView>

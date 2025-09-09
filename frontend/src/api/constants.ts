@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     REGISTER: '/auth/register/client',
     LOGIN: '/auth/login',
+    GOOGLE_VALIDATE: '/auth/google/validate',
     FORGOT_PASSWORD: '/auth/forgot-password',
     VALIDATE_RESET_CODE: '/auth/validate-reset-code',
     RESET_PASSWORD: '/auth/reset-password',
