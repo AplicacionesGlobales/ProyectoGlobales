@@ -12,7 +12,8 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
-  Request
+  Request,
+  BadRequestException
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -499,6 +500,47 @@ export class AppointmentsController {
     return this.appointmentsService.getDayAgenda(
       parseInt(brandId),
       today,
+      userId,
+      query
+    );
+  }
+
+  // Get complete day agenda for any specific date
+  @Get('calendar/date/:date/agenda')
+  @UseGuards(JwtAuthGuard) // Requiere autenticación
+  @ApiOperation({
+    summary: 'Obtener agenda completa para una fecha específica',
+    description: 'Retorna la agenda de una fecha específica con citas programadas y espacios disponibles. Solo accesible para miembros del brand.'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiParam({ name: 'date', description: 'Fecha en formato YYYY-MM-DD', example: '2024-08-20' })
+  @ApiQuery({ 
+    name: 'includeCancelled', 
+    required: false, 
+    description: 'Incluir citas canceladas (solo para dueños)',
+    example: false
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Agenda de la fecha específica obtenida exitosamente',
+    type: BaseResponseDto
+  })
+  async getDateAgenda(
+    @Param('brandId') brandId: string,
+    @Param('date') date: string,
+    @Query(ValidationPipe) query: GetDayAgendaQueryDto,
+    @Request() req: any
+  ): Promise<BaseResponseDto<DayAgendaDto>> {
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+      throw new BadRequestException('Formato de fecha inválido. Use YYYY-MM-DD');
+    }
+
+    const userId = req.user?.sub || req.user?.userId;
+    return this.appointmentsService.getDayAgenda(
+      parseInt(brandId),
+      date,
       userId,
       query
     );
