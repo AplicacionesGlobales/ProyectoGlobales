@@ -7,7 +7,7 @@ Has proporcionado credenciales de **aplicación instalada** (`"installed"`), per
 ### 📋 Credenciales Actuales:
 
 - **Project ID**: `white-label-469518`
-- **Client ID**: `669086356546-ara22s1b3i1377f97oevh6sq8eagcqn0.apps.googleusercontent.com`
+- **Client ID**: `669086356546-gjd6uud9egbg1in8svp1ll8omej0brf4.apps.googleusercontent.com`
 - **Tipo**: Aplicación instalada (desktop/installed)
 
 ## 🚨 Pasos CRÍTICOS para Completar la Configuración
@@ -55,13 +55,13 @@ Una vez que tengas los nuevos Client IDs de Android e iOS:
 
 ```env
 # Mantener el mismo (web client id funciona para backend)
-GOOGLE_CLIENT_ID=669086356546-ara22s1b3i1377f97oevh6sq8eagcqn0.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=669086356546-gjd6uud9egbg1in8svp1ll8omej0brf4.apps.googleusercontent.com
 ```
 
 #### Frontend (.env):
 
 ```env
-EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=669086356546-ara22s1b3i1377f97oevh6sq8eagcqn0.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=669086356546-gjd6uud9egbg1in8svp1ll8omej0brf4.apps.googleusercontent.com
 EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=TU_NUEVO_ANDROID_CLIENT_ID.apps.googleusercontent.com
 EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=TU_NUEVO_IOS_CLIENT_ID.apps.googleusercontent.com
 ```
@@ -71,7 +71,7 @@ EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=TU_NUEVO_IOS_CLIENT_ID.apps.googleusercontent.c
 ```json
 {
   "extra": {
-    "googleWebClientId": "669086356546-ara22s1b3i1377f97oevh6sq8eagcqn0.apps.googleusercontent.com",
+    "googleWebClientId": "669086356546-gjd6uud9egbg1in8svp1ll8omej0brf4.apps.googleusercontent.com",
     "googleAndroidClientId": "TU_NUEVO_ANDROID_CLIENT_ID.apps.googleusercontent.com",
     "googleIosClientId": "TU_NUEVO_IOS_CLIENT_ID.apps.googleusercontent.com"
   }

@@ -8,12 +8,8 @@ export const GoogleAuthConfig = {
     scopes: ['email', 'profile'],
 };
 
+// ✅ CORREGIR ESTA FUNCIÓN
 export const getGoogleClientId = (): string => {
-    if (Platform.OS === 'android') {
-        return GoogleAuthConfig.androidClientId;
-    } else if (Platform.OS === 'ios') {
-        return GoogleAuthConfig.iosClientId;
-    } else {
-        return GoogleAuthConfig.webClientId;
-    }
+    // SIEMPRE usar webClientId para la configuración del SDK
+    return GoogleAuthConfig.webClientId;
 };
