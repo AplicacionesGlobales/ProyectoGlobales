@@ -1,6 +1,5 @@
 // src/components/calendar/OptimizedDailyCalendarView.tsx
-// Principio de Responsabilidad Única (SRP) y Principio Abierto-Cerrado (OCP)
-// Vista diaria del calendario optimizada para móviles
+// Vista diaria del calendario con colores unificados
 
 import React, { useMemo, useRef, useEffect } from 'react';
 import { 
@@ -14,7 +13,7 @@ import {
   Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useOptimizedDailyCalendar } from '@/hooks/useOptimizedDailyCalendar';
 import CalendarTimeSlot from './base/CalendarTimeSlot';
 import type { CalendarConfiguration, CalendarInteractions } from '@/types/calendar';
@@ -39,11 +38,7 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
   showCurrentTimeIndicator = true
 }) => {
   const scrollViewRef = useRef<ScrollView>(null);
-  
-  // Theme colors
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const tintColor = useThemeColor({}, 'tint');
+  const { colors } = useTheme();
 
   // Calendar hook
   const {
@@ -82,11 +77,10 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
     if (currentTimePosition && scrollViewRef.current) {
       const timeout = setTimeout(() => {
         scrollViewRef.current?.scrollTo({
-          y: Math.max(0, currentTimePosition - 200), // Show some context above
+          y: Math.max(0, currentTimePosition - 200),
           animated: true
         });
-      }, 500); // Small delay to ensure component is mounted
-
+      }, 500);
       return () => clearTimeout(timeout);
     }
   }, [currentTimePosition]);
@@ -133,7 +127,7 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor,
+      backgroundColor: colors.background,
     },
     header: {
       flexDirection: 'row',
@@ -142,7 +136,8 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
       paddingHorizontal: 16,
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: textColor + '20',
+      borderBottomColor: colors.textSecondary + '20',
+      backgroundColor: colors.surface,
     },
     headerCenter: {
       flex: 1,
@@ -152,11 +147,12 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
     dateTitle: {
       fontSize: 18,
       fontWeight: '600',
-      color: textColor,
+      color: colors.text,
       textAlign: 'center',
+      textTransform: 'capitalize',
     },
     todayBadge: {
-      backgroundColor: tintColor,
+      backgroundColor: colors.primary,
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 12,
@@ -164,13 +160,13 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
     },
     todayText: {
       fontSize: 12,
-      color: 'white',
+      color: colors.surface,
       fontWeight: '500',
     },
     navButton: {
       padding: 8,
       borderRadius: 8,
-      backgroundColor: textColor + '10',
+      backgroundColor: colors.textSecondary + '15',
     },
     scrollContainer: {
       flex: 1,
@@ -184,7 +180,7 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
       left: 76, // After time column
       right: 16,
       height: 2,
-      backgroundColor: tintColor,
+      backgroundColor: colors.primary,
       zIndex: 10,
       borderRadius: 1,
     },
@@ -195,7 +191,7 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: tintColor,
+      backgroundColor: colors.primary,
     },
     errorContainer: {
       flex: 1,
@@ -204,19 +200,19 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
       padding: 20,
     },
     errorText: {
-      color: textColor + 'AA',
+      color: colors.textSecondary,
       fontSize: 16,
       textAlign: 'center',
       marginBottom: 16,
     },
     retryButton: {
-      backgroundColor: tintColor,
+      backgroundColor: colors.primary,
       paddingHorizontal: 20,
       paddingVertical: 10,
       borderRadius: 8,
     },
     retryButtonText: {
-      color: 'white',
+      color: colors.surface,
       fontSize: 16,
       fontWeight: '500',
     },
@@ -227,7 +223,7 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
       padding: 40,
     },
     emptyText: {
-      color: textColor + '60',
+      color: colors.textSecondary,
       fontSize: 16,
       textAlign: 'center',
     },
@@ -238,10 +234,13 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
       padding: 40,
     },
     closedText: {
-      color: textColor + '60',
+      color: colors.textSecondary,
       fontSize: 18,
       fontWeight: '500',
       textAlign: 'center',
+    },
+    closedIcon: {
+      marginBottom: 16,
     },
   });
 
@@ -252,7 +251,7 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
         {showHeader && (
           <View style={styles.header}>
             <TouchableOpacity style={styles.navButton} onPress={navigateToPreviousDay}>
-              <Ionicons name="chevron-back" size={24} color={textColor} />
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
             
             <View style={styles.headerCenter}>
@@ -260,9 +259,8 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
                 {formatDate(currentDate)}
               </Text>
             </View>
-
             <TouchableOpacity style={styles.navButton} onPress={navigateToNextDay}>
-              <Ionicons name="chevron-forward" size={24} color={textColor} />
+              <Ionicons name="chevron-forward" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
         )}
@@ -286,7 +284,7 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
         {showHeader && (
           <View style={styles.header}>
             <TouchableOpacity style={styles.navButton} onPress={navigateToPreviousDay}>
-              <Ionicons name="chevron-back" size={24} color={textColor} />
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
             
             <View style={styles.headerCenter}>
@@ -294,15 +292,19 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
                 {formatDate(currentDate)}
               </Text>
             </View>
-
             <TouchableOpacity style={styles.navButton} onPress={navigateToNextDay}>
-              <Ionicons name="chevron-forward" size={24} color={textColor} />
+              <Ionicons name="chevron-forward" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
         )}
         
         <View style={styles.closedContainer}>
-          <Ionicons name="business" size={48} color={textColor + '40'} />
+          <Ionicons 
+            name="lock-closed" 
+            size={48} 
+            color={colors.textSecondary + '40'} 
+            style={styles.closedIcon}
+          />
           <Text style={styles.closedText}>
             Cerrado este día
           </Text>
@@ -317,7 +319,7 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
       {showHeader && (
         <View style={styles.header}>
           <TouchableOpacity style={styles.navButton} onPress={navigateToPreviousDay}>
-            <Ionicons name="chevron-back" size={24} color={textColor} />
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.headerCenter} onPress={navigateToToday}>
@@ -330,9 +332,8 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
               </View>
             )}
           </TouchableOpacity>
-
           <TouchableOpacity style={styles.navButton} onPress={navigateToNextDay}>
-            <Ionicons name="chevron-forward" size={24} color={textColor} />
+            <Ionicons name="chevron-forward" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
       )}
@@ -345,7 +346,7 @@ const OptimizedDailyCalendarView: React.FC<OptimizedDailyCalendarViewProps> = ({
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={refreshData}
-            tintColor={tintColor}
+            tintColor={colors.primary}
           />
         }
         showsVerticalScrollIndicator={false}

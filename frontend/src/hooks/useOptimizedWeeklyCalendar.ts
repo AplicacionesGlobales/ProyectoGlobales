@@ -131,8 +131,8 @@ export const useOptimizedWeeklyCalendar = ({
   const getMobileViewConfig = useCallback(() => {
     const visibleDays = getVisibleDays();
     return {
-      daysToShow: visibleDays.length <= 3 ? visibleDays.length : 3, // Max 3 days on mobile
-      showAllDay: visibleDays.length <= 3
+      daysToShow: visibleDays.length, // Mostrar todos los días visibles
+      showAllDay: true // Siempre mostrar todo el día
     };
   }, [getVisibleDays]);
 
