@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useError, ErrorUtils } from '@/components/ui/errors';
 import { useTheme } from '@/contexts/ThemeContext';
 import { authService } from '../../services/authService';
-import { googleAuthNativeService } from '../../services/googleAuth.native.service';
+import { googleAuthService } from '../../services/googleAuth.universal.service';
 import { useEmailValidation } from '../../hooks/useEmailValidation';
 import { useUsernameValidation } from '../../hooks/useUsernameValidation';
 import { usePasswordValidation } from '../../hooks/usePasswordValidation';
@@ -212,7 +212,7 @@ export default function RegisterScreen() {
     try {
       console.log('🔍 Iniciando Google Sign-Up...');
 
-      const result = await googleAuthNativeService.signIn();
+      const result = await googleAuthService.signIn();
 
       if (!result.success) {
         showToast(result.error || 'Google sign-up failed', 'error', 'high');

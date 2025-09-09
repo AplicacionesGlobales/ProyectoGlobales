@@ -2,7 +2,7 @@
 import { healthCheck } from '@/api';
 import { useApp } from '@/contexts/AppContext';
 import { authService } from '@/services/authService';
-import { googleAuthNativeService } from '@/services/googleAuth.native.service';
+import { googleAuthService } from '@/services/googleAuth.universal.service';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect, useRef } from 'react';
@@ -169,7 +169,7 @@ export default function LoginScreen() {
     try {
       console.log('🔍 Iniciando Google Sign-In...');
 
-      const result = await googleAuthNativeService.signIn();
+      const result = await googleAuthService.signIn();
 
       if (!result.success) {
         showToast(result.error || 'Google sign-in failed', 'error', 'high');
