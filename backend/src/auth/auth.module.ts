@@ -10,6 +10,7 @@ import { EmailService } from '../common/services/email/email.service';
 import { CryptoService } from '../common/services/crypto.service';
 import { UserCreationService } from './services/user-creation.service';
 import { ColorPaletteService } from './services/color-palette.service';
+import { GoogleAuthService } from './services/google-auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -32,6 +33,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     CryptoService,
     UserCreationService,
     ColorPaletteService,
+    GoogleAuthService,
     JwtStrategy
   ],
   exports: [
@@ -39,7 +41,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     EmailService,
     CryptoService,
     UserCreationService,
-    ColorPaletteService
+    ColorPaletteService,
+    GoogleAuthService
   ],
 })
 export class AuthModule { }

@@ -8,8 +8,9 @@ import { FileService } from '../common/services/file.service';
 import { PlanService } from '../common/services/plan.service';
 import { PaymentService } from '../common/services/payment.service';
 import { ColorPaletteService } from './services/color-palette.service';
+import { GoogleAuthService } from './services/google-auth.service';
 import * as bcrypt from 'bcryptjs';
-import { ValidateResetCodeDto, ProfileResponseDto, RegisterClientDto, AuthResponse, UpdateProfileDto, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto, LoginRequestDto, RefreshRequestDto, RefreshResponseDto } from './dto';
+import { ValidateResetCodeDto, ProfileResponseDto, RegisterClientDto, AuthResponse, UpdateProfileDto, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto, LoginRequestDto, RefreshRequestDto, RefreshResponseDto, GoogleValidateDto } from './dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole } from '../../generated/prisma';
 import { randomBytes } from 'crypto';
@@ -23,6 +24,7 @@ export class AuthService {
     private emailService: EmailService,
     private cryptoService: CryptoService,
     private configService: ConfigService,
+    private googleAuthService: GoogleAuthService,
   ) { }
 
   private get appName(): string {
@@ -1017,6 +1019,157 @@ export class AuthService {
         ERROR_CODES.INTERNAL_ERROR,
         ERROR_MESSAGES.INTERNAL_ERROR
       );
+    }
+  }
+
+  // ==================== GOOGLE AUTHENTICATION ====================
+
+  async loginWithGoogle(googleValidateDto: GoogleValidateDto): Promise<BaseResponseDto<AuthResponse>> {
+    console.log('\n🔍 === GOOGLE LOGIN INICIADO ===');
+    console.log('🏢 BrandId:', googleValidateDto.brandId);
+    console.log('🔒 Remember Me:', googleValidateDto.rememberMe);
+
+    const errors: ErrorDetail[] = [];
+
+    try {
+      // Verificar Google ID Token
+      const googleUser = await this.googleAuthService.verifyIdToken(googleValidateDto.idToken);
+
+      if (!googleUser) {
+        errors.push({
+          code: ERROR_CODES.INVALID_CREDENTIALS,
+          description: 'Token de Google inválido'
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      console.log('📧 Google Email:', googleUser.email);
+
+      // Verificar que la marca existe
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: googleValidateDto.brandId },
+        select: { id: true, name: true }
+      });
+
+      if (!brand) {
+        errors.push({
+          code: ERROR_CODES.VALIDATION_ERROR || 404,
+          description: 'Marca no encontrada'
+        });
+        return BaseResponseDto.error(errors);
+      }
+
+      // Buscar usuario existente por email
+      let user = await this.prisma.user.findUnique({
+        where: { email: googleUser.email },
+        include: {
+          userBrands: {
+            where: { brandId: googleValidateDto.brandId }
+          }
+        }
+      });
+
+      // Si el usuario no existe, crearlo
+      if (!user) {
+        console.log('👤 Creando nuevo usuario desde Google...');
+
+        // Generar username único basado en email
+        const baseUsername = googleUser.email.split('@')[0];
+        let username = baseUsername;
+        let counter = 1;
+
+        while (await this.prisma.user.findUnique({ where: { username } })) {
+          username = `${baseUsername}${counter}`;
+          counter++;
+        }
+
+        user = await this.prisma.user.create({
+          data: {
+            email: googleUser.email,
+            username,
+            firstName: googleUser.firstName,
+            lastName: googleUser.lastName,
+            role: UserRole.CLIENT
+          },
+          include: {
+            userBrands: {
+              where: { brandId: googleValidateDto.brandId }
+            }
+          }
+        });
+
+        console.log('✅ Usuario creado:', user.id);
+      }
+
+      // Verificar si ya tiene UserBrand para esta marca
+      let userBrand = user.userBrands[0];
+
+      if (!userBrand) {
+        console.log('🔗 Creando relación UserBrand...');
+
+        // Para usuarios de Google, crear UserBrand sin contraseña tradicional
+        // Usar un hash especial que indique que es cuenta de Google
+        const googleAccountHash = await bcrypt.hash(`google_${googleUser.googleId}`, 12);
+        const salt = randomBytes(32).toString('hex');
+
+        userBrand = await this.prisma.userBrand.create({
+          data: {
+            userId: user.id,
+            brandId: googleValidateDto.brandId,
+            passwordHash: googleAccountHash,
+            salt,
+          }
+        });
+
+        console.log('✅ UserBrand creado para Google user');
+      }
+
+      // Generar tokens JWT
+      const tokenPayload = {
+        userId: user.id,
+        userBrandId: userBrand.id,
+        brandId: googleValidateDto.brandId,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      };
+
+      const accessToken = createAccessToken(tokenPayload);
+      let refreshToken: string | undefined;
+
+      if (googleValidateDto.rememberMe) {
+        refreshToken = createRefreshToken(tokenPayload);
+        console.log('🔄 Refresh token generado para sesión perpetua');
+      }
+
+      const response: AuthResponse = {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          role: user.role,
+        },
+        brand: {
+          id: brand.id,
+          name: brand.name,
+        },
+        token: accessToken,
+        refreshToken,
+        rememberMe: googleValidateDto.rememberMe || false,
+      };
+
+      console.log('🎉 Google login exitoso');
+      return BaseResponseDto.success(response);
+
+    } catch (error) {
+      console.error('💥 Error en loginWithGoogle:', error);
+      errors.push({
+        code: ERROR_CODES.INTERNAL_ERROR,
+        description: 'Error interno durante autenticación con Google'
+      });
+      return BaseResponseDto.error(errors);
     }
   }
 }
