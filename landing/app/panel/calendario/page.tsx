@@ -1,12 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calendar, Clock, Mail, ChevronLeft, ChevronRight } from "lucide-react"
+import { Calendar, Clock, Mail, ChevronLeft, ChevronRight, Phone, DollarSign, Briefcase, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { AppointmentActions } from "@/components/appointment-actions"
-import { appointmentsService, Appointment, AppointmentStatus } from "@/services/appointment.service"
+import { 
+  appointmentsService, 
+  Appointment, 
+  AppointmentStatus,
+  APPOINTMENT_STATUS_LABELS,
+  APPOINTMENT_STATUS_COLORS 
+} from "@/services/appointment.service"
+import { formatPriceSimple } from "@/utils/format-utils"
 
 export default function AdminAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -40,6 +48,25 @@ export default function AdminAppointmentsPage() {
     }
   }
 
+  // Obtener variante del badge según el estado
+  const getStatusBadgeVariant = (status: AppointmentStatus): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case AppointmentStatus.CONFIRMED:
+        return "default"
+      case AppointmentStatus.PENDING:
+        return "secondary"
+      case AppointmentStatus.COMPLETED:
+        return "outline"
+      case AppointmentStatus.CANCELLED:
+      case AppointmentStatus.NO_SHOW:
+        return "destructive"
+      case AppointmentStatus.IN_PROGRESS:
+        return "default"
+      default:
+        return "secondary"
+    }
+  }
+
   // Cargar citas del día seleccionado
   const fetchDayAppointments = async () => {
     try {
@@ -47,11 +74,10 @@ export default function AdminAppointmentsPage() {
       const brandId = getBrandId()
       const dateStr = formatDateForAPI(selectedDate)
 
-      // Usar el método getAppointments con filtros de fecha
       const response = await appointmentsService.getAppointments(
         brandId,
-        1, // página
-        100, // límite
+        1,
+        100,
         {
           startDate: dateStr,
           endDate: dateStr
@@ -59,7 +85,6 @@ export default function AdminAppointmentsPage() {
       )
 
       if (response.success && response.data) {
-        // Verificar el tipo de response.data
         let appointmentsList: Appointment[] = []
         
         if (Array.isArray(response.data)) {
@@ -67,6 +92,11 @@ export default function AdminAppointmentsPage() {
         } else if (typeof response.data === 'object' && 'appointments' in response.data) {
           appointmentsList = (response.data as any).appointments || []
         }
+        
+        // Ordenar por hora de inicio
+        appointmentsList.sort((a, b) => 
+          new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+        )
         
         setAppointments(appointmentsList)
       } else {
@@ -88,11 +118,10 @@ export default function AdminAppointmentsPage() {
       const brandId = getBrandId()
       const { startDate, endDate } = getMonthDateRange(currentMonth)
 
-      // Usar el método getAppointments con rango de fechas
       const response = await appointmentsService.getAppointments(
         brandId,
-        1, // página
-        200, // límite mayor para el mes completo
+        1,
+        200,
         {
           startDate,
           endDate
@@ -100,7 +129,6 @@ export default function AdminAppointmentsPage() {
       )
 
       if (response.success && response.data) {
-        // Verificar el tipo de response.data
         let appointmentsList: Appointment[] = []
         
         if (Array.isArray(response.data)) {
@@ -127,13 +155,11 @@ export default function AdminAppointmentsPage() {
     try {
       const brandId = getBrandId()
       
-      // Usar el método updateAppointment con el objeto de status
       const response = await appointmentsService.updateAppointment(brandId, appointmentId, {
         status: newStatus as AppointmentStatus
       })
 
       if (response.success) {
-        // Actualizar estado local
         setAppointments((prev) =>
           prev.map((apt) => 
             apt.id === appointmentId 
@@ -142,7 +168,6 @@ export default function AdminAppointmentsPage() {
           )
         )
         
-        // También actualizar en las citas del mes
         setMonthAppointments((prev) =>
           prev.map((apt) => 
             apt.id === appointmentId 
@@ -152,7 +177,6 @@ export default function AdminAppointmentsPage() {
         )
       } else {
         console.error('Error actualizando estado:', response.errors)
-        // Aquí podrías mostrar un toast o notificación de error
       }
     } catch (error) {
       console.error('Error updating appointment status:', error)
@@ -302,14 +326,21 @@ export default function AdminAppointmentsPage() {
             </Card>
           </div>
 
-          {/* Lista de Citas */}
+          {/* Lista de Citas Mejorada */}
           <div className="space-y-4">
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-card-foreground flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Citas del {selectedDate.toLocaleDateString("es-ES")}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-card-foreground flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Citas del {selectedDate.toLocaleDateString("es-ES", { day: 'numeric', month: 'long' })}
+                  </CardTitle>
+                  {appointments.length > 0 && (
+                    <Badge variant="outline">
+                      {appointments.length} {appointments.length === 1 ? 'cita' : 'citas'}
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {loading ? (
@@ -331,29 +362,62 @@ export default function AdminAppointmentsPage() {
                       : 'Sin cliente asignado'
 
                     return (
-                      <Card key={appointment.id} className="bg-muted/50 border-border">
-                        <CardContent className="p-4">
+                      <Card 
+                        key={appointment.id} 
+                        className="relative bg-muted/50 border-border overflow-hidden hover:shadow-md transition-shadow"
+                      >
+                        {/* Indicador de color del servicio */}
+                        <div 
+                          className="absolute left-0 top-0 bottom-0 w-1"
+                          style={{ 
+                            backgroundColor: appointment.serviceType?.color || '#3B82F6' 
+                          }}
+                        />
+                        
+                        <CardContent className="p-4 pl-5">
+                          {/* Header con tipo de servicio y precio */}
                           <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src="/placeholder.svg" />
-                                <AvatarFallback className="bg-accent text-accent-foreground">
-                                  {appointment.client 
-                                    ? `${appointment.client.firstName?.[0] || ''}${appointment.client.lastName?.[0] || ''}`
-                                    : 'NA'
-                                  }
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <h4 className="font-semibold text-card-foreground">{clientName}</h4>
-                                <p className="text-sm text-muted-foreground">
-                                  Estado: {appointment.status}
-                                </p>
+                            <div className="flex-1">
+                              {/* Tipo de servicio y precio */}
+                              {appointment.serviceType && (
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                  <h4 className="font-semibold text-sm">
+                                    {appointment.serviceType.name}
+                                  </h4>
+                                  <Badge variant="outline" className="text-xs">
+                                    {formatPriceSimple(appointment.serviceType.price)}
+                                  </Badge>
+                                </div>
+                              )}
+                              
+                              {/* Cliente */}
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage src="/placeholder.svg" />
+                                  <AvatarFallback className="bg-accent text-accent-foreground">
+                                    {appointment.client 
+                                      ? `${appointment.client.firstName?.[0] || ''}${appointment.client.lastName?.[0] || ''}`
+                                      : 'NA'
+                                    }
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h4 className="font-medium text-card-foreground">{clientName}</h4>
+                                  <Badge 
+                                    variant={getStatusBadgeVariant(appointment.status)}
+                                    className="text-xs"
+                                  >
+                                    {APPOINTMENT_STATUS_LABELS[appointment.status]}
+                                  </Badge>
+                                </div>
                               </div>
                             </div>
                           </div>
 
+                          {/* Información de contacto y horario */}
                           <div className="space-y-2 text-sm">
+                            {/* Horario */}
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Clock className="h-4 w-4" />
                               <span>
@@ -366,18 +430,41 @@ export default function AdminAppointmentsPage() {
                                   hour: "2-digit",
                                   minute: "2-digit",
                                 })}{" "}
-                                ({appointment.duration} min)
+                                <span className="text-xs">
+                                  ({appointment.duration || appointment.serviceType?.duration || 30} min)
+                                </span>
                               </span>
                             </div>
+                            
+                            {/* Email */}
                             {appointment.client?.email && (
                               <div className="flex items-center gap-2 text-muted-foreground">
                                 <Mail className="h-4 w-4" />
-                                <span>{appointment.client.email}</span>
+                                <a 
+                                  href={`mailto:${appointment.client.email}`}
+                                  className="hover:underline text-xs"
+                                >
+                                  {appointment.client.email}
+                                </a>
+                              </div>
+                            )}
+                            
+                            {/* Teléfono */}
+                            {appointment.client?.phone && (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Phone className="h-4 w-4" />
+                                <a 
+                                  href={`tel:${appointment.client.phone}`}
+                                  className="hover:underline text-xs"
+                                >
+                                  {appointment.client.phone}
+                                </a>
                               </div>
                             )}
                           </div>
 
-                          <div className="flex items-center justify-between mt-3">
+                          {/* Acciones */}
+                          <div className="mt-3">
                             <AppointmentActions
                               appointmentId={appointment.id}
                               currentStatus={appointment.status as string}
@@ -385,8 +472,9 @@ export default function AdminAppointmentsPage() {
                             />
                           </div>
 
+                          {/* Notas */}
                           {appointment.notes && (
-                            <div className="mt-3 p-2 bg-muted rounded text-sm text-muted-foreground">
+                            <div className="mt-3 p-2 bg-muted rounded text-xs text-muted-foreground">
                               <strong>Notas:</strong> {appointment.notes}
                             </div>
                           )}

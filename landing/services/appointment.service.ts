@@ -2,17 +2,17 @@
 import { apiClient, ApiResponse } from '../api';
 import { API_ENDPOINTS } from '../api';
 
-// Interfaces para Appointments (actualizadas para coincidir con backend)
 export interface Appointment {
   id: number;
   brandId: number;
-  clientId?: number; // Opcional para citas sin asignar
-  startTime: string; // ISO string format
-  endTime: string; // ISO string format
-  duration: number; // Duración en minutos
+  clientId?: number;
+  serviceTypeId?: number; // Agregar referencia al tipo de servicio
+  startTime: string;
+  endTime: string;
+  duration: number;
   status: AppointmentStatus;
   notes?: string;
-  createdBy: number; // ID del usuario que creó la cita
+  createdBy: number;
   createdAt: string;
   updatedAt: string;
   
@@ -22,6 +22,7 @@ export interface Appointment {
     firstName?: string;
     lastName?: string;
     email: string;
+    phone?: string; // Agregar teléfono si está disponible
   };
   creator?: {
     id: number;
@@ -29,19 +30,31 @@ export interface Appointment {
     lastName?: string;
     email: string;
   };
+  // Agregar información del tipo de servicio
+  serviceType?: {
+    id: number;
+    name: string;
+    description?: string;
+    duration: number;
+    price: number;
+    color: string;
+    icon?: string;
+  };
 }
 
 export interface CreateAppointmentData {
-  startTime: string; // ISO string format
-  duration?: number; // Opcional, usa configuración por defecto
+  startTime: string;
+  serviceTypeId: number; // Hacer requerido el tipo de servicio
+  duration?: number; // Se puede calcular desde el serviceType
   description?: string;
   notes?: string;
 }
 
 export interface CreateAppointmentByRootData {
-  clientId?: number; // Opcional para citas sin asignar
-  startTime: string; // ISO string format
-  duration?: number; // Opcional, usa configuración por defecto
+  clientId?: number;
+  serviceTypeId: number; // Hacer requerido el tipo de servicio
+  startTime: string;
+  duration?: number; // Se puede calcular desde el serviceType
   description?: string;
   notes?: string;
 }
@@ -52,8 +65,8 @@ export interface UpdateAppointmentData {
   status?: AppointmentStatus;
   notes?: string;
   clientId?: number;
+  serviceTypeId?: number; // Permitir actualizar el tipo de servicio
 }
-
 export interface AppointmentConflict {
   hasConflict: boolean;
   conflictingAppointments: Array<{
@@ -81,6 +94,9 @@ export interface CalendarEvent extends Appointment {
     status: AppointmentStatus;
     clientName: string;
     serviceName: string;
+    servicePrice?: number; // Agregar precio
+    serviceColor?: string; // Agregar color del servicio
+    serviceIcon?: string; // Agregar icono
   };
 }
 
@@ -127,51 +143,51 @@ class AppointmentsService {
   // ==================== CRUD OPERATIONS ====================
 
   // Obtener todas las citas
-  async getAppointments(
-    brandId: number,
-    page: number = 1,
-    limit: number = 50,
-    filters?: {
-      startDate?: string;
-      endDate?: string;
-      status?: AppointmentStatus;
-      clientId?: number;
-      serviceId?: number;
-    }
-  ): Promise<ApiResponse<Appointment[]>> {
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        ...(filters?.startDate ? { startDate: filters.startDate } : {}),
-        ...(filters?.endDate ? { endDate: filters.endDate } : {}),
-        ...(filters?.status ? { status: filters.status } : {}),
-        ...(filters?.clientId !== undefined ? { clientId: filters.clientId.toString() } : {}),
-        ...(filters?.serviceId !== undefined ? { serviceId: filters.serviceId.toString() } : {})
-      });
-
-      console.log('🚀 Getting appointments:', { brandId, page, limit, filters });
-      const response = await apiClient.get<Appointment[]>(
-        `${API_ENDPOINTS.APPOINTMENTS.GET_ALL(brandId)}?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
-      );
-      console.log('✅ Appointments response:', response);
-      return response;
-    } catch (error: any) {
-      console.error('❌ Appointments error:', error);
-      return {
-        success: false,
-        errors: [
-          {
-            code: 'APPOINTMENTS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo citas'
-          }
-        ]
-      };
-    }
+ async getAppointments(
+  brandId: number,
+  page: number = 1,
+  limit: number = 50,
+  filters?: {
+    startDate?: string;
+    endDate?: string;
+    status?: AppointmentStatus;
+    clientId?: number;
+    serviceTypeId?: number; // Cambiar de serviceId a serviceTypeId
   }
+): Promise<ApiResponse<Appointment[]>> {
+  try {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...(filters?.startDate ? { startDate: filters.startDate } : {}),
+      ...(filters?.endDate ? { endDate: filters.endDate } : {}),
+      ...(filters?.status ? { status: filters.status } : {}),
+      ...(filters?.clientId !== undefined ? { clientId: filters.clientId.toString() } : {}),
+      ...(filters?.serviceTypeId !== undefined ? { serviceTypeId: filters.serviceTypeId.toString() } : {}) // Actualizar aquí también
+    });
+
+    console.log('🚀 Getting appointments:', { brandId, page, limit, filters });
+    const response = await apiClient.get<Appointment[]>(
+      `${API_ENDPOINTS.APPOINTMENTS.GET_ALL(brandId)}?${params.toString()}`,
+      { headers: this.getAuthHeaders() }
+    );
+    console.log('✅ Appointments response:', response);
+    return response;
+  } catch (error: any) {
+    console.error('❌ Appointments error:', error);
+    return {
+      success: false,
+      errors: [
+        {
+          code: 'APPOINTMENTS_ERROR',
+          description: error?.response?.data?.errors?.[0]?.description || 
+                      error?.message || 
+                      'Error obteniendo citas'
+        }
+      ]
+    };
+  }
+}
 
   // Obtener cita por ID
   async getAppointment(brandId: number, appointmentId: number): Promise<ApiResponse<Appointment>> {
@@ -400,126 +416,158 @@ class AppointmentsService {
   // ==================== CALENDAR VIEWS ====================
 
   // Obtener citas para calendario (rango de fechas)
-  async getCalendarAppointments(
-    brandId: number,
-    startDate: string,
-    endDate: string
-  ): Promise<ApiResponse<CalendarEvent[]>> {
-    try {
-      console.log('🚀 Getting calendar appointments:', { brandId, startDate, endDate });
-      const response = await apiClient.get<Appointment[]>(
-        `${API_ENDPOINTS.APPOINTMENTS.GET_BY_DATE_RANGE(brandId)}?startDate=${startDate}&endDate=${endDate}`,
-        { headers: this.getAuthHeaders() }
-      );
-      
-      if (response.success && response.data) {
-        // Convertir appointments a eventos de calendario
-        const events: CalendarEvent[] = response.data.map(appointment => {
-          const clientName = appointment.client 
-            ? `${appointment.client.firstName || ''} ${appointment.client.lastName || ''}`.trim()
-            : 'Sin asignar';
-          
-          return {
-            ...appointment,
-            title: clientName,
-            start: new Date(appointment.startTime),
-            end: new Date(appointment.endTime),
-            resource: {
-              appointmentId: appointment.id,
-              status: appointment.status,
-              clientName,
-              serviceName: 'Cita'
-            }
-          };
-        });
+ // Actualizar el método getCalendarAppointments
+async getCalendarAppointments(
+  brandId: number,
+  startDate: string,
+  endDate: string
+): Promise<ApiResponse<CalendarEvent[]>> {
+  try {
+    console.log('🚀 Getting calendar appointments:', { brandId, startDate, endDate });
+    const response = await apiClient.get<Appointment[]>(
+      `${API_ENDPOINTS.APPOINTMENTS.GET_BY_DATE_RANGE(brandId)}?startDate=${startDate}&endDate=${endDate}`,
+      { headers: this.getAuthHeaders() }
+    );
+    
+    if (response.success && response.data) {
+      // Convertir appointments a eventos de calendario con información del servicio
+      const events: CalendarEvent[] = response.data.map(appointment => {
+        const clientName = appointment.client 
+          ? `${appointment.client.firstName || ''} ${appointment.client.lastName || ''}`.trim()
+          : 'Sin cliente asignado';
+        
+        // Obtener información del servicio
+        const serviceName = appointment.serviceType?.name || 'Servicio General';
+        const servicePrice = appointment.serviceType?.price || 0;
+        const serviceColor = appointment.serviceType?.color || '#3B82F6';
+        const serviceIcon = appointment.serviceType?.icon || 'calendar';
         
         return {
-          success: true,
-          data: events
-        };
-      }
-      
-      console.log('✅ Calendar appointments response:', response);
-      return response as ApiResponse<CalendarEvent[]>;
-    } catch (error: any) {
-      console.error('❌ Calendar appointments error:', error);
-      return {
-        success: false,
-        errors: [
-          {
-            code: 'CALENDAR_APPOINTMENTS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo citas del calendario'
+          ...appointment,
+          title: `${clientName} - ${serviceName}`,
+          start: new Date(appointment.startTime),
+          end: new Date(appointment.endTime),
+          resource: {
+            appointmentId: appointment.id,
+            status: appointment.status,
+            clientName,
+            serviceName,
+            servicePrice,
+            serviceColor,
+            serviceIcon
           }
-        ]
+        };
+      });
+      
+      return {
+        success: true,
+        data: events
       };
     }
+    
+    console.log('✅ Calendar appointments response:', response);
+    return response as ApiResponse<CalendarEvent[]>;
+  } catch (error: any) {
+    console.error('❌ Calendar appointments error:', error);
+    return {
+      success: false,
+      errors: [
+        {
+          code: 'CALENDAR_APPOINTMENTS_ERROR',
+          description: error?.response?.data?.errors?.[0]?.description || 
+                      error?.message || 
+                      'Error obteniendo citas del calendario'
+        }
+      ]
+    };
   }
+}
 
   // Obtener citas de un día específico
-  async getDayAppointments(brandId: number, date: string): Promise<ApiResponse<Appointment[]>> {
-    try {
-      console.log('🚀 Getting day appointments:', { brandId, date });
-      const response = await apiClient.get<Appointment[]>(
-        API_ENDPOINTS.APPOINTMENTS.GET_BY_DATE(brandId, date),
-        { headers: this.getAuthHeaders() }
-      );
-      console.log('✅ Day appointments response:', response);
-      return response;
-    } catch (error: any) {
-      console.error('❌ Day appointments error:', error);
-      return {
-        success: false,
-        errors: [
-          {
-            code: 'DAY_APPOINTMENTS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo citas del día'
-          }
-        ]
-      };
-    }
+  async getDayAppointments(
+  brandId: number, 
+  date: string,
+  includeServiceType: boolean = true // Opción para incluir información del servicio
+): Promise<ApiResponse<Appointment[]>> {
+  try {
+    console.log('🚀 Getting day appointments:', { brandId, date, includeServiceType });
+    const params = includeServiceType ? '?includeServiceType=true' : '';
+    const response = await apiClient.get<Appointment[]>(
+      `${API_ENDPOINTS.APPOINTMENTS.GET_BY_DATE(brandId, date)}${params}`,
+      { headers: this.getAuthHeaders() }
+    );
+    console.log('✅ Day appointments response:', response);
+    return response;
+  } catch (error: any) {
+    console.error('❌ Day appointments error:', error);
+    return {
+      success: false,
+      errors: [
+        {
+          code: 'DAY_APPOINTMENTS_ERROR',
+          description: error?.response?.data?.errors?.[0]?.description || 
+                      error?.message || 
+                      'Error obteniendo citas del día'
+        }
+      ]
+    };
   }
+}
 
   // ==================== AVAILABILITY & CONFLICTS ====================
 
   // Verificar conflictos
   async checkConflicts(
-    brandId: number,
-    startTime: string, // ISO string format
-    duration: number,
-    excludeAppointmentId?: number
-  ): Promise<ApiResponse<AppointmentConflict>> {
-    try {
-      console.log('🚀 Checking conflicts:', { brandId, startTime, duration });
-      const response = await apiClient.post<AppointmentConflict>(
-        API_ENDPOINTS.APPOINTMENTS.CHECK_CONFLICTS(brandId),
+  brandId: number,
+  startTime: string,
+  duration?: number, // Hacer opcional si viene del serviceType
+  serviceTypeId?: number, // Agregar para obtener duración del servicio
+  excludeAppointmentId?: number
+): Promise<ApiResponse<AppointmentConflict>> {
+  try {
+    console.log('🚀 Checking conflicts:', { brandId, startTime, duration, serviceTypeId });
+    const response = await apiClient.post<AppointmentConflict>(
+      API_ENDPOINTS.APPOINTMENTS.CHECK_CONFLICTS(brandId),
+      {
+        startTime,
+        duration,
+        serviceTypeId,
+        excludeAppointmentId
+      },
+      { headers: this.getAuthHeaders() }
+    );
+    console.log('✅ Conflicts check response:', response);
+    return response;
+  } catch (error: any) {
+    console.error('❌ Conflicts check error:', error);
+    return {
+      success: false,
+      errors: [
         {
-          startTime,
-          duration,
-          excludeAppointmentId
-        },
-        { headers: this.getAuthHeaders() }
-      );
-      console.log('✅ Conflicts check response:', response);
-      return response;
-    } catch (error: any) {
-      console.error('❌ Conflicts check error:', error);
-      return {
-        success: false,
-        errors: [
-          {
-            code: 'CONFLICTS_CHECK_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error verificando conflictos'
-          }
-        ]
-      };
-    }
+          code: 'CONFLICTS_CHECK_ERROR',
+          description: error?.response?.data?.errors?.[0]?.description || 
+                      error?.message || 
+                      'Error verificando conflictos'
+        }
+      ]
+    };
   }
+}
+
+
+async getAppointmentsByServiceType(
+  brandId: number,
+  serviceTypeId: number,
+  startDate?: string,
+  endDate?: string
+): Promise<ApiResponse<Appointment[]>> {
+  return this.getAppointments(brandId, 1, 50, {
+    serviceTypeId,
+    startDate,
+    endDate
+  });
+}
+
 
   // Obtener slots disponibles
   async getAvailableSlots(

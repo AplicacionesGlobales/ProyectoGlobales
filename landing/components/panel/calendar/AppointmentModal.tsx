@@ -8,9 +8,28 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Loader2, Calendar, Clock, User, Save } from "lucide-react"
-import { appointmentsService, Appointment, AppointmentStatus, CreateAppointmentByRootData, CalendarEvent } from "@/services/appointment.service"
+import { AlertCircle, Loader2, Calendar, Clock, User, Save, Briefcase } from "lucide-react"
+import { 
+  appointmentsService, 
+  Appointment, 
+  AppointmentStatus, 
+  CreateAppointmentByRootData, 
+  CalendarEvent
+} from "@/services/appointment.service"
+
+import { formatPriceSimple } from '@/utils/format-utils'
+
+interface ServiceType {
+  id: number
+  name: string
+  description?: string
+  duration: number
+  price: number
+  color: string
+  icon?: string
+}
 
 interface AppointmentModalProps {
   brandId: number
@@ -20,12 +39,15 @@ interface AppointmentModalProps {
   initialDate?: Date
   initialTime?: string
   editingAppointment?: CalendarEvent
+  serviceTypes: ServiceType[] // Recibir tipos de servicio desde el componente padre
 }
 
 interface AppointmentFormData {
+  serviceTypeId: number | null
   startTime: string // ISO string format
   duration: number
   notes: string
+  clientId?: number
 }
 
 export function AppointmentModal({
@@ -35,7 +57,8 @@ export function AppointmentModal({
   onSuccess,
   initialDate,
   initialTime,
-  editingAppointment
+  editingAppointment,
+  serviceTypes
 }: AppointmentModalProps) {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -43,23 +66,33 @@ export function AppointmentModal({
   
   // Datos del formulario
   const [formData, setFormData] = useState<AppointmentFormData>({
+    serviceTypeId: serviceTypes.length > 0 ? serviceTypes[0].id : null,
     startTime: initialDate && initialTime 
       ? `${format(initialDate, 'yyyy-MM-dd')}T${initialTime}:00`
       : format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-    duration: 30,
-    notes: ''
+    duration: serviceTypes.length > 0 ? serviceTypes[0].duration : 30,
+    notes: '',
+    clientId: undefined
   })
 
   // Si estamos editando, cargar datos de la cita
   useEffect(() => {
     if (editingAppointment) {
       setFormData({
+        serviceTypeId: editingAppointment.serviceTypeId || null,
         startTime: editingAppointment.startTime,
         duration: editingAppointment.duration,
-        notes: editingAppointment.notes || ''
+        notes: editingAppointment.notes || '',
+        clientId: editingAppointment.clientId
       })
     }
   }, [editingAppointment])
+
+  // Obtener el tipo de servicio seleccionado
+  const selectedServiceType = useMemo(() => {
+    if (!formData.serviceTypeId) return null
+    return serviceTypes.find(st => st.id === formData.serviceTypeId)
+  }, [formData.serviceTypeId, serviceTypes])
 
   // Calcular hora de fin basada en duración
   const endTime = useMemo(() => {
@@ -74,6 +107,18 @@ export function AppointmentModal({
     }
   }, [formData.startTime, formData.duration])
 
+  // Actualizar duración cuando cambia el tipo de servicio
+  const handleServiceTypeChange = (serviceTypeId: string) => {
+    const id = parseInt(serviceTypeId)
+    const serviceType = serviceTypes.find(st => st.id === id)
+    
+    setFormData(prev => ({
+      ...prev,
+      serviceTypeId: id,
+      duration: serviceType?.duration || 30
+    }))
+  }
+
   const handleSave = async () => {
     try {
       setSaving(true)
@@ -85,15 +130,22 @@ export function AppointmentModal({
         return
       }
 
+      if (!formData.serviceTypeId) {
+        setError('Debe seleccionar un tipo de servicio')
+        return
+      }
+
       if (formData.duration < 15) {
         setError('La duración mínima es de 15 minutos')
         return
       }
 
       const appointmentData: CreateAppointmentByRootData = {
+        serviceTypeId: formData.serviceTypeId,
         startTime: formData.startTime,
         duration: formData.duration,
-        notes: formData.notes || undefined
+        notes: formData.notes || undefined,
+        clientId: formData.clientId
       }
 
       let response
@@ -124,9 +176,11 @@ export function AppointmentModal({
 
   const handleClose = () => {
     setFormData({
+      serviceTypeId: serviceTypes.length > 0 ? serviceTypes[0].id : null,
       startTime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-      duration: 30,
-      notes: ''
+      duration: serviceTypes.length > 0 ? serviceTypes[0].duration : 30,
+      notes: '',
+      clientId: undefined
     })
     setError(null)
     onClose()
@@ -156,6 +210,60 @@ export function AppointmentModal({
         )}
 
         <div className="space-y-4">
+          {/* Tipo de Servicio */}
+          <div className="space-y-2">
+            <Label htmlFor="serviceType" className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              Tipo de Servicio
+            </Label>
+            <Select
+              value={formData.serviceTypeId?.toString()}
+              onValueChange={handleServiceTypeChange}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecciona un servicio" />
+              </SelectTrigger>
+              <SelectContent>
+                {serviceTypes.map((serviceType) => (
+                  <SelectItem 
+                    key={serviceType.id} 
+                    value={serviceType.id.toString()}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: serviceType.color }}
+                        />
+                        <span>{serviceType.name}</span>
+                      </div>
+                      <span className="text-sm text-muted-foreground ml-4">
+                        {formatPriceSimple(serviceType.price)}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Mostrar información del servicio seleccionado */}
+            {selectedServiceType && (
+              <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Precio:</span>
+                  <span className="font-medium">{formatPriceSimple(selectedServiceType.price)}</span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-gray-600">Duración sugerida:</span>
+                  <span className="font-medium">{selectedServiceType.duration} min</span>
+                </div>
+                {selectedServiceType.description && (
+                  <p className="text-gray-500 mt-2 text-xs">{selectedServiceType.description}</p>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Fecha y Hora */}
           <div className="space-y-2">
             <Label htmlFor="datetime" className="flex items-center gap-2">
@@ -192,6 +300,11 @@ export function AppointmentModal({
               }))}
               className="w-full"
             />
+            {selectedServiceType && formData.duration !== selectedServiceType.duration && (
+              <p className="text-xs text-amber-600">
+                ⚠️ La duración difiere de la sugerida ({selectedServiceType.duration} min)
+              </p>
+            )}
           </div>
 
           {/* Notas */}
@@ -220,7 +333,7 @@ export function AppointmentModal({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !formData.serviceTypeId}
             className="flex items-center gap-2"
           >
             {saving ? (
