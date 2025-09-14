@@ -14,7 +14,8 @@ import {
   Zap, 
   Settings,
   Menu,
-  X
+  X,
+  Handshake
 } from "lucide-react"
 
 interface SidebarItem {
@@ -43,6 +44,11 @@ const sidebarItems: SidebarItem[] = [
     title: "Funciones",
     href: "/panel/funciones",
     icon: Zap
+  },
+  {
+    title: "Servicios",
+    href: "/panel/servicios",
+    icon: Handshake
   },
   {
     title: "Configuraciones",
