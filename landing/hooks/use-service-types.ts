@@ -134,11 +134,11 @@ export const useServiceTypes = ({
     loading,
     error,
     searchTerm,
-    
+
     // Actions
     setSearchTerm,
     refreshServiceTypes,
-    
+
     // Utility functions
     formatDuration,
     formatPrice
