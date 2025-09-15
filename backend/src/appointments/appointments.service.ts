@@ -192,6 +192,20 @@ export class AppointmentsService {
     }
   }
 
+  // Obtener el tipo de servicio por defecto para un brand
+  private async getDefaultServiceType(brandId: number) {
+    return this.prisma.serviceType.findFirst({
+      where: {
+        brandId,
+        isActive: true
+      },
+      orderBy: [
+        { order: 'asc' },  // El servicio con order: 0 será el primero (por defecto)
+        { createdAt: 'asc' }  // En caso de empate, el más antiguo
+      ]
+    });
+  }
+
   // Crear cita como cliente
 async createAppointment(
   brandId: number,
@@ -206,30 +220,36 @@ async createAppointment(
     
     // Determinar la duración basada en la configuración del negocio
     if (appointmentSettings.useServiceTypes) {
-      // El negocio usa tipos de servicio - serviceTypeId es REQUERIDO
+      // El negocio usa tipos de servicio
       if (!serviceTypeId) {
-        throw new BadRequestException(
-          'Debe seleccionar un tipo de servicio para agendar su cita'
-        );
-      }
-      
-      // Obtener el tipo de servicio y validar
-      const serviceType = await this.prisma.serviceType.findFirst({
-        where: {
-          id: serviceTypeId,
-          brandId,
-          isActive: true
+        // Si no se especifica serviceTypeId, usar el servicio por defecto
+        const defaultService = await this.getDefaultServiceType(brandId);
+        if (!defaultService) {
+          throw new NotFoundException(
+            'No se encontró un tipo de servicio por defecto para este negocio'
+          );
         }
-      });
-      
-      if (!serviceType) {
-        throw new NotFoundException(
-          'El tipo de servicio seleccionado no existe o no está disponible'
-        );
+        serviceTypeId = defaultService.id;
+        duration = defaultService.duration;
+      } else {
+        // Validar el tipo de servicio especificado
+        const serviceType = await this.prisma.serviceType.findFirst({
+          where: {
+            id: serviceTypeId,
+            brandId,
+            isActive: true
+          }
+        });
+        
+        if (!serviceType) {
+          throw new NotFoundException(
+            'El tipo de servicio seleccionado no existe o no está disponible'
+          );
+        }
+        
+        // Usar la duración del tipo de servicio
+        duration = serviceType.duration;
       }
-      
-      // Usar la duración del tipo de servicio
-      duration = serviceType.duration;
       
     } else {
       // El negocio NO usa tipos de servicio - no debe haber serviceTypeId
@@ -317,30 +337,36 @@ async createAppointmentByRoot(
     
     // Determinar la duración basada en la configuración del negocio
     if (appointmentSettings.useServiceTypes) {
-      // El negocio usa tipos de servicio - serviceTypeId es REQUERIDO
+      // El negocio usa tipos de servicio
       if (!serviceTypeId) {
-        throw new BadRequestException(
-          'Debe seleccionar un tipo de servicio para agendar la cita'
-        );
-      }
-      
-      // Obtener el tipo de servicio y validar
-      const serviceType = await this.prisma.serviceType.findFirst({
-        where: {
-          id: serviceTypeId,
-          brandId,
-          isActive: true
+        // Si no se especifica serviceTypeId, usar el servicio por defecto
+        const defaultService = await this.getDefaultServiceType(brandId);
+        if (!defaultService) {
+          throw new NotFoundException(
+            'No se encontró un tipo de servicio por defecto para este negocio'
+          );
         }
-      });
-      
-      if (!serviceType) {
-        throw new NotFoundException(
-          'El tipo de servicio seleccionado no existe o no está disponible'
-        );
+        serviceTypeId = defaultService.id;
+        duration = defaultService.duration;
+      } else {
+        // Validar el tipo de servicio especificado
+        const serviceType = await this.prisma.serviceType.findFirst({
+          where: {
+            id: serviceTypeId,
+            brandId,
+            isActive: true
+          }
+        });
+        
+        if (!serviceType) {
+          throw new NotFoundException(
+            'El tipo de servicio seleccionado no existe o no está disponible'
+          );
+        }
+        
+        // Usar la duración del tipo de servicio
+        duration = serviceType.duration;
       }
-      
-      // Usar la duración del tipo de servicio
-      duration = serviceType.duration;
       
     } else {
       // El negocio NO usa tipos de servicio - no debe haber serviceTypeId

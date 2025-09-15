@@ -113,7 +113,7 @@ export class CreateAppointmentDto {
 
   @ApiPropertyOptional({ 
     example: 1,
-    description: 'ID del tipo de servicio a agendar (requerido si el negocio usa tipos de servicio)' 
+    description: 'ID del tipo de servicio a agendar (opcional - si no se especifica, usará el servicio por defecto)' 
   })
   @IsNumber()
   @IsOptional()
@@ -149,7 +149,7 @@ export class CreateAppointmentByRootDto {
 
   @ApiPropertyOptional({ 
     example: 1,
-    description: 'ID del tipo de servicio a agendar (requerido si el negocio usa tipos de servicio)' 
+    description: 'ID del tipo de servicio a agendar (opcional - si no se especifica, usará el servicio por defecto)' 
   })
   @IsNumber()
   @IsOptional()
