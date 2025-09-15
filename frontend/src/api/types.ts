@@ -233,7 +233,7 @@ export interface ServiceTypesResponse {
 
 export interface CreateAppointmentRequest {
   startTime: string; 
-  serviceTypeId: number;
+  serviceTypeId?: number;
   notes?: string;
 }
 

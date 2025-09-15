@@ -53,7 +53,7 @@ import {
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AppointmentsController {
-  constructor(private readonly appointmentsService: AppointmentsService) {}
+  constructor(private readonly appointmentsService: AppointmentsService) { }
 
   // Endpoint para que clientes creen sus propias citas
   @Post('appointments')
@@ -128,37 +128,37 @@ export class AppointmentsController {
     description: 'ROOT ve todas las citas del brand, clientes solo ven sus propias citas'
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiQuery({ 
-    name: 'startDate', 
-    required: false, 
-    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)' 
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)'
   })
-  @ApiQuery({ 
-    name: 'endDate', 
-    required: false, 
-    description: 'Fecha de fin para filtrar (YYYY-MM-DD)' 
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'Fecha de fin para filtrar (YYYY-MM-DD)'
   })
-  @ApiQuery({ 
-    name: 'status', 
-    required: false, 
-    description: 'Filtrar por estado de la cita' 
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filtrar por estado de la cita'
   })
-  @ApiQuery({ 
-    name: 'clientId', 
-    required: false, 
-    description: 'Filtrar por cliente (solo ROOT)' 
+  @ApiQuery({
+    name: 'clientId',
+    required: false,
+    description: 'Filtrar por cliente (solo ROOT)'
   })
-  @ApiQuery({ 
-    name: 'page', 
-    required: false, 
+  @ApiQuery({
+    name: 'page',
+    required: false,
     description: 'Número de página',
-    example: 1 
+    example: 1
   })
-  @ApiQuery({ 
-    name: 'limit', 
-    required: false, 
+  @ApiQuery({
+    name: 'limit',
+    required: false,
     description: 'Elementos por página',
-    example: 20 
+    example: 20
   })
   @ApiResponse({
     status: 200,
@@ -259,15 +259,15 @@ export class AppointmentsController {
     description: 'Retorna los horarios disponibles para una fecha específica'
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiQuery({ 
-    name: 'date', 
-    required: true, 
+  @ApiQuery({
+    name: 'date',
+    required: true,
     description: 'Fecha para consultar disponibilidad (YYYY-MM-DD)',
     example: '2024-08-20'
   })
-  @ApiQuery({ 
-    name: 'duration', 
-    required: false, 
+  @ApiQuery({
+    name: 'duration',
+    required: false,
     description: 'Duración deseada en minutos',
     example: 30
   })
@@ -294,15 +294,15 @@ export class AppointmentsController {
     description: 'Retorna un resumen estadístico de las citas del brand'
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiQuery({ 
-    name: 'startDate', 
-    required: false, 
-    description: 'Fecha de inicio para el reporte (YYYY-MM-DD)' 
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'Fecha de inicio para el reporte (YYYY-MM-DD)'
   })
-  @ApiQuery({ 
-    name: 'endDate', 
-    required: false, 
-    description: 'Fecha de fin para el reporte (YYYY-MM-DD)' 
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'Fecha de fin para el reporte (YYYY-MM-DD)'
   })
   @ApiResponse({
     status: 200,
@@ -347,13 +347,13 @@ export class AppointmentsController {
       page: 1,
       limit: 100
     };
-    
+
     const result = await this.appointmentsService.getAppointments(
       parseInt(brandId),
       req.user.userId,
       query
     );
-    
+
     return BaseResponseDto.success(result.data?.appointments || []);
   }
 
@@ -389,15 +389,15 @@ export class AppointmentsController {
     description: 'Obtiene todas las citas en un rango de fechas para mostrar en el calendario'
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiQuery({ 
-    name: 'startDate', 
-    required: true, 
-    description: 'Fecha de inicio (YYYY-MM-DD)' 
+  @ApiQuery({
+    name: 'startDate',
+    required: true,
+    description: 'Fecha de inicio (YYYY-MM-DD)'
   })
-  @ApiQuery({ 
-    name: 'endDate', 
-    required: true, 
-    description: 'Fecha de fin (YYYY-MM-DD)' 
+  @ApiQuery({
+    name: 'endDate',
+    required: true,
+    description: 'Fecha de fin (YYYY-MM-DD)'
   })
   @ApiResponse({
     status: 200,
@@ -416,13 +416,13 @@ export class AppointmentsController {
       page: 1,
       limit: 1000 // Allow more appointments for calendar view
     };
-    
+
     const result = await this.appointmentsService.getAppointments(
       parseInt(brandId),
       req.user.userId,
       query
     );
-    
+
     // El servicio ya devuelve BaseResponseDto, extraemos los appointments
     if (result.success && result.data) {
       return BaseResponseDto.success(result.data.appointments || []);
@@ -439,9 +439,9 @@ export class AppointmentsController {
     description: 'Retorna la agenda del día actual con citas programadas y espacios disponibles. Solo accesible para miembros del brand.'
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiQuery({ 
-    name: 'includeCancelled', 
-    required: false, 
+  @ApiQuery({
+    name: 'includeCancelled',
+    required: false,
     description: 'Incluir citas canceladas (solo para dueños)',
     example: false
   })
@@ -475,9 +475,9 @@ export class AppointmentsController {
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiParam({ name: 'date', description: 'Fecha en formato YYYY-MM-DD', example: '2024-08-20' })
-  @ApiQuery({ 
-    name: 'includeCancelled', 
-    required: false, 
+  @ApiQuery({
+    name: 'includeCancelled',
+    required: false,
     description: 'Incluir citas canceladas (solo para dueños)',
     example: false
   })

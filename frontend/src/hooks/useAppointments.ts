@@ -34,9 +34,10 @@ export const useAppointments = () => {
         throw new Error('Debe seleccionar fecha y hora');
       }
 
-      if (!appointmentData.serviceTypeId) {
-        throw new Error('Debe seleccionar un servicio');
-      }
+      // serviceTypeId is now optional - will use default if not provided
+      // if (!appointmentData.serviceTypeId) {
+      //   throw new Error('Debe seleccionar un servicio');
+      // }
 
       // Combinar fecha y hora para crear ISO string
       const selectedDate = new Date(appointmentData.selectedDate);
@@ -49,7 +50,7 @@ export const useAppointments = () => {
 
       const requestData: CreateAppointmentRequest = {
         startTime,
-        serviceTypeId: appointmentData.serviceTypeId,
+        serviceTypeId: appointmentData.serviceTypeId || undefined,
         notes: appointmentData.notes || undefined
       };
 

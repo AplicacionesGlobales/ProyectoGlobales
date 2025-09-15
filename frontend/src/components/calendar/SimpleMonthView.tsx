@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCalendar } from '@/contexts/CalendarContext';
+import { MonthlyDayData } from '@/types/calendar';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CELL_SIZE = (screenWidth - 32) / 7;
@@ -47,7 +48,7 @@ const SimpleMonthView: React.FC<SimpleMonthViewProps> = ({ onDateSelect }) => {
       currentDate.setDate(startDate.getDate() + i);
       
       const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-      const dayInfo = state.monthData.days?.find(d => d.date === dateStr);
+      const dayInfo = state.monthData.days?.find((d: MonthlyDayData) => d.date === dateStr);
       
       grid.push({
         date: dateStr,
