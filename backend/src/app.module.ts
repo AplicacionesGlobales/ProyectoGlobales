@@ -17,6 +17,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { ClientModule } from './client/client.module';
 import { PublicAvailabilityModule } from './public-availability/public-availability.module';
 import { ServiceTypeModule } from './service-type/service-type.module';
+import { BrandFeaturesModule } from './brand-features/brand-features.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ServiceTypeModule } from './service-type/service-type.module';
     ClientModule,
     PublicAvailabilityModule,
     ServiceTypeModule,
+    BrandFeaturesModule,
   ],
   controllers: [],
   providers: [
