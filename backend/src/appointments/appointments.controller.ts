@@ -507,6 +507,47 @@ export class AppointmentsController {
     );
   }
 
+  // NUEVO: Actualizar información completa de cita (solo ROOT/ADMIN)
+  @Put('appointments/:appointmentId/admin-edit')
+  @UseGuards(BrandOwnerGuard) // Solo ROOT/ADMIN
+  @ApiOperation({
+    summary: 'Editar cita completa',
+    description: 'Permite al ROOT/ADMIN modificar fecha, hora, cliente, servicio y duración de una cita.'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+  @ApiBody({ type: UpdateAppointmentDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Cita actualizada exitosamente',
+    type: BaseResponseDto
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Solo ROOT/ADMIN puede usar este endpoint'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cita no encontrada'
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflicto con horario existente o fuera de horario laboral'
+  })
+  async updateAppointmentAdmin(
+    @Param('brandId') brandId: string,
+    @Param('appointmentId') appointmentId: string,
+    @Body(ValidationPipe) updateData: UpdateAppointmentDto,
+    @Request() req: any
+  ): Promise<BaseResponseDto<AppointmentDto>> {
+    return this.appointmentsService.updateAppointmentAdmin(
+      parseInt(brandId),
+      parseInt(appointmentId),
+      updateData,
+      req.user.userId
+    );
+  }
+
   // Obtener una cita específica (DEBE IR AL FINAL para evitar conflictos de rutas)
   @Get('appointments/:appointmentId')
   @ApiOperation({
