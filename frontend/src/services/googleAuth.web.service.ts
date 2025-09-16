@@ -107,19 +107,27 @@ class GoogleAuthWebService {
                     cancel_on_tap_outside: true
                 });
 
-                // Intentar prompt primero, si no funciona, usar un botón simple sin modal
-                console.log('🔧 Intentando prompt de Google Sign-In...');
-                try {
-                    window.google.accounts.id.prompt((notification: any) => {
-                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                            console.log('📋 Prompt no disponible, usando botón directo...');
-                            // Crear un botón simple e invisible que se ejecute automáticamente
-                            this.createInlineButton().then(resolve);
-                        }
-                    });
-                } catch (error) {
-                    console.log('📋 Error con prompt, usando botón directo...');
+                // Detectar si estamos en móvil o tunnel para usar botón directo
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const isDevTunnel = window.location.hostname.includes('devtunnels.ms');
+                
+                if (isMobile || isDevTunnel) {
+                    console.log('🔧 Detectado móvil/tunnel, usando botón directo...');
                     this.createInlineButton().then(resolve);
+                } else {
+                    // Intentar prompt solo en desktop local
+                    console.log('🔧 Intentando prompt de Google Sign-In...');
+                    try {
+                        window.google.accounts.id.prompt((notification: any) => {
+                            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                                console.log('📋 Prompt no disponible, usando botón directo...');
+                                this.createInlineButton().then(resolve);
+                            }
+                        });
+                    } catch (error) {
+                        console.log('📋 Error con prompt, usando botón directo...');
+                        this.createInlineButton().then(resolve);
+                    }
                 }
             });
         } catch (error) {
@@ -138,20 +146,49 @@ class GoogleAuthWebService {
             tempContainer.style.position = 'absolute';
             tempContainer.style.top = '-9999px'; // Oculto fuera de la pantalla
             tempContainer.style.left = '-9999px';
+            tempContainer.style.width = '200px';
+            tempContainer.style.height = '50px';
             document.body.appendChild(tempContainer);
 
             // Renderizar el botón de Google
             window.google.accounts.id.renderButton(tempContainer, {
                 theme: 'outline',
-                size: 'large'
+                size: 'large',
+                text: 'signin_with',
+                shape: 'rectangular'
             });
 
-            // Simular clic automático en el botón
-            setTimeout(() => {
-                const googleButton = tempContainer.querySelector('div[role="button"]');
+            // Intentar múltiples formas de encontrar y hacer clic en el botón
+            const tryClickButton = () => {
+                // Método 1: Buscar por role="button"
+                let googleButton = tempContainer.querySelector('div[role="button"]') as HTMLElement;
+                
+                // Método 2: Buscar por cualquier div clickeable
+                if (!googleButton) {
+                    googleButton = tempContainer.querySelector('div[tabindex]') as HTMLElement;
+                }
+                
+                // Método 3: Buscar primer div con eventos
+                if (!googleButton) {
+                    googleButton = tempContainer.querySelector('div') as HTMLElement;
+                }
+
                 if (googleButton) {
                     console.log('🔄 Ejecutando sign-in automático...');
-                    (googleButton as HTMLElement).click();
+                    
+                    // Múltiples formas de activar el botón
+                    googleButton.click();
+                    
+                    // Fallback: disparar eventos manualmente
+                    setTimeout(() => {
+                        const clickEvent = new MouseEvent('click', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        });
+                        googleButton.dispatchEvent(clickEvent);
+                    }, 50);
+                    
                 } else {
                     console.error('❌ No se pudo encontrar el botón de Google');
                     document.body.removeChild(tempContainer);
@@ -160,14 +197,19 @@ class GoogleAuthWebService {
                         error: 'No se pudo inicializar Google Sign-In'
                     });
                 }
-            }, 100);
+            };
+
+            // Esperar más tiempo en móviles para que el botón se renderice
+            const waitTime = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 500 : 200;
+            
+            setTimeout(tryClickButton, waitTime);
 
             // Limpiar después de un tiempo
             setTimeout(() => {
                 if (document.body.contains(tempContainer)) {
                     document.body.removeChild(tempContainer);
                 }
-            }, 5000);
+            }, 10000);
         });
     }
 
