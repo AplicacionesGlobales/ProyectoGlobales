@@ -296,3 +296,18 @@ export interface AppointmentFormData {
   serviceTypeId: number | null;
 }
 
+// New types for appointment by date endpoints
+export interface AppointmentsByDateResponse {
+  success: boolean;
+  data: any[];
+}
+
+export interface AppointmentsByDateRangeResponse {
+  success: boolean;
+  data: {
+    appointments: any[];
+    total: number;
+    pages: number;
+  };
+}
+

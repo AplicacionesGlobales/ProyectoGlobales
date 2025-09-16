@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCalendar } from '@/contexts/CalendarContext';
-import { MonthlyDayData } from '@/types/calendar';
+import type { MonthlyDayData } from '@/types/calendar';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CELL_SIZE = (screenWidth - 32) / 7;

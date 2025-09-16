@@ -1,3 +1,4 @@
+
 // src/components/calendar/DayNavigator.tsx
 // Componente simple de navegación entre días
 import React from 'react';

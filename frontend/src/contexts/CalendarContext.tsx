@@ -1,7 +1,13 @@
 // src/contexts/CalendarContext.tsx
 // Context centralizado para manejar el estado del calendario
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { getDayAgenda, getMonthlyCalendarData, getCalendarAppointments } from '@/api/endpoints';
+import { 
+  getDayAgenda, 
+  getMonthlyCalendarData, 
+  getCalendarAppointments,
+  getAppointmentsByDate,
+  getAppointmentsByDateRange 
+} from '@/api/endpoints';
 
 export type CalendarViewType = 'day' | 'week' | 'month';
 
@@ -137,30 +143,45 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({
       dispatch({ type: 'SET_LOADING', payload: { view: 'day', loading: true } });
       dispatch({ type: 'SET_ERROR', payload: null });
       
-      const response = await getDayAgenda(state.brandId, date);
+      // Usar el endpoint de agenda del día Y el endpoint de citas por fecha
+      const [agendaResponse, appointmentsResponse] = await Promise.all([
+        getDayAgenda(state.brandId, date).catch(() => null),
+        getAppointmentsByDate(state.brandId, date).catch(() => null)
+      ]);
       
-      if (response.success && response.data) {
-        dispatch({ type: 'SET_DAY_DATA', payload: response.data });
-      } else {
-        // Si no hay datos, crear estructura vacía
-        dispatch({ type: 'SET_DAY_DATA', payload: {
-          date,
-          businessHours: { start: '08:00', end: '18:00', isClosed: false },
-          agenda: [],
-          totalAppointments: 0,
-          totalAvailableSlots: 0,
-          slotDuration: 30,
-          totalAvailableTime: 0,
-          totalBookedTime: 0
-        }});
+      // Procesar datos de agenda
+      let dayData: any = {
+        date,
+        businessHours: { start: '08:00', end: '18:00', isClosed: false },
+        agenda: [] as any[],
+        totalAppointments: 0,
+        totalAvailableSlots: 0,
+        slotDuration: 30,
+        totalAvailableTime: 0,
+        totalBookedTime: 0,
+        appointments: [] as any[]
+      };
+
+      if (agendaResponse?.success && agendaResponse.data) {
+        dayData = { ...agendaResponse.data, appointments: dayData.appointments };
       }
+
+      // Integrar citas específicas del día
+      if (appointmentsResponse?.success && appointmentsResponse.data) {
+        dayData.appointments = appointmentsResponse.data;
+        dayData.totalAppointments = appointmentsResponse.data.length;
+      }
+
+      dispatch({ type: 'SET_DAY_DATA', payload: dayData });
+      
     } catch (error) {
       console.warn('Error loading day data:', error);
-      // En caso de error, mostrar estructura vacía en lugar de fallar
+      // En caso de error, mostrar estructura vacía
       dispatch({ type: 'SET_DAY_DATA', payload: {
         date,
         businessHours: { start: '08:00', end: '18:00', isClosed: false },
-        agenda: [],
+        agenda: [] as any[],
+        appointments: [] as any[],
         totalAppointments: 0,
         totalAvailableSlots: 0,
         slotDuration: 30,
@@ -178,10 +199,14 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({
       dispatch({ type: 'SET_ERROR', payload: null });
       
       const endDate = addDays(startDate, 6);
-      const response = await getCalendarAppointments(state.brandId, startDate, endDate);
       
-      if (response.success) {
-        dispatch({ type: 'SET_WEEK_DATA', payload: response.data || [] });
+      // Usar el endpoint de appointments que sí funciona con rangos de fechas
+      const response = await getAppointmentsByDateRange(state.brandId, startDate, endDate);
+      
+      if (response.success && response.data) {
+        // Si viene la estructura con .appointments, extraer el array
+        const appointments = response.data.appointments || response.data || [];
+        dispatch({ type: 'SET_WEEK_DATA', payload: appointments });
       } else {
         dispatch({ type: 'SET_WEEK_DATA', payload: [] });
       }
