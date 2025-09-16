@@ -48,6 +48,10 @@ import {
   DayAgendaDto,
   GetDayAgendaQueryDto
 } from './dto/day-agenda.dto';
+import {
+  GetRealTimeSlotsDto,
+  RealTimeSlotsResponseDto
+} from './dto/real-time-slots.dto';
 
 @ApiTags('Appointments Management')
 @Controller('brand/:brandId')
@@ -587,6 +591,98 @@ export class AppointmentsController {
       parseInt(appointmentId),
       updateData,
       req.user.userId
+    );
+  }
+
+  // NUEVO: Obtener slots disponibles en tiempo real por tipo de servicio
+  @Get('appointments/real-time-slots')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Obtener slots disponibles en tiempo real',
+    description: 'Retorna los slots disponibles para una fecha específica con soporte para tipos de servicio específicos y configuraciones personalizables. Ideal para sistemas de booking en tiempo real.'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiQuery({
+    name: 'date',
+    required: true,
+    description: 'Fecha para consultar disponibilidad (YYYY-MM-DD)',
+    example: '2024-08-20'
+  })
+  @ApiQuery({
+    name: 'serviceTypeId',
+    required: false,
+    description: 'ID del tipo de servicio específico. Si no se proporciona, se muestran todos los tipos activos',
+    example: 123
+  })
+  @ApiQuery({
+    name: 'duration',
+    required: false,
+    description: 'Duración personalizada en minutos. Sobrescribe la duración del tipo de servicio',
+    example: 45
+  })
+  @ApiQuery({
+    name: 'slotInterval',
+    required: false,
+    description: 'Intervalo entre slots en minutos (default: 15)',
+    example: 15
+  })
+  @ApiQuery({
+    name: 'onlyFullSlots',
+    required: false,
+    description: 'Solo mostrar slots que puedan acomodar completamente el servicio (default: true)',
+    example: true
+  })
+  @ApiQuery({
+    name: 'startTime',
+    required: false,
+    description: 'Hora de inicio para filtrar slots (HH:mm)',
+    example: '09:00'
+  })
+  @ApiQuery({
+    name: 'endTime',
+    required: false,
+    description: 'Hora de fin para filtrar slots (HH:mm)',
+    example: '17:00'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Slots en tiempo real obtenidos exitosamente',
+    type: BaseResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Parámetros de consulta inválidos'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Tipo de servicio no encontrado'
+  })
+  async getRealTimeSlots(
+    @Param('brandId') brandId: string,
+    @Query() query: any,
+    @Request() req: any
+  ): Promise<BaseResponseDto<RealTimeSlotsResponseDto>> {
+    // Transform and validate query parameters
+    const realTimeSlotsQuery: GetRealTimeSlotsDto = {
+      date: query.date,
+      serviceTypeId: query.serviceTypeId ? parseInt(query.serviceTypeId) : undefined,
+      duration: query.duration ? parseInt(query.duration) : undefined,
+      slotInterval: query.slotInterval ? parseInt(query.slotInterval) : 15,
+      onlyFullSlots: query.onlyFullSlots !== 'false', // Default to true unless explicitly false
+      startTime: query.startTime,
+      endTime: query.endTime
+    };
+
+    // Basic validation
+    if (!realTimeSlotsQuery.date) {
+      throw new BadRequestException('El parámetro date es requerido');
+    }
+
+    const userId = req.user?.sub || req.user?.userId;
+    return this.appointmentsService.getRealTimeSlots(
+      parseInt(brandId),
+      realTimeSlotsQuery,
+      userId
     );
   }
 
