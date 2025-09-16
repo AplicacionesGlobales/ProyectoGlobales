@@ -1,4 +1,4 @@
-import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, UseGuards, Request, Put} from '@nestjs/common';
+import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, UseGuards, Request, Put } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
@@ -14,6 +14,7 @@ import {
   RefreshRequestDto,
   RefreshResponseDto,
   UpdateProfileDto,
+  GoogleValidateDto,
 } from './dto';
 import { CreateBrandDto } from '../brand-register/dto/create-brand.dto';
 import { BaseResponseDto } from '../common/dto';
@@ -80,6 +81,26 @@ export class AuthController {
     @Body(ValidationPipe) refreshDto: RefreshRequestDto
   ): Promise<BaseResponseDto<RefreshResponseDto>> {
     return this.authService.refreshToken(refreshDto);
+  }
+
+  @Public()
+  @Post('google/validate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Autenticar con Google ID Token' })
+  @ApiBody({ type: GoogleValidateDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Autenticación con Google exitosa',
+    type: BaseResponseDto<AuthResponse>
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token de Google inválido'
+  })
+  async validateGoogleToken(
+    @Body(ValidationPipe) googleValidateDto: GoogleValidateDto
+  ): Promise<BaseResponseDto<AuthResponse>> {
+    return this.authService.loginWithGoogle(googleValidateDto);
   }
 
   /**

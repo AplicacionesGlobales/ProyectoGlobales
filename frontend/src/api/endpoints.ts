@@ -1,5 +1,5 @@
 import { API_ENDPOINTS, BASE_URL } from './constants';
-import { 
+import {
   HealthResponse,
   RegisterRequest,
   RegisterResponse,
@@ -29,7 +29,7 @@ const apiRequest = async <T>(
   requiresAuth: boolean = false
 ): Promise<T> => {
   const url = `${BASE_URL}${endpoint}`;
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -58,7 +58,7 @@ const apiRequest = async <T>(
   }
 
   const response = await fetch(url, config);
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || `API Error: ${response.status}`);
@@ -75,7 +75,7 @@ export const healthCheck = async (): Promise<HealthResponse> => {
     undefined,
     false // No requiere autenticación
   );
-  
+
   console.log('Health check response:', response.status);
   return response;
 };
@@ -93,6 +93,19 @@ export const registerUser = async (data: RegisterRequest): Promise<RegisterRespo
 export const loginUser = async (data: LoginRequest): Promise<LoginResponse> => {
   return apiRequest<LoginResponse>(
     API_ENDPOINTS.AUTH.LOGIN,
+    'POST',
+    data,
+    false // No requiere autenticación
+  );
+};
+
+export const validateGoogleToken = async (data: {
+  idToken: string;
+  brandId: number;
+  rememberMe?: boolean;
+}): Promise<LoginResponse> => {
+  return apiRequest<LoginResponse>(
+    API_ENDPOINTS.AUTH.GOOGLE_VALIDATE,
     'POST',
     data,
     false // No requiere autenticación
@@ -124,7 +137,7 @@ export const forgotPassword = async (email: string): Promise<ForgotPasswordRespo
     { email },
     false // No requiere autenticación
   );
-  
+
   // Extraer la data del wrapper BaseResponseDto
   if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
@@ -143,7 +156,7 @@ export const validateResetCode = async (data: ValidateResetCodeRequest): Promise
     data,
     false // No requiere autenticación
   );
-  
+
   // Extraer la data del wrapper BaseResponseDto
   if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
@@ -161,7 +174,7 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
     data,
     false // No requiere autenticación
   );
-  
+
   // Extraer la data del wrapper BaseResponseDto
   if (apiResponse.success && apiResponse.data) {
     return apiResponse.data;
@@ -178,7 +191,7 @@ export const getColorPaletteByBrand = async (brandId: number): Promise<ColorPale
     `${API_ENDPOINTS.COLOR_PALETTES.BY_BRAND}/${brandId}`,
     'GET',
     undefined,
-    false 
+    false
   );
 };
 
@@ -196,7 +209,7 @@ export const getBrandImages = async (brandId: number): Promise<BrandImagesRespon
     `${API_ENDPOINTS.BRAND_IMAGES.BY_BRAND}/${brandId}/images`,
     'GET',
     undefined,
-    false 
+    false
   );
 };
 
@@ -205,7 +218,7 @@ export const getServicesTypes = async (brandId: number): Promise<ServiceTypesRes
     `${API_ENDPOINTS.SERVICE_TYPES.BY_ID.replace('{brandId}', brandId.toString())}/service-types`,
     'GET',
     undefined,
-    true 
+    true
   );
 };
 
@@ -317,6 +330,178 @@ export const getTodayAgenda = async (
       businessHours: { start: string; end: string };
       agenda: any[];
     }
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+export const getMonthlyCalendarData = async (
+  brandId: number, 
+  month: string // YYYY-MM format
+): Promise<{ 
+  success: boolean; 
+  data: {
+    month: string;
+    summary: {
+      totalAppointments: number;
+      confirmedAppointments: number;
+      pendingAppointments: number;
+      completedAppointments: number;
+      cancelledAppointments: number;
+      totalOccupiedMinutes: number;
+      totalAvailableMinutes: number;
+      averageOccupancyPercentage: number;
+      businessDaysInMonth: number;
+      daysWithAppointments: number;
+    };
+    days: Array<{
+      date: string;
+      totalAppointments: number;
+      confirmedAppointments: number;
+      pendingAppointments: number;
+      completedAppointments: number;
+      cancelledAppointments: number;
+      totalOccupiedMinutes: number;
+      totalAvailableMinutes: number;
+      occupancyPercentage: number;
+      isBusinessOpen: boolean;
+    }>;
+  }
+}> => {
+  const url = `/brand/${brandId}/calendar/month/${month}`;
+  console.log('🔗 Fetching monthly calendar data:', url);
+  
+  return apiRequest<{ 
+    success: boolean; 
+    data: any;
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Endpoints para horarios de negocio
+export const getBusinessHours = async (
+  brandId: number
+): Promise<{
+  success: boolean;
+  data: Array<{
+    id: number;
+    dayOfWeek: number; // 0=Sunday, 1=Monday, etc.
+    dayName: string;
+    isOpen: boolean;
+    openTime?: string;
+    closeTime?: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}> => {
+  const url = `/brand/${brandId}/business-hours`;
+  console.log('🔗 Fetching business hours:', url);
+  
+  return apiRequest<{
+    success: boolean;
+    data: any[];
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Endpoints para horarios especiales
+export const getSpecialHours = async (
+  brandId: number,
+  startDate?: string,
+  endDate?: string
+): Promise<{
+  success: boolean;
+  data: Array<{
+    id: number;
+    date: string;
+    isOpen: boolean;
+    openTime?: string;
+    closeTime?: string;
+    reason?: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}> => {
+  let url = `/brand/${brandId}/special-hours`;
+  const params = new URLSearchParams();
+  
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  console.log('🔗 Fetching special hours:', url);
+  
+  return apiRequest<{
+    success: boolean;
+    data: any[];
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Endpoint para configuraciones de citas
+export const getAppointmentSettings = async (
+  brandId: number
+): Promise<{
+  success: boolean;
+  data: {
+    id: number;
+    defaultDuration: number;
+    bufferTime: number;
+    maxAdvanceBookingDays: number;
+    minAdvanceBookingHours: number;
+    allowSameDayBooking: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+}> => {
+  const url = `/brand/${brandId}/appointment-settings`;
+  console.log('🔗 Fetching appointment settings:', url);
+  
+  return apiRequest<{
+    success: boolean;
+    data: any;
+  }>(
+    url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Mejorar el endpoint semanal existente
+export const getWeeklyCalendarData = async (
+  brandId: number,
+  startDate: string, // Fecha de inicio de la semana YYYY-MM-DD
+  endDate: string    // Fecha de fin de la semana YYYY-MM-DD
+): Promise<{ 
+  success: boolean; 
+  data: any[] 
+}> => {
+  // Para vista semanal, usar el endpoint de citas por rango
+  const url = `${API_ENDPOINTS.APPOINTMENTS.CALENDAR.replace('{brandId}', brandId.toString())}?startDate=${startDate}&endDate=${endDate}`;
+  console.log('🔗 Fetching weekly calendar data:', url);
+  
+  return apiRequest<{ 
+    success: boolean; 
+    data: any[] 
   }>(
     url,
     'GET',
