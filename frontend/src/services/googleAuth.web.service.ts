@@ -107,11 +107,20 @@ class GoogleAuthWebService {
                     cancel_on_tap_outside: true
                 });
 
-                // Usar directamente el botón en lugar del prompt automático
-                console.log('🔧 Usando botón de Google Sign-In (más confiable que prompt automático)');
-                this.renderButton().then((result) => {
-                    resolve(result);
-                });
+                // Intentar prompt primero, si no funciona, usar un botón simple sin modal
+                console.log('🔧 Intentando prompt de Google Sign-In...');
+                try {
+                    window.google.accounts.id.prompt((notification: any) => {
+                        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                            console.log('📋 Prompt no disponible, usando botón directo...');
+                            // Crear un botón simple e invisible que se ejecute automáticamente
+                            this.createInlineButton().then(resolve);
+                        }
+                    });
+                } catch (error) {
+                    console.log('📋 Error con prompt, usando botón directo...');
+                    this.createInlineButton().then(resolve);
+                }
             });
         } catch (error) {
             console.error('❌ Error en Google Sign-In Web:', error);
@@ -120,51 +129,45 @@ class GoogleAuthWebService {
                 error: error instanceof Error ? error.message : 'Error desconocido en Google Sign-In Web'
             };
         }
-    } private renderButton(): Promise<GoogleSignInResult> {
-        return new Promise((resolve) => {
-            // Crear elemento temporal para el botón si no existe
-            let buttonContainer = document.getElementById('temp-google-signin-button');
-            if (!buttonContainer) {
-                buttonContainer = document.createElement('div');
-                buttonContainer.id = 'temp-google-signin-button';
-                buttonContainer.style.position = 'fixed';
-                buttonContainer.style.top = '50%';
-                buttonContainer.style.left = '50%';
-                buttonContainer.style.transform = 'translate(-50%, -50%)';
-                buttonContainer.style.zIndex = '10000';
-                buttonContainer.style.backgroundColor = 'white';
-                buttonContainer.style.padding = '20px';
-                buttonContainer.style.borderRadius = '8px';
-                buttonContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                document.body.appendChild(buttonContainer);
-            }
+    }
 
-            window.google.accounts.id.renderButton(buttonContainer, {
+    private createInlineButton(): Promise<GoogleSignInResult> {
+        return new Promise((resolve) => {
+            // Crear un contenedor temporal pero sin modal/overlay
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.top = '-9999px'; // Oculto fuera de la pantalla
+            tempContainer.style.left = '-9999px';
+            document.body.appendChild(tempContainer);
+
+            // Renderizar el botón de Google
+            window.google.accounts.id.renderButton(tempContainer, {
                 theme: 'outline',
-                size: 'large',
-                text: 'signin_with',
-                shape: 'rectangular'
+                size: 'large'
             });
 
-            // Agregar overlay para cerrar
-            const overlay = document.createElement('div');
-            overlay.style.position = 'fixed';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100%';
-            overlay.style.height = '100%';
-            overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
-            overlay.style.zIndex = '9999';
-            overlay.onclick = () => {
-                document.body.removeChild(overlay);
-                document.body.removeChild(buttonContainer!);
-                resolve({
-                    success: false,
-                    error: 'Sign-in cancelado por el usuario'
-                });
-            };
+            // Simular clic automático en el botón
+            setTimeout(() => {
+                const googleButton = tempContainer.querySelector('div[role="button"]');
+                if (googleButton) {
+                    console.log('🔄 Ejecutando sign-in automático...');
+                    (googleButton as HTMLElement).click();
+                } else {
+                    console.error('❌ No se pudo encontrar el botón de Google');
+                    document.body.removeChild(tempContainer);
+                    resolve({
+                        success: false,
+                        error: 'No se pudo inicializar Google Sign-In'
+                    });
+                }
+            }, 100);
 
-            document.body.appendChild(overlay);
+            // Limpiar después de un tiempo
+            setTimeout(() => {
+                if (document.body.contains(tempContainer)) {
+                    document.body.removeChild(tempContainer);
+                }
+            }, 5000);
         });
     }
 
