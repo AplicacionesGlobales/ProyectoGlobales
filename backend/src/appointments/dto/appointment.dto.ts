@@ -310,3 +310,23 @@ export class TimeSlotDto {
   @ApiPropertyOptional({ example: 'Horario ocupado' })
   reason?: string;
 }
+
+export class CancelAppointmentDto {
+  @ApiProperty({ 
+    example: 'El cliente solicitó cancelar debido a un imprevisto',
+    description: 'Motivo de la cancelación que se enviará al cliente'
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(10)
+  @MaxLength(500)
+  reason: string;
+
+  @ApiPropertyOptional({ 
+    example: true,
+    description: 'Si se debe enviar notificación por email al cliente',
+    default: true
+  })
+  @IsOptional()
+  sendNotification?: boolean;
+}

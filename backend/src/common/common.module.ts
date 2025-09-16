@@ -5,6 +5,7 @@ import { FileService } from './services/file.service';
 import { PlanService } from './services/plan.service';
 import { PaymentService } from './services/payment.service';
 import { PricingService } from './services/pricing.service';
+import { EmailService } from './services/email/email.service';
 
 @Module({
   imports: [ConfigModule],
@@ -13,14 +14,16 @@ import { PricingService } from './services/pricing.service';
     FileService,
     PlanService,
     PaymentService,
-    PricingService
+    PricingService,
+    EmailService
   ],
   exports: [
     PrismaService,
     FileService,
     PlanService,
     PaymentService,
-    PricingService
+    PricingService,
+    EmailService
   ]
 })
 export class CommonModule {}
