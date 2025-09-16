@@ -38,6 +38,8 @@ export const API_ENDPOINTS = {
     CALENDAR: '/brand/{brandId}/appointments/calendar',
     DAY_AGENDA: '/brand/{brandId}/calendar/today/agenda',
     DATE_AGENDA: '/brand/{brandId}/calendar/date/{date}/agenda',
+    BY_DATE: '/brand/{brandId}/appointments/date/{date}',
+    BY_DATE_RANGE: '/brand/{brandId}/appointments',
   },
   CALENDAR: {
     MONTH: '/brand/{brandId}/calendar/month/{month}',

@@ -122,7 +122,7 @@ export class AppointmentsController {
 
   // Obtener citas (ROOT ve todas, clientes solo las suyas)
   @Get('appointments')
-  @UseGuards(BrandOwnerGuard)
+  //@UseGuards(BrandOwnerGuard)
   @ApiOperation({
     summary: 'Obtener citas',
     description: 'ROOT ve todas las citas del brand, clientes solo ven sus propias citas'

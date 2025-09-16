@@ -35,19 +35,27 @@ const SimpleDayView: React.FC<SimpleDayViewProps> = ({
     const startHour = parseInt(start.split(':')[0]);
     const endHour = parseInt(end.split(':')[0]);
 
+    // Obtener las citas del día
+    const dayAppointments = state.dayData.appointments || [];
+
     for (let hour = startHour; hour < endHour; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         
         // Buscar si hay una cita en este horario
-        const appointment = state.dayData.agenda?.find((item: any) => 
-          item.type === 'appointment' && item.startTime === timeStr
-        );
+        const appointment = dayAppointments.find((apt: any) => {
+          const aptStartTime = new Date(apt.startTime);
+          const aptHour = aptStartTime.getUTCHours();
+          const aptMinute = aptStartTime.getUTCMinutes();
+          const aptTimeStr = `${aptHour.toString().padStart(2, '0')}:${aptMinute.toString().padStart(2, '0')}`;
+          
+          return aptTimeStr === timeStr;
+        });
 
         slots.push({
           time: timeStr,
           isAvailable: !appointment,
-          appointment: appointment?.appointment || null
+          appointment: appointment || null
         });
       }
     }

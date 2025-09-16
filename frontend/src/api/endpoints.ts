@@ -18,7 +18,9 @@ import {
   BrandImagesResponse,
   ServiceTypesResponse,
   CreateAppointmentRequest,
-  CreateAppointmentResponse
+  CreateAppointmentResponse,
+  AppointmentsByDateResponse,
+  AppointmentsByDateRangeResponse
 } from './types';
 import { secureStorage } from '../utils/secureStorage';
 
@@ -504,6 +506,32 @@ export const getWeeklyCalendarData = async (
     data: any[] 
   }>(
     url,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Nuevos endpoints que SÍ funcionan para mostrar citas
+export const getAppointmentsByDate = async (
+  brandId: number, 
+  date: string // YYYY-MM-DD
+): Promise<AppointmentsByDateResponse> => {
+  return apiRequest<AppointmentsByDateResponse>(
+    `${API_ENDPOINTS.APPOINTMENTS.BY_DATE.replace('{brandId}', brandId.toString()).replace('{date}', date)}`,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+export const getAppointmentsByDateRange = async (
+  brandId: number, 
+  startDate: string, 
+  endDate: string
+): Promise<AppointmentsByDateRangeResponse> => {
+  return apiRequest<AppointmentsByDateRangeResponse>(
+    `${API_ENDPOINTS.APPOINTMENTS.BY_DATE_RANGE.replace('{brandId}', brandId.toString())}?startDate=${startDate}&endDate=${endDate}&limit=100`,
     'GET',
     undefined,
     true
