@@ -167,12 +167,18 @@ export class CreateAppointmentByRootDto {
 }
 
 export class UpdateAppointmentDto {
-  @ApiPropertyOptional({ example: '2024-08-20T11:00:00Z' })
+  @ApiPropertyOptional({ 
+    example: '2024-08-20T11:00:00Z',
+    description: 'Nueva fecha y hora de inicio de la cita'
+  })
   @IsDateString()
   @IsOptional()
   startTime?: string;
 
-  @ApiPropertyOptional({ example: 45 })
+  @ApiPropertyOptional({ 
+    example: 45,
+    description: 'Nueva duración en minutos (15-480)'
+  })
   @IsNumber()
   @Min(15)
   @Max(480)
@@ -189,10 +195,21 @@ export class UpdateAppointmentDto {
   @IsOptional()
   notes?: string;
 
-  @ApiPropertyOptional({ example: 3 })
+  @ApiPropertyOptional({ 
+    example: 3,
+    description: 'ID del nuevo cliente asignado'
+  })
   @IsNumber()
   @IsOptional()
   clientId?: number;
+
+  @ApiPropertyOptional({ 
+    example: 2,
+    description: 'ID del nuevo tipo de servicio'
+  })
+  @IsNumber()
+  @IsOptional()
+  serviceTypeId?: number;
 }
 
 export class UpdateAppointmentStatusDto {

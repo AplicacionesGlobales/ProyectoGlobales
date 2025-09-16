@@ -4,7 +4,8 @@ import {
   NotFoundException, 
   ForbiddenException, 
   BadRequestException,
-  ConflictException 
+  ConflictException,
+  InternalServerErrorException
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
@@ -124,8 +125,9 @@ export class AppointmentsService {
     }
 
     // 2. Validar horario dentro del rango de operación
-    const startTimeStr = startTime.toTimeString().substring(0, 5);
-    const endTimeStr = endTime.toTimeString().substring(0, 5);
+    // Usar UTC para ser consistente con el almacenamiento en la base de datos
+    const startTimeStr = startTime.toISOString().substring(11, 16); // HH:mm en UTC
+    const endTimeStr = endTime.toISOString().substring(11, 16); // HH:mm en UTC
     
     const operationStart = businessHoursForDay.start;
     const operationEnd = businessHoursForDay.end;
@@ -695,6 +697,156 @@ async getAppointments(
     } catch (error) {
       console.error('Error updating appointment:', error);
       throw error;
+    }
+  }
+
+  // NUEVO: Actualizar información completa de cita (solo ROOT/ADMIN)
+  async updateAppointmentAdmin(
+    brandId: number,
+    appointmentId: number,
+    updateData: UpdateAppointmentDto,
+    userId: number
+  ): Promise<BaseResponseDto<AppointmentDto>> {
+    try {
+      // Verificar que sea ROOT/ADMIN
+      const isRoot = await this.isRootUser(brandId, userId);
+      if (!isRoot) {
+        throw new ForbiddenException('Solo ROOT/ADMIN puede editar completamente las citas');
+      }
+
+      // Obtener la cita actual
+      const appointment = await this.prisma.appointment.findUnique({
+        where: { id: appointmentId },
+        include: {
+          serviceType: true,
+          client: true
+        }
+      });
+
+      if (!appointment || appointment.brandId !== brandId) {
+        throw new NotFoundException('Cita no encontrada');
+      }
+
+      // Validar cliente si se está cambiando
+      if (updateData.clientId && updateData.clientId !== appointment.clientId) {
+        const client = await this.prisma.user.findUnique({
+          where: { id: updateData.clientId }
+        });
+        if (!client) {
+          throw new NotFoundException('Cliente no encontrado');
+        }
+      }
+
+      // Validar serviceType si se está cambiando y obtener duración por defecto
+      let newDuration = updateData.duration || appointment.duration;
+      if (updateData.serviceTypeId && updateData.serviceTypeId !== appointment.serviceTypeId) {
+        const serviceType = await this.prisma.serviceType.findFirst({
+          where: {
+            id: updateData.serviceTypeId,
+            brandId,
+            isActive: true
+          }
+        });
+        if (!serviceType) {
+          throw new NotFoundException('Tipo de servicio no encontrado o inactivo');
+        }
+        // Si no se especifica duración, usar la del nuevo servicio
+        if (!updateData.duration) {
+          newDuration = serviceType.duration;
+        }
+      }
+
+      // Validar disponibilidad si se cambia fecha/hora/duración/servicio
+      if (updateData.startTime || updateData.duration || updateData.serviceTypeId) {
+        const startTime = updateData.startTime ? 
+          new Date(updateData.startTime) : appointment.startTime;
+        const endTime = new Date(startTime.getTime() + newDuration * 60000);
+
+        // Verificar disponibilidad excluyendo la cita actual
+        await this.validateAppointmentAvailability(
+          brandId, 
+          startTime, 
+          endTime, 
+          appointmentId // Excluir esta cita de la validación
+        );
+      }
+
+      // Preparar datos para actualización
+      const updatePayload: any = {};
+      
+      if (updateData.startTime) {
+        updatePayload.startTime = new Date(updateData.startTime);
+        updatePayload.endTime = new Date(updatePayload.startTime.getTime() + newDuration * 60000);
+      } else if (newDuration !== appointment.duration) {
+        // Si solo cambia duración, recalcular endTime
+        updatePayload.endTime = new Date(appointment.startTime.getTime() + newDuration * 60000);
+      }
+
+      if (newDuration !== appointment.duration) {
+        updatePayload.duration = newDuration;
+      }
+
+      if (updateData.clientId && updateData.clientId !== appointment.clientId) {
+        updatePayload.clientId = updateData.clientId;
+      }
+
+      if (updateData.serviceTypeId && updateData.serviceTypeId !== appointment.serviceTypeId) {
+        updatePayload.serviceTypeId = updateData.serviceTypeId;
+      }
+
+      // Solo actualizar si hay cambios
+      if (Object.keys(updatePayload).length === 0) {
+        return BaseResponseDto.success(this.mapToDto(appointment));
+      }
+
+      // Actualizar la cita
+      const updatedAppointment = await this.prisma.appointment.update({
+        where: { id: appointmentId },
+        data: updatePayload,
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true
+            }
+          },
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          serviceType: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              duration: true,
+              price: true,
+              color: true,
+              icon: true
+            }
+          }
+        }
+      });
+
+      return BaseResponseDto.success(
+        this.mapToDto(updatedAppointment)
+      );
+
+    } catch (error) {
+      console.error('Error updating appointment (admin):', error);
+      if (error instanceof NotFoundException || 
+          error instanceof ForbiddenException || 
+          error instanceof ConflictException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error interno del servidor al actualizar la cita');
     }
   }
 
