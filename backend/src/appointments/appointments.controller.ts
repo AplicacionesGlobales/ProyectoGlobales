@@ -35,6 +35,7 @@ import {
   CreateAppointmentByRootDto,
   UpdateAppointmentDto,
   UpdateAppointmentStatusDto,
+  CancelAppointmentDto,
   GetAppointmentsQueryDto,
   AvailableTimeSlotsDto,
   TimeSlotDto
@@ -248,6 +249,47 @@ export class AppointmentsController {
       parseInt(brandId),
       parseInt(appointmentId),
       { status: 'CANCELLED' as any, notes: 'Cita cancelada' },
+      req.user.userId
+    );
+  }
+
+  // NUEVO: Cancelar cita con notificación automática al cliente
+  @Post('appointments/:appointmentId/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancelar cita con notificación',
+    description: 'Cancela una cita con motivo específico y envía notificación automática por email al cliente'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+  @ApiBody({ type: CancelAppointmentDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Cita cancelada exitosamente y notificación enviada',
+    type: BaseResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'La cita ya está cancelada o datos inválidos'
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'No tiene permisos para cancelar esta cita'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cita no encontrada'
+  })
+  async cancelAppointmentWithNotification(
+    @Param('brandId') brandId: string,
+    @Param('appointmentId') appointmentId: string,
+    @Body(ValidationPipe) cancelData: CancelAppointmentDto,
+    @Request() req: any
+  ): Promise<BaseResponseDto<AppointmentDto>> {
+    return this.appointmentsService.cancelAppointmentWithNotification(
+      parseInt(brandId),
+      parseInt(appointmentId),
+      cancelData,
       req.user.userId
     );
   }

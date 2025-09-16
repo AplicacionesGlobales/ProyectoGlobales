@@ -8,6 +8,7 @@ import {
   InternalServerErrorException
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../common/services/email/email.service';
 import { BaseResponseDto } from '../common/dto';
 import {
   AppointmentDto,
@@ -15,6 +16,7 @@ import {
   CreateAppointmentByRootDto,
   UpdateAppointmentDto,
   UpdateAppointmentStatusDto,
+  CancelAppointmentDto,
   GetAppointmentsQueryDto,
   AvailableTimeSlotsDto,
   TimeSlotDto,
@@ -38,7 +40,10 @@ import { APPOINTMENT_CONSTANTS } from './utils/appointment.constants';
 
 @Injectable()
 export class AppointmentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService
+  ) {}
 
   // Validación de acceso al brand - incluye dueños y clientes
   private async validateBrandAccess(brandId: number, userId: number): Promise<boolean> {
@@ -905,6 +910,200 @@ async getAppointments(
       return BaseResponseDto.success(this.mapToDto(updated));
     } catch (error) {
       console.error('Error updating appointment status:', error);
+      throw error;
+    }
+  }
+
+  // NUEVO: Cancelar cita con notificación automática al cliente
+  async cancelAppointmentWithNotification(
+    brandId: number,
+    appointmentId: number,
+    cancelData: CancelAppointmentDto,
+    userId: number
+  ): Promise<BaseResponseDto<AppointmentDto>> {
+    try {
+      // Obtener la cita completa con información del cliente y brand
+      const appointment = await this.prisma.appointment.findUnique({
+        where: { id: appointmentId },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true
+            }
+          },
+          serviceType: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              duration: true,
+              price: true
+            }
+          },
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              phone: true
+            }
+          }
+        }
+      });
+
+      if (!appointment || appointment.brandId !== brandId) {
+        throw new NotFoundException('Cita no encontrada');
+      }
+
+      // Verificar que el usuario tenga permisos
+      const isRoot = await this.isRootUser(brandId, userId);
+      if (!isRoot && appointment.clientId !== userId) {
+        throw new ForbiddenException('No tiene permisos para cancelar esta cita');
+      }
+
+      // Verificar que la cita no esté ya cancelada
+      if (appointment.status === AppointmentStatus.CANCELLED) {
+        throw new BadRequestException('Esta cita ya está cancelada');
+      }
+
+      // Actualizar el estado de la cita a CANCELLED
+      const updatedAppointment = await this.prisma.appointment.update({
+        where: { id: appointmentId },
+        data: {
+          status: AppointmentStatus.CANCELLED,
+          notes: cancelData.reason
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true
+            }
+          },
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          serviceType: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              duration: true,
+              price: true,
+              color: true,
+              icon: true
+            }
+          }
+        }
+      });
+
+      // Enviar notificación por email si está habilitada y el cliente tiene email
+      console.log('🔍 Evaluando envío de notificación...');
+      console.log('📬 sendNotification:', cancelData.sendNotification);
+      console.log('📧 Email del cliente:', appointment.client?.email);
+      
+      if (cancelData.sendNotification !== false && appointment.client?.email) {
+        console.log('✅ Condiciones cumplidas, enviando email de cancelación...');
+        try {
+          await this.sendCancellationEmail(appointment, cancelData.reason);
+          console.log('✅ Email de cancelación procesado exitosamente');
+        } catch (emailError) {
+          console.error('❌ Error enviando email de cancelación:', emailError);
+          console.error('❌ Stack trace email error:', emailError.stack);
+          // No fallar la operación si el email falla, solo loggear el error
+        }
+      } else {
+        console.log('❌ No se enviará email - condiciones no cumplidas');
+        if (cancelData.sendNotification === false) {
+          console.log('  - Notificación deshabilitada por parámetro');
+        }
+        if (!appointment.client?.email) {
+          console.log('  - Cliente sin email');
+        }
+      }
+
+      return BaseResponseDto.success(this.mapToDto(updatedAppointment));
+
+    } catch (error) {
+      console.error('Error cancelling appointment with notification:', error);
+      throw error;
+    }
+  }
+
+  // Método privado para enviar email de cancelación
+  private async sendCancellationEmail(appointment: any, reason: string): Promise<void> {
+    try {
+      console.log('🚀 INICIO sendCancellationEmail');
+      console.log('📧 Cliente email:', appointment.client?.email);
+      console.log('🏢 Marca:', appointment.brand?.name);
+      console.log('📅 EmailService disponible:', !!this.emailService);
+      
+      const clientName = `${appointment.client.firstName || ''} ${appointment.client.lastName || ''}`.trim();
+      const appointmentDate = new Date(appointment.startTime).toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      const appointmentTime = new Date(appointment.startTime).toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Variables para el template
+      const templateVariables = {
+        clientName: clientName || 'Cliente',
+        brandName: appointment.brand?.name || 'Nuestro Negocio',
+        appointmentDate,
+        appointmentTime,
+        serviceName: appointment.serviceType?.name || 'Servicio',
+        duration: appointment.duration?.toString() || '30',
+        reason: reason,
+        cancellationDate: new Date().toLocaleDateString('es-ES'),
+        brandPhone: appointment.brand?.phone || '',
+        brandEmail: process.env.SUPPORT_EMAIL || 'soporte@tuapp.com',
+        bookingUrl: `${process.env.FRONTEND_URL || 'https://app.whitelabel.com'}/booking/${appointment.brandId}`,
+        contactUrl: `${process.env.FRONTEND_URL || 'https://app.whitelabel.com'}/contact/${appointment.brandId}`,
+        unsubscribeUrl: `${process.env.FRONTEND_URL || 'https://app.whitelabel.com'}/unsubscribe`,
+        privacyUrl: `${process.env.FRONTEND_URL || 'https://app.whitelabel.com'}/privacy`
+      };
+
+      console.log('📝 Variables del template preparadas:', Object.keys(templateVariables));
+
+      // Cargar y procesar el template
+      console.log('🔍 Cargando template appointment-cancelled...');
+      const emailHtml = this.emailService.loadTemplate('appointment-cancelled', templateVariables);
+      console.log('✅ Template cargado exitosamente, longitud HTML:', emailHtml.length);
+
+      // Enviar el email
+      console.log('📮 Enviando email...');
+      const emailResult = await this.emailService.sendEmail({
+        to: appointment.client.email,
+        subject: `🚫 Cita Cancelada - ${appointment.brand?.name || 'Su Cita'}`,
+        html: emailHtml
+      });
+
+      console.log('📬 Resultado del envío:', emailResult);
+      
+      if (emailResult) {
+        console.log(`✅ Email de cancelación enviado exitosamente a: ${appointment.client.email}`);
+      } else {
+        console.log(`❌ Falló el envío del email a: ${appointment.client.email}`);
+      }
+    } catch (error) {
+      console.error('❌ Error en sendCancellationEmail:', error);
+      console.error('❌ Stack trace:', error.stack);
       throw error;
     }
   }
