@@ -36,7 +36,8 @@ import {
   UpdateAppointmentStatusDto,
   GetAppointmentsQueryDto,
   AvailableTimeSlotsDto,
-  TimeSlotDto
+  TimeSlotDto,
+  AppointmentStatus
 } from './dto/appointment.dto';
 import {
   GetCalendarMonthDto,
@@ -46,13 +47,17 @@ import {
   DayAgendaDto,
   GetDayAgendaQueryDto
 } from './dto/day-agenda.dto';
-
+import { AppointmentStatusManagerService } from './appointment-status-manager.service';
+import { StatusTransitionDto, StatusHistoryDto } from './dto/status-transition.dto';
 @ApiTags('Appointments Management')
 @Controller('brand/:brandId')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AppointmentsController {
-  constructor(private readonly appointmentsService: AppointmentsService) {}
+   constructor(
+    private readonly appointmentsService: AppointmentsService,
+    private readonly statusManager: AppointmentStatusManagerService // AGREGAR
+  ) {}
 
   // Endpoint para que clientes creen sus propias citas
   @Post('appointments')
@@ -502,4 +507,93 @@ export class AppointmentsController {
       query
     );
   }
+  // Obtener transiciones válidas para una cita
+@Get('appointments/:appointmentId/transitions')
+@ApiOperation({
+  summary: 'Obtener transiciones de estado disponibles',
+  description: 'Retorna las transiciones de estado válidas para una cita'
+})
+@ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+@ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+@ApiResponse({
+  status: 200,
+  description: 'Transiciones válidas obtenidas',
+  type: BaseResponseDto
+})
+async getValidTransitions(
+  @Param('brandId') brandId: string,
+  @Param('appointmentId') appointmentId: string,
+  @Request() req: any
+): Promise<BaseResponseDto<any>> {
+  const validation = await this.statusManager.validateTransition(
+    parseInt(appointmentId),
+    AppointmentStatus.PENDING, // dummy status para obtener todas las transiciones
+    req.user.userId
+  );
+  
+  return BaseResponseDto.success(validation);
+}
+
+// Obtener historial de cambios de estado
+@Get('appointments/:appointmentId/status-history')
+@ApiOperation({
+  summary: 'Obtener historial de cambios de estado',
+  description: 'Retorna el historial completo de cambios de estado de una cita'
+})
+@ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+@ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+@ApiResponse({
+  status: 200,
+  description: 'Historial obtenido exitosamente',
+  type: BaseResponseDto
+})
+async getStatusHistory(
+  @Param('brandId') brandId: string,
+  @Param('appointmentId') appointmentId: string,
+  @Request() req: any
+): Promise<BaseResponseDto<StatusHistoryDto[]>> {
+  const history = await this.statusManager.getStatusHistory(
+    parseInt(appointmentId),
+    req.user.userId
+  );
+  
+  return BaseResponseDto.success(history);
+}
+
+// Obtener estadísticas de estados (solo ROOT)
+@Get('appointments/statistics/status')
+@UseGuards(BrandOwnerGuard)
+@ApiOperation({
+  summary: 'Obtener estadísticas de estados',
+  description: 'Retorna estadísticas sobre estados de citas (solo ROOT)'
+})
+@ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+@ApiQuery({ 
+  name: 'startDate', 
+  required: false, 
+  description: 'Fecha inicio (YYYY-MM-DD)' 
+})
+@ApiQuery({ 
+  name: 'endDate', 
+  required: false, 
+  description: 'Fecha fin (YYYY-MM-DD)' 
+})
+@ApiResponse({
+  status: 200,
+  description: 'Estadísticas obtenidas',
+  type: BaseResponseDto
+})
+async getStatusStatistics(
+  @Param('brandId') brandId: string,
+  @Query('startDate') startDate?: string,
+  @Query('endDate') endDate?: string
+): Promise<BaseResponseDto<any>> {
+  const statistics = await this.statusManager.getStatusStatistics(
+    parseInt(brandId),
+    startDate ? new Date(startDate) : undefined,
+    endDate ? new Date(endDate) : undefined
+  );
+  
+  return BaseResponseDto.success(statistics);
+}
 }
