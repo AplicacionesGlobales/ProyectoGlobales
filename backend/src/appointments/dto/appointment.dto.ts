@@ -226,10 +226,16 @@ export class UpdateAppointmentStatusDto {
     example: 'Cliente confirmó la cita',
     description: 'Notas adicionales sobre el cambio de estado'
   })
+
+  @ApiPropertyOptional({
+    description: 'Razón del cambio de estado',  // AGREGAR ESTA PROPIEDAD
+    example: 'Cliente no puede asistir'
+  })
   @IsString()
   @IsOptional()
   @MinLength(3)
-  notes?: string;
+  notes?: string
+  reason?: string;
 }
 
 export class GetAppointmentsQueryDto {
