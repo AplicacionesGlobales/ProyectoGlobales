@@ -2,22 +2,21 @@
 import { apiClient, ApiResponse } from '../api';
 import { API_ENDPOINTS } from '../api';
 
-// Interfaces para Schedule
+// Interfaces para Schedule que coinciden con los DTOs del backend
 export interface BusinessHour {
-  id: number;
-  brandId: number;
+  id?: number;
   dayOfWeek: number; // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+  dayName?: string;
   isOpen: boolean;
   openTime?: string; // Formato "HH:MM"
   closeTime?: string; // Formato "HH:MM"
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SpecialHour {
   id: number;
-  brandId: number;
-  date: string; // Fecha en formato ISO
+  date: string; // Fecha en formato ISO (YYYY-MM-DD)
   isOpen: boolean;
   openTime?: string; // Formato "HH:MM"
   closeTime?: string; // Formato "HH:MM"
@@ -29,7 +28,6 @@ export interface SpecialHour {
 
 export interface AppointmentSettings {
   id: number;
-  brandId: number;
   defaultDuration: number; // en minutos
   bufferTime: number; // en minutos
   maxAdvanceBookingDays: number;
@@ -39,6 +37,46 @@ export interface AppointmentSettings {
   updatedAt: string;
 }
 
+// DTOs para requests que coinciden con el backend
+export interface BusinessHoursDto {
+  id?: number;
+  dayOfWeek: number;
+  dayName?: string;
+  isOpen: boolean;
+  openTime?: string;
+  closeTime?: string;
+}
+
+export interface UpdateBusinessHoursDto {
+  businessHours: BusinessHoursDto[];
+}
+
+export interface CreateSpecialHourData {
+  date: string; // YYYY-MM-DD
+  isOpen: boolean;
+  openTime?: string;
+  closeTime?: string;
+  reason?: string;
+  description?: string;
+}
+
+export interface UpdateSpecialHourData {
+  isOpen: boolean;
+  openTime?: string;
+  closeTime?: string;
+  reason?: string;
+  description?: string;
+}
+
+export interface UpdateAppointmentSettingsData {
+  defaultDuration: number;
+  bufferTime: number;
+  maxAdvanceBookingDays: number;
+  minAdvanceBookingHours: number;
+  allowSameDayBooking: boolean;
+}
+
+// Interfaces legacy para compatibilidad (se pueden remover gradualmente)
 export interface CreateBusinessHourData {
   dayOfWeek: number;
   isOpen: boolean;
@@ -50,31 +88,6 @@ export interface UpdateBusinessHourData {
   isOpen?: boolean;
   openTime?: string;
   closeTime?: string;
-}
-
-export interface CreateSpecialHourData {
-  date: string;
-  isOpen: boolean;
-  openTime?: string;
-  closeTime?: string;
-  reason?: string;
-  description?: string;
-}
-
-export interface UpdateSpecialHourData {
-  isOpen?: boolean;
-  openTime?: string;
-  closeTime?: string;
-  reason?: string;
-  description?: string;
-}
-
-export interface UpdateAppointmentSettingsData {
-  defaultDuration?: number;
-  bufferTime?: number;
-  maxAdvanceBookingDays?: number;
-  minAdvanceBookingHours?: number;
-  allowSameDayBooking?: boolean;
 }
 
 class ScheduleService {
@@ -113,7 +126,7 @@ class ScheduleService {
   }
 
   // Crear o actualizar horarios de negocio (batch)
-  async updateBusinessHours(brandId: number, hours: CreateBusinessHourData[]): Promise<ApiResponse<BusinessHour[]>> {
+  async updateBusinessHours(brandId: number, hours: BusinessHoursDto[]): Promise<ApiResponse<BusinessHour[]>> {
     try {
       console.log('🚀 Updating business hours:', { brandId, hours });
 
@@ -136,6 +149,36 @@ class ScheduleService {
             description: error?.response?.data?.errors?.[0]?.description ||
               error?.message ||
               'Error actualizando horarios de negocio'
+          }
+        ]
+      };
+    }
+  }
+
+  // Crear configuración inicial de horarios de disponibilidad
+  async createAvailabilitySchedule(brandId: number, hours: BusinessHoursDto[]): Promise<ApiResponse<BusinessHour[]>> {
+    try {
+      console.log('🚀 Creating initial availability schedule:', { brandId, hours });
+
+      const response = await apiClient.post<BusinessHour[]>(
+        `/brand/${brandId}/availability/schedule`,
+        { businessHours: hours },
+        { headers: this.getAuthHeaders() }
+      );
+
+      console.log('✅ Availability schedule creation response:', response);
+      return response;
+
+    } catch (error: any) {
+      console.error('❌ Availability schedule creation error:', error);
+      return {
+        success: false,
+        errors: [
+          {
+            code: 'AVAILABILITY_SCHEDULE_CREATE_ERROR',
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error creando configuración inicial de horarios'
           }
         ]
       };
@@ -299,27 +342,14 @@ class ScheduleService {
   async getAppointmentSettings(brandId: number): Promise<ApiResponse<AppointmentSettings>> {
     try {
       console.log('🚀 Getting appointment settings for brand:', brandId);
-
-      // TODO: Implementar endpoint en el backend
-      // Por ahora, simular respuesta con configuración por defecto
-      console.log('⚠️ Appointment settings endpoint not implemented yet, simulating default settings');
-
-      const defaultSettings: AppointmentSettings = {
-        id: 1,
-        brandId,
-        defaultDuration: 60,
-        bufferTime: 15,
-        maxAdvanceBookingDays: 30,
-        minAdvanceBookingHours: 24,
-        allowSameDayBooking: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      return {
-        success: true,
-        data: defaultSettings
-      };
+      
+      const response = await apiClient.get<AppointmentSettings>(
+        API_ENDPOINTS.SCHEDULE.GET_APPOINTMENT_SETTINGS(brandId),
+        { headers: this.getAuthHeaders() }
+      );
+      
+      console.log('✅ Appointment settings response:', response);
+      return response;
 
     } catch (error: any) {
       console.error('❌ Appointment settings error:', error);
@@ -345,26 +375,14 @@ class ScheduleService {
     try {
       console.log('🚀 Updating appointment settings:', { brandId, data });
 
-      // TODO: Implementar endpoint en el backend
-      // Por ahora, simular respuesta exitosa
-      console.log('⚠️ Appointment settings endpoint not implemented yet, simulating success');
+      const response = await apiClient.put<AppointmentSettings>(
+        API_ENDPOINTS.SCHEDULE.UPDATE_APPOINTMENT_SETTINGS(brandId),
+        data,
+        { headers: this.getAuthHeaders() }
+      );
 
-      const simulatedResponse: AppointmentSettings = {
-        id: 1,
-        brandId,
-        defaultDuration: data.defaultDuration || 60,
-        bufferTime: data.bufferTime || 15,
-        maxAdvanceBookingDays: data.maxAdvanceBookingDays || 30,
-        minAdvanceBookingHours: data.minAdvanceBookingHours || 24,
-        allowSameDayBooking: data.allowSameDayBooking || true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      return {
-        success: true,
-        data: simulatedResponse
-      };
+      console.log('✅ Appointment settings update response:', response);
+      return response;
 
     } catch (error: any) {
       console.error('❌ Appointment settings update error:', error);

@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Calendar, Plus, Edit, Trash2, AlertCircle, CheckCircle, CalendarDays } from "lucide-react"
-import { scheduleService, SpecialHour } from "@/services/schedule.service"
+import { scheduleService, SpecialHour, CreateSpecialHourData, UpdateSpecialHourData } from "@/services/schedule.service"
 import { 
   SpecialHourType, 
   SPECIAL_HOUR_LABELS, 
@@ -98,7 +98,7 @@ export function SpecialHours({ brandId }: SpecialHoursProps) {
     if (hour) {
       setEditingHour(hour)
       setFormData({
-        date: hour.date.split('T')[0], // Convertir ISO date a YYYY-MM-DD
+        date: hour.date, // El backend ya devuelve en formato YYYY-MM-DD
         isOpen: hour.isOpen,
         openTime: hour.openTime || '09:00',
         closeTime: hour.closeTime || '18:00',
@@ -175,22 +175,28 @@ export function SpecialHours({ brandId }: SpecialHoursProps) {
         return
       }
 
-      const data = {
-        date: formData.date,
-        isOpen: formData.isOpen,
-        openTime: formData.isOpen ? formData.openTime : undefined,
-        closeTime: formData.isOpen ? formData.closeTime : undefined,
-        reason: formData.reason,
-        description: formData.description || undefined
-      }
-
       let response
       if (editingHour) {
-        // Actualizar horario especial existente
-        response = await scheduleService.updateSpecialHour(brandId, editingHour.id, data)
+        // Actualizar horario especial existente - UpdateSpecialHourData no incluye 'date'
+        const updateData: UpdateSpecialHourData = {
+          isOpen: formData.isOpen,
+          openTime: formData.isOpen ? formData.openTime : undefined,
+          closeTime: formData.isOpen ? formData.closeTime : undefined,
+          reason: formData.reason,
+          description: formData.description || undefined
+        }
+        response = await scheduleService.updateSpecialHour(brandId, editingHour.id, updateData)
       } else {
-        // Crear nuevo horario especial
-        response = await scheduleService.createSpecialHour(brandId, data)
+        // Crear nuevo horario especial - CreateSpecialHourData incluye 'date'
+        const createData: CreateSpecialHourData = {
+          date: formData.date,
+          isOpen: formData.isOpen,
+          openTime: formData.isOpen ? formData.openTime : undefined,
+          closeTime: formData.isOpen ? formData.closeTime : undefined,
+          reason: formData.reason,
+          description: formData.description || undefined
+        }
+        response = await scheduleService.createSpecialHour(brandId, createData)
       }
 
       if (response.success) {
