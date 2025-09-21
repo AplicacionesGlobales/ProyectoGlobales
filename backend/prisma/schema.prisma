@@ -22,14 +22,16 @@ model User {
   brands             Brand[]
   passwordResetCodes PasswordResetCode[]
   userBrands         UserBrand[]
-  uploadedFiles File[] @relation("UploadedFiles")
+  uploadedFiles      File[]              @relation("UploadedFiles")
 
   clientAppointments  Appointment[] @relation("ClientAppointments")
   createdAppointments Appointment[] @relation("CreatedAppointments")
 
-  clientNotes         ClientNote[]       @relation("ClientNotes")
-  createdNotes        ClientNote[]       @relation("NoteCreator")
-  clientActivities    ClientActivity[]
+  clientNotes      ClientNote[]     @relation("ClientNotes")
+  createdNotes     ClientNote[]     @relation("NoteCreator")
+  clientActivities ClientActivity[]
+
+  statusHistoryChanges AppointmentStatusHistory[]
 
   @@map("users")
 }
@@ -58,7 +60,7 @@ model Brand {
   appointments        Appointment[]
   clientNotes         ClientNote[]
   clientActivities    ClientActivity[]
-  serviceTypes        ServiceType[] 
+  serviceTypes        ServiceType[]
 
   @@map("brands")
 }
@@ -68,9 +70,9 @@ model UserBrand {
   passwordHash String
   salt         String   @unique
   isActive     Boolean  @default(true)
-  notes        String?  @db.Text        // Notas generales del cliente
-  tags         String[] @default([])    // Etiquetas del cliente (VIP, Frecuente, etc.)
-  preferences  Json?                    // Preferencias del cliente (servicios favoritos, horarios, etc.)
+  notes        String?  @db.Text // Notas generales del cliente
+  tags         String[] @default([]) // Etiquetas del cliente (VIP, Frecuente, etc.)
+  preferences  Json? // Preferencias del cliente (servicios favoritos, horarios, etc.)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   userId       Int
@@ -262,50 +264,52 @@ model AppointmentSettings {
   updatedAt              DateTime @updatedAt
   brand                  Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
   useServiceTypes        Boolean  @default(false)
+
   @@map("appointment_settings")
 }
 
 model File {
   id          Int      @id @default(autoincrement())
-  name        String   // Nombre original del archivo
-  url         String   // URL completa de MinIO
+  name        String // Nombre original del archivo
+  url         String // URL completa de MinIO
   key         String   @unique // Key único en MinIO (path completo)
-  contentType String   // MIME type (image/jpeg, application/pdf, etc.)
-  fileType    String   // Tipo lógico (logo, isotipo, imagotipo, document, etc.)
-  size        Int?     // Tamaño en bytes
-  entityId    Int      // ID de la entidad relacionada
-  entityType  String   // Tipo de entidad (brand, user, etc.)
-  uploadedBy  Int?     // ID del usuario que subió el archivo
+  contentType String // MIME type (image/jpeg, application/pdf, etc.)
+  fileType    String // Tipo lógico (logo, isotipo, imagotipo, document, etc.)
+  size        Int? // Tamaño en bytes
+  entityId    Int // ID de la entidad relacionada
+  entityType  String // Tipo de entidad (brand, user, etc.)
+  uploadedBy  Int? // ID del usuario que subió el archivo
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  uploader    User?    @relation("UploadedFiles", fields: [uploadedBy], references: [id])
+  uploader User? @relation("UploadedFiles", fields: [uploadedBy], references: [id])
+
   @@map("files")
 }
 
 model Appointment {
-  id          Int              @id @default(autoincrement())
-  serviceTypeId Int?           // NUEVO CAMPO
-  price       Decimal?         @db.Decimal(10, 2) // NUEVO CAMPO
-  brandId     Int
-  clientId    Int?
-  createdById Int
-  startTime   DateTime
-  endTime     DateTime
-  duration    Int              // en minutos
-  status      AppointmentStatus @default(PENDING)
-  notes       String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  
-  brand       Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  client      User?            @relation("ClientAppointments", fields: [clientId], references: [id], onDelete: Cascade)
-  createdBy   User             @relation("CreatedAppointments", fields: [createdById], references: [id], onDelete: Cascade)  
-  serviceType ServiceType?     @relation(fields: [serviceTypeId], references: [id])
-  
+  id            Int               @id @default(autoincrement())
+  serviceTypeId Int? // NUEVO CAMPO
+  price         Decimal?          @db.Decimal(10, 2) // NUEVO CAMPO
+  brandId       Int
+  clientId      Int?
+  createdById   Int
+  startTime     DateTime
+  endTime       DateTime
+  duration      Int // en minutos
+  status        AppointmentStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
-  @@index([serviceTypeId])    
+  brand         Brand                      @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  client        User?                      @relation("ClientAppointments", fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy     User                       @relation("CreatedAppointments", fields: [createdById], references: [id], onDelete: Cascade)
+  serviceType   ServiceType?               @relation(fields: [serviceTypeId], references: [id])
+  statusHistory AppointmentStatusHistory[]
+
+  @@index([serviceTypeId])
   @@index([brandId, startTime])
   @@index([clientId])
   @@index([createdById])
@@ -313,40 +317,40 @@ model Appointment {
 }
 
 model ClientNote {
-  id          Int      @id @default(autoincrement())
-  clientId    Int      // ID del cliente (User)
-  brandId     Int      // ID del brand
-  note        String   @db.Text
-  isPrivate   Boolean  @default(false) // Solo visible para admins
-  createdBy   Int      // ID del usuario que creó la nota
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id        Int      @id @default(autoincrement())
+  clientId  Int // ID del cliente (User)
+  brandId   Int // ID del brand
+  note      String   @db.Text
+  isPrivate Boolean  @default(false) // Solo visible para admins
+  createdBy Int // ID del usuario que creó la nota
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relaciones
-  client      User     @relation("ClientNotes", fields: [clientId], references: [id], onDelete: Cascade)
-  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  creator     User     @relation("NoteCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  
+  client  User  @relation("ClientNotes", fields: [clientId], references: [id], onDelete: Cascade)
+  brand   Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  creator User  @relation("NoteCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
   @@index([clientId, brandId])
   @@index([createdBy])
   @@map("client_notes")
 }
 
 model ClientActivity {
-  id          Int            @id @default(autoincrement())
-  clientId    Int            // ID del cliente
-  brandId     Int            // ID del brand
-  type        ActivityType   // Tipo de actividad
-  description String         // Descripción de la actividad
-  metadata    Json?          // Datos adicionales
-  ipAddress   String?        // IP del cliente (para tracking)
-  userAgent   String?        // User agent del navegador
-  createdAt   DateTime       @default(now())
-  
+  id          Int          @id @default(autoincrement())
+  clientId    Int // ID del cliente
+  brandId     Int // ID del brand
+  type        ActivityType // Tipo de actividad
+  description String // Descripción de la actividad
+  metadata    Json? // Datos adicionales
+  ipAddress   String? // IP del cliente (para tracking)
+  userAgent   String? // User agent del navegador
+  createdAt   DateTime     @default(now())
+
   // Relaciones
-  client      User           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  brand       Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  
+  client User  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  brand  Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
   @@index([clientId, brandId])
   @@index([type])
   @@index([createdAt])
@@ -358,21 +362,41 @@ model ServiceType {
   brandId     Int
   name        String
   description String?
-  duration    Int      // Duración en minutos
+  duration    Int // Duración en minutos
   price       Decimal? @db.Decimal(10, 2)
-  color       String?  // Color hex para visualización
-  icon        String?  // Nombre del icono
+  color       String? // Color hex para visualización
+  icon        String? // Nombre del icono
   isActive    Boolean  @default(true)
   order       Int      @default(0) // Para ordenamiento
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  brand        Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
   appointments Appointment[]
-  
+
   @@unique([brandId, name])
   @@index([brandId])
   @@map("service_types")
+}
+
+model AppointmentStatusHistory {
+  id            Int               @id @default(autoincrement())
+  appointmentId Int
+  fromStatus    AppointmentStatus
+  toStatus      AppointmentStatus
+  reason        String?           @db.Text
+  notes         String?           @db.Text
+  changedBy     Int
+  metadata      Json?
+  createdAt     DateTime          @default(now())
+
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  changedByUser User        @relation(fields: [changedBy], references: [id])
+
+  @@index([appointmentId])
+  @@index([changedBy])
+  @@index([createdAt])
+  @@map("appointment_status_history")
 }
 
 enum ActivityType {
@@ -382,36 +406,37 @@ enum ActivityType {
   APPOINTMENT_CANCELLED
   APPOINTMENT_COMPLETED
   APPOINTMENT_NO_SHOW
-  
+
   // Pagos
   PAYMENT_RECEIVED
   PAYMENT_FAILED
   PAYMENT_REFUNDED
-  
+
   // Perfil
   PROFILE_CREATED
   PROFILE_UPDATED
   PASSWORD_CHANGED
   EMAIL_VERIFIED
-  
+
   // Interacciones
   NOTE_ADDED
   REVIEW_SUBMITTED
   RATING_GIVEN
-  
+
   // Hitos
   FIRST_VISIT
   MILESTONE_10_VISITS
   MILESTONE_25_VISITS
   MILESTONE_50_VISITS
   MILESTONE_100_VISITS
-  
+
   // Sistema
   LOGIN
   LOGOUT
   ACCOUNT_ACTIVATED
   ACCOUNT_DEACTIVATED
 }
+
 enum UserRole {
   ROOT
   CLIENT

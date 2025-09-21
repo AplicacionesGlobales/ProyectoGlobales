@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../common/services/email/email.service';
+import { AppointmentStatusManagerService } from './appointment-status-manager.service';
 import { BaseResponseDto } from '../common/dto';
 import {
   AppointmentDto,
@@ -48,7 +49,8 @@ import { APPOINTMENT_CONSTANTS } from './utils/appointment.constants';
 export class AppointmentsService {
   constructor(
     private prisma: PrismaService,
-    private emailService: EmailService
+    private emailService: EmailService,
+    private statusManager: AppointmentStatusManagerService 
   ) {}
 
   // Validación de acceso al brand - incluye dueños y clientes
@@ -861,64 +863,43 @@ export class AppointmentsService {
   }
 
   // Actualizar solo el estado de una cita
-  async updateAppointmentStatus(
-    brandId: number,
-    appointmentId: number,
-    updateData: UpdateAppointmentStatusDto,
-    userId: number
-  ): Promise<BaseResponseDto<AppointmentDto>> {
-    try {
-      const appointment = await this.prisma.appointment.findUnique({
-        where: { id: appointmentId }
-      });
+  // Actualizar solo el estado de una cita
+async updateAppointmentStatus(
+  brandId: number,
+  appointmentId: number,
+  updateData: UpdateAppointmentStatusDto,
+  userId: number
+): Promise<BaseResponseDto<AppointmentDto>> {
+  try {
+    // Verificar que la cita pertenece al brand
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId }
+    });
 
-      if (!appointment || appointment.brandId !== brandId) {
-        throw new NotFoundException('Cita no encontrada');
-      }
-
-      const isRoot = await this.isRootUser(brandId, userId);
-
-      // Solo el ROOT o el cliente dueño de la cita pueden actualizarla
-      if (!isRoot && appointment.clientId !== userId) {
-        throw new ForbiddenException('No tiene permisos para actualizar esta cita');
-      }
-
-      // Validar transiciones de estado válidas
-      this.validateStatusTransition(appointment.status as AppointmentStatus, updateData.status);
-
-      const updated = await this.prisma.appointment.update({
-        where: { id: appointmentId },
-        data: {
-          status: updateData.status,
-          ...(updateData.notes && { notes: updateData.notes })
-        },
-        include: {
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          createdBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
-
-      return BaseResponseDto.success(this.mapToDto(updated));
-    } catch (error) {
-      console.error('Error updating appointment status:', error);
-      throw error;
+    if (!appointment || appointment.brandId !== brandId) {
+      throw new NotFoundException('Cita no encontrada');
     }
-  }
 
+    // Usar el StatusManager para ejecutar la transición con todas las validaciones
+    const updatedAppointment = await this.statusManager.executeTransition(
+      appointmentId,
+      {
+        newStatus: updateData.status,
+        reason: updateData.reason,
+        notes: updateData.notes,
+        notifyClient: true
+      },
+      userId
+    );
+
+    return BaseResponseDto.success(
+      this.mapToDto(updatedAppointment)
+    );
+  } catch (error) {
+    console.error('Error updating appointment status:', error);
+    throw error;
+  }
+}
   // NUEVO: Cancelar cita con notificación automática al cliente
   async cancelAppointmentWithNotification(
     brandId: number,
