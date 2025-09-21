@@ -84,6 +84,16 @@ export interface ClientActivityResponse {
   };
 }
 
+export interface CreateNoteData {
+  note: string;
+  isPrivate: boolean;
+}
+
+export interface UpdateNoteData {
+  note?: string;
+  isPrivate?: boolean;
+}
+
 class ClientsService {
   private getAuthToken(): string | null {
     if (typeof window !== 'undefined') {
@@ -316,6 +326,119 @@ class ClientsService {
         errors: [{
           code: 'CLIENT_ACTIVITY_ERROR',
           description: 'Error obteniendo actividad del cliente'
+        }]
+      };
+    }
+  }
+
+   // Crear nota del cliente
+  async createClientNote(
+    brandId: number,
+    clientId: number,
+    data: CreateNoteData
+  ): Promise<ApiResponse<ClientNote>> {
+    try {
+      console.log('🚀 Creating client note:', { brandId, clientId, data });
+      
+      const response = await apiClient.post<ClientNote>(
+        `/brands/${brandId}/clients/${clientId}/notes`,
+        data,
+        { headers: this.getAuthHeaders() }
+      );
+      
+      console.log('✅ Note created:', response);
+      return response;
+      
+    } catch (error: any) {
+      console.error('❌ Note creation error:', error);
+      
+      if (error?.response?.data?.message) {
+        return {
+          success: false,
+          errors: [{
+            code: 'NOTE_CREATE_ERROR',
+            description: error.response.data.message
+          }]
+        };
+      }
+      
+      return {
+        success: false,
+        errors: [{
+          code: 'NOTE_CREATE_ERROR',
+          description: 'Error creando la nota'
+        }]
+      };
+    }
+  }
+
+  // Actualizar nota del cliente
+  async updateClientNote(
+    brandId: number,
+    clientId: number,
+    noteId: number,
+    data: UpdateNoteData
+  ): Promise<ApiResponse<ClientNote>> {
+    try {
+      console.log('🚀 Updating client note:', { brandId, clientId, noteId, data });
+      
+      const response = await apiClient.put<ClientNote>(
+        `/brands/${brandId}/clients/${clientId}/notes/${noteId}`,
+        data,
+        { headers: this.getAuthHeaders() }
+      );
+      
+      console.log('✅ Note updated:', response);
+      return response;
+      
+    } catch (error: any) {
+      console.error('❌ Note update error:', error);
+      
+      if (error?.response?.data?.message) {
+        return {
+          success: false,
+          errors: [{
+            code: 'NOTE_UPDATE_ERROR',
+            description: error.response.data.message
+          }]
+        };
+      }
+      
+      return {
+        success: false,
+        errors: [{
+          code: 'NOTE_UPDATE_ERROR',
+          description: 'Error actualizando la nota'
+        }]
+      };
+    }
+  }
+
+  // Eliminar nota del cliente
+  async deleteClientNote(
+    brandId: number,
+    clientId: number,
+    noteId: number
+  ): Promise<ApiResponse<{ message: string }>> {
+    try {
+      console.log('🚀 Deleting client note:', { brandId, clientId, noteId });
+      
+      const response = await apiClient.delete<{ message: string }>(
+        `/brands/${brandId}/clients/${clientId}/notes/${noteId}`,
+        { headers: this.getAuthHeaders() }
+      );
+      
+      console.log('✅ Note deleted:', response);
+      return response;
+      
+    } catch (error: any) {
+      console.error('❌ Note deletion error:', error);
+      
+      return {
+        success: false,
+        errors: [{
+          code: 'NOTE_DELETE_ERROR',
+          description: 'Error eliminando la nota'
         }]
       };
     }
