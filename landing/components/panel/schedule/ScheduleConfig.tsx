@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Clock, Settings, Save, RefreshCw, Calendar, AlertCircle, CheckCircle } from "lucide-react"
-import { scheduleService, BusinessHour, AppointmentSettings } from "@/services/schedule.service"
+import { scheduleService, BusinessHour, AppointmentSettings, BusinessHoursDto } from "@/services/schedule.service"
 import {
   DayOfWeek,
   DAY_NAMES,
@@ -199,24 +199,43 @@ export function ScheduleConfig({ brandId }: ScheduleConfigProps) {
         return;
       }
 
-      // Preparar datos para la API
-      const businessHoursData = formData.businessHours.map(day => ({
+      // Preparar datos para la API - usar BusinessHoursDto
+      const businessHoursData: BusinessHoursDto[] = formData.businessHours.map(day => ({
         dayOfWeek: day.dayOfWeek,
         isOpen: day.isOpen,
         openTime: day.isOpen ? day.openTime : undefined,
         closeTime: day.isOpen ? day.closeTime : undefined
       }));
 
-      // Solo guardar horarios de negocio primero
-      const response = await scheduleService.updateBusinessHours(brandId, businessHoursData);
+      // Intentar actualizar horarios existentes primero
+      let businessHoursResponse = await scheduleService.updateBusinessHours(brandId, businessHoursData);
 
-      if (!response.success) {
-        throw new Error(response.errors?.[0]?.description || 'Error actualizando horarios');
+      // Si falla con 409 (horarios no configurados), crear configuración inicial
+      if (!businessHoursResponse.success && 
+          businessHoursResponse.errors?.[0]?.code === 'BUSINESS_HOURS_UPDATE_ERROR') {
+        console.log('🔄 Trying to create initial availability schedule...');
+        businessHoursResponse = await scheduleService.createAvailabilitySchedule(brandId, businessHoursData);
+      }
+
+      if (!businessHoursResponse.success) {
+        throw new Error(businessHoursResponse.errors?.[0]?.description || 'Error actualizando horarios');
+      }
+
+      // Guardar configuración de citas
+      try {
+        const settingsResponse = await scheduleService.updateAppointmentSettings(brandId, formData.appointmentSettings);
+        if (!settingsResponse.success) {
+          console.warn('⚠️ Could not update appointment settings:', settingsResponse.errors);
+          // No fallar el guardado completo si solo falla la configuración de citas
+        }
+      } catch (settingsError) {
+        console.warn('⚠️ Appointment settings update failed:', settingsError);
+        // Continuar sin fallar
       }
 
       setSuccess('Configuración de horarios guardada exitosamente');
 
-      // Opcional: Recargar datos después de un tiempo para confirmar
+      // Recargar datos después de un tiempo para confirmar
       setTimeout(() => {
         loadScheduleData();
       }, 1500);
