@@ -11,6 +11,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { ScheduleValidator } from "@/components/validators/ScheduleValidator"
+import { ValidationResult } from "@/services/schedule-validator.service"
 
 interface Client {
   id: number
@@ -31,16 +32,6 @@ interface ServiceType {
   name: string
   duration: number
   price: number | null
-}
-
-// Tipos de validación
-interface ValidationResult {
-  isValid: boolean
-  hasConflicts: boolean
-  hasBusinessHourConflict: boolean
-  conflicts: any[]
-  suggestions: string[]
-  warnings: string[]
 }
 
 interface CreateAppointmentModalProps {
@@ -79,8 +70,6 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
   const [clientSearchOpen, setClientSearchOpen] = useState(false)
   const [clientSearchValue, setClientSearchValue] = useState("")
   const [brandId, setBrandId] = useState<number | null>(null)
-  
-  // Estado del validador
   const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: true,
     hasConflicts: false,
@@ -90,7 +79,6 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     warnings: []
   })
 
-  // Obtener brandId del localStorage
   useEffect(() => {
     const brandData = localStorage.getItem('brand_data')
     if (brandData) {
@@ -99,7 +87,6 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     }
   }, [])
 
-  // Generar horarios disponibles (cada 30 minutos de 8:00 AM a 6:00 PM)
   const generateTimeSlots = () => {
     const slots = []
     for (let hour = 8; hour < 18; hour++) {
@@ -128,7 +115,6 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     setLocalError(null)
   }
 
-  // Combina fecha y hora en formato ISO para enviar
   const getStartTimeISO = () => {
     if (date && time) {
       return `${date}T${time}:00.000`
@@ -141,7 +127,6 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     return today.toISOString().split('T')[0]
   }
 
-  // Manejar resultado de validación
   const handleValidationChange = (result: ValidationResult) => {
     setValidationResult(result)
   }
@@ -149,16 +134,13 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
   const validateForm = (): string | null => {
     if (!date || !time) return 'Fecha y hora son requeridas'
     if (!formData.clientId) return 'Cliente es requerido'
-    if (!formData.serviceTypeId) return 'Tipo de servicio es requerido'
     
-    // Validar que la fecha no sea en el pasado
     const appointmentDate = new Date(getStartTimeISO())
     const now = new Date()
     if (appointmentDate < now) {
       return 'No se pueden crear citas en el pasado'
     }
 
-    // Verificar validación de horarios
     if (!validationResult.isValid) {
       return 'Hay conflictos de horario que deben resolverse'
     }
@@ -180,12 +162,11 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
 
     try {
       await onSubmit(submitData)
-      // Reset form on success
       if (!error) {
         resetForm()
       }
     } catch (err) {
-      // Error handling is done by parent component
+      // Error handling done by parent
     }
   }
 
@@ -245,7 +226,6 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
       }}
     >
       <div className="space-y-4 py-2">
-        {/* Mensajes de error y éxito */}
         {currentError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -259,7 +239,6 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
           </Alert>
         )}
 
-        {/* Formulario - Con contenedor scrolleable */}
         <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
           {/* Cliente */}
           <div className="space-y-2">
@@ -312,19 +291,19 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
 
           {/* Tipo de Servicio */}
           <div className="space-y-2">
-            <Label>Tipo de Servicio *</Label>
+            <Label>Tipo de Servicio</Label>
             <Select
-              value={formData.serviceTypeId ? formData.serviceTypeId.toString() : ""}
-              onValueChange={(value) => handleInputChange('serviceTypeId', parseInt(value))}
+              value={formData.serviceTypeId ? formData.serviceTypeId.toString() : undefined}
+              onValueChange={(value) => handleInputChange('serviceTypeId', value ? parseInt(value) : null)}
               disabled={loading}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Seleccionar servicio" />
+                <SelectValue placeholder="Seleccionar servicio (opcional)" />
               </SelectTrigger>
               <SelectContent className="max-h-64">
                 {serviceTypes.map((service) => (
                   <SelectItem key={service.id} value={service.id.toString()}>
-                    {service.name} ({service.duration} min) {service.price ? `- $${service.price}` : ""}
+                    {service.name} ({service.duration} min) {service.price ? `- ${service.price}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -364,7 +343,7 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
             </div>
           </div>
 
-          {/* Validador de Horarios - COMPONENTE NUEVO */}
+          {/* Validador de Horarios */}
           {brandId && (
             <ScheduleValidator
               selectedDate={date}
