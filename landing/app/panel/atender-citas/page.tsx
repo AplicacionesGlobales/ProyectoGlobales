@@ -71,6 +71,9 @@ export default function AtenderCitasPage() {
       const response = await attendAppointmentsService.getTodayAgenda(brandId, true)
       
       if (response.success && response.data) {
+        console.log('🔍 Agenda data received:', response.data)
+        console.log('📊 Total booked time:', response.data.totalBookedTime, 'minutes')
+        console.log('📋 Agenda items:', response.data.agenda)
         setAgendaData(response.data)
       } else {
         const errorMsg = response.errors?.[0]?.description || 'Error cargando agenda'
@@ -117,7 +120,16 @@ export default function AtenderCitasPage() {
   }
 
   const getAppointmentsByStatus = () => {
-    if (!agendaData) return {}
+    if (!agendaData) {
+      return {
+        pending: [],
+        confirmed: [],
+        inProgress: [],
+        completed: [],
+        cancelled: [],
+        noShow: []
+      }
+    }
     
     const appointments = agendaData.agenda
       .filter(item => item.type === 'appointment' && item.appointment)
