@@ -4,6 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
 import { EmailValidationResponseDto, UsernameValidationResponseDto,
   PaymentValidationResponseDto, 
+  ValidateCalendarDto,
+  CalendarValidationResponseDto
  } from './dto';
 import { ERROR_CODES } from '../common/constants';
 
@@ -278,6 +280,249 @@ export class ValidateService {
       return BaseResponseDto.error([{
         code: ERROR_CODES.INTERNAL_ERROR,
         description: 'Error validating payment status'
+      }]);
+    }
+  }
+
+  async validateCalendarAvailable(
+    brandId: number, 
+    query: ValidateCalendarDto
+  ): Promise<BaseResponseDto<CalendarValidationResponseDto>> {
+    try {
+      console.log('\n🗓️ === VALIDACIÓN CALENDARIO ===');
+      console.log('🏢 Brand ID:', brandId);
+      console.log('📅 Fecha:', query.date);
+      console.log('🕐 Hora:', query.time);
+
+      // 1. Verificar que el brand existe
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId },
+        select: { id: true, name: true, isActive: true }
+      });
+
+      if (!brand) {
+        console.log('❌ Brand no encontrado');
+        return BaseResponseDto.error([{
+          code: ERROR_CODES.INTERNAL_ERROR,
+          description: 'Brand no encontrado'
+        }]);
+      }
+
+      if (!brand.isActive) {
+        console.log('❌ Brand inactivo');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          message: 'Negocio no disponible',
+          date: query.date,
+          time: query.time,
+          reason: 'Negocio temporalmente cerrado'
+        });
+      }
+
+      // 2. Obtener configuración de AppointmentSettings
+      const appointmentSettings = await this.prisma.appointmentSettings.findUnique({
+        where: { brandId }
+      });
+
+      if (!appointmentSettings) {
+        console.log('❌ No hay configuración de citas');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          message: 'Configuración de citas no disponible',
+          date: query.date,
+          time: query.time,
+          reason: 'Sistema de citas no configurado'
+        });
+      }
+
+      // 3. Validar fecha y hora solicitada
+      const requestedDateTime = new Date(`${query.date}T${query.time}:00`);
+      const now = new Date();
+
+      // Validar que la fecha no sea en el pasado
+      if (requestedDateTime < now) {
+        console.log('❌ Fecha/hora en el pasado');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          message: 'Horario no disponible',
+          date: query.date,
+          time: query.time,
+          reason: 'No se pueden reservar horarios pasados'
+        });
+      }
+
+      // 4. Validar horario mínimo de anticipación
+      const hoursDifference = (requestedDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      if (hoursDifference < appointmentSettings.minAdvanceBookingHours) {
+        console.log('❌ No cumple tiempo mínimo de anticipación');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          message: 'Horario no disponible',
+          date: query.date,
+          time: query.time,
+          reason: `Se requieren al menos ${appointmentSettings.minAdvanceBookingHours} horas de anticipación`
+        });
+      }
+
+      // 5. Validar máximo de días de anticipación
+      const daysDifference = Math.floor(hoursDifference / 24);
+      if (daysDifference > appointmentSettings.maxAdvanceBookingDays) {
+        console.log('❌ Excede días máximos de anticipación');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          message: 'Horario no disponible',
+          date: query.date,
+          time: query.time,
+          reason: `Solo se permiten reservas hasta ${appointmentSettings.maxAdvanceBookingDays} días de anticipación`
+        });
+      }
+
+      // 6. Validar si permite reservas el mismo día
+      const isSameDay = now.toDateString() === requestedDateTime.toDateString();
+      if (isSameDay && !appointmentSettings.allowSameDayBooking) {
+        console.log('❌ No permite reservas el mismo día');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          message: 'Horario no disponible',
+          date: query.date,
+          time: query.time,
+          reason: 'No se permiten reservas para el mismo día'
+        });
+      }
+
+      // 7. Verificar horarios de negocio
+      const dayOfWeek = requestedDateTime.getDay(); // 0 = domingo, 1 = lunes, etc.
+      const businessHour = await this.prisma.businessHours.findFirst({
+        where: {
+          brandId,
+          dayOfWeek
+        }
+      });
+
+      if (!businessHour || !businessHour.isOpen) {
+        console.log('❌ Negocio cerrado ese día');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          message: 'Horario no disponible',
+          date: query.date,
+          time: query.time,
+          reason: 'Negocio cerrado ese día'
+        });
+      }
+
+      // 8. Verificar si la hora está dentro del horario de negocio
+      const requestedTime = query.time;
+      if (!businessHour.openTime || !businessHour.closeTime || 
+          requestedTime < businessHour.openTime || requestedTime >= businessHour.closeTime) {
+        console.log('❌ Hora fuera del horario de negocio');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          message: 'Horario no disponible',
+          date: query.date,
+          time: query.time,
+          reason: businessHour.openTime && businessHour.closeTime 
+            ? `Horario de atención: ${businessHour.openTime} - ${businessHour.closeTime}`
+            : 'Horario de atención no definido'
+        });
+      }
+
+      // 9. Verificar horarios especiales
+      const specialHour = await this.prisma.specialHours.findFirst({
+        where: {
+          brandId,
+          date: new Date(query.date)
+        }
+      });
+
+      if (specialHour) {
+        if (!specialHour.isOpen) {
+          console.log('❌ Día especial cerrado');
+          return BaseResponseDto.success({
+            isAvailable: false,
+            message: 'Horario no disponible',
+            date: query.date,
+            time: query.time,
+            reason: specialHour.reason || 'Día especial - cerrado'
+          });
+        }
+
+        // Si hay horario especial abierto, verificar el horario
+        if (specialHour.openTime && specialHour.closeTime) {
+          if (requestedTime < specialHour.openTime || requestedTime >= specialHour.closeTime) {
+            console.log('❌ Hora fuera del horario especial');
+            return BaseResponseDto.success({
+              isAvailable: false,
+              message: 'Horario no disponible',
+              date: query.date,
+              time: query.time,
+              reason: `Horario especial: ${specialHour.openTime} - ${specialHour.closeTime}`
+            });
+          }
+        }
+      }
+
+      // 10. Verificar si hay citas que ocupen ese horario
+      const duration = appointmentSettings.defaultDuration;
+      const startTime = requestedDateTime;
+      const endTime = new Date(startTime.getTime() + duration * 60000);
+
+      const conflictingAppointment = await this.prisma.appointment.findFirst({
+        where: {
+          brandId,
+          status: {
+            in: ['PENDING', 'CONFIRMED']
+          },
+          OR: [
+            {
+              // Cita que empieza durante el horario solicitado
+              startTime: {
+                gte: startTime,
+                lt: endTime
+              }
+            },
+            {
+              // Cita que termina durante el horario solicitado
+              endTime: {
+                gt: startTime,
+                lte: endTime
+              }
+            },
+            {
+              // Cita que abarca completamente el horario solicitado
+              AND: [
+                { startTime: { lte: startTime } },
+                { endTime: { gte: endTime } }
+              ]
+            }
+          ]
+        }
+      });
+
+      if (conflictingAppointment) {
+        console.log('❌ Horario ocupado por otra cita');
+        return BaseResponseDto.success({
+          isAvailable: false,
+          message: 'Horario no disponible',
+          date: query.date,
+          time: query.time,
+          reason: 'Horario ya reservado'
+        });
+      }
+
+      // 11. Si llegamos aquí, el horario está disponible
+      console.log('✅ Horario disponible');
+      return BaseResponseDto.success({
+        isAvailable: true,
+        message: 'Horario disponible',
+        date: query.date,
+        time: query.time
+      });
+
+    } catch (error) {
+      console.error('💥 Error validating calendar availability:', error);
+      return BaseResponseDto.error([{
+        code: ERROR_CODES.INTERNAL_ERROR,
+        description: 'Error validating calendar availability'
       }]);
     }
   }

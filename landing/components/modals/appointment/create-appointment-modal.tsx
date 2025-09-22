@@ -1,3 +1,4 @@
+// landing\components\modals\appointment\create-appointment-modal.tsx
 import React, { useState, useEffect } from "react"
 import { BaseModal } from "@/components/reusable-components/BaseModal"
 import { Input } from "@/components/ui/input"
@@ -9,6 +10,7 @@ import { Calendar, AlertCircle, CheckCircle, Search } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
+import { ScheduleValidator } from "@/components/validators/ScheduleValidator"
 
 interface Client {
   id: number
@@ -29,6 +31,16 @@ interface ServiceType {
   name: string
   duration: number
   price: number | null
+}
+
+// Tipos de validación
+interface ValidationResult {
+  isValid: boolean
+  hasConflicts: boolean
+  hasBusinessHourConflict: boolean
+  conflicts: any[]
+  suggestions: string[]
+  warnings: string[]
 }
 
 interface CreateAppointmentModalProps {
@@ -63,10 +75,29 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     return today.toISOString().split('T')[0]
   })
   const [time, setTime] = useState<string>('')
-
   const [localError, setLocalError] = useState<string | null>(null)
   const [clientSearchOpen, setClientSearchOpen] = useState(false)
   const [clientSearchValue, setClientSearchValue] = useState("")
+  const [brandId, setBrandId] = useState<number | null>(null)
+  
+  // Estado del validador
+  const [validationResult, setValidationResult] = useState<ValidationResult>({
+    isValid: true,
+    hasConflicts: false,
+    hasBusinessHourConflict: false,
+    conflicts: [],
+    suggestions: [],
+    warnings: []
+  })
+
+  // Obtener brandId del localStorage
+  useEffect(() => {
+    const brandData = localStorage.getItem('brand_data')
+    if (brandData) {
+      const brand = JSON.parse(brandData)
+      setBrandId(brand.id)
+    }
+  }, [])
 
   // Generar horarios disponibles (cada 30 minutos de 8:00 AM a 6:00 PM)
   const generateTimeSlots = () => {
@@ -110,16 +141,28 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     return today.toISOString().split('T')[0]
   }
 
+  // Manejar resultado de validación
+  const handleValidationChange = (result: ValidationResult) => {
+    setValidationResult(result)
+  }
+
   const validateForm = (): string | null => {
     if (!date || !time) return 'Fecha y hora son requeridas'
     if (!formData.clientId) return 'Cliente es requerido'
     if (!formData.serviceTypeId) return 'Tipo de servicio es requerido'
+    
     // Validar que la fecha no sea en el pasado
     const appointmentDate = new Date(getStartTimeISO())
     const now = new Date()
     if (appointmentDate < now) {
       return 'No se pueden crear citas en el pasado'
     }
+
+    // Verificar validación de horarios
+    if (!validationResult.isValid) {
+      return 'Hay conflictos de horario que deben resolverse'
+    }
+    
     return null
   }
 
@@ -129,10 +172,12 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
       setLocalError(validationError)
       return
     }
+
     const submitData = {
       ...formData,
       startTime: getStartTimeISO()
     }
+
     try {
       await onSubmit(submitData)
       // Reset form on success
@@ -155,6 +200,14 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
     setTime('')
     setLocalError(null)
     setClientSearchValue("")
+    setValidationResult({
+      isValid: true,
+      hasConflicts: false,
+      hasBusinessHourConflict: false,
+      conflicts: [],
+      suggestions: [],
+      warnings: []
+    })
   }
 
   const handleClose = () => {
@@ -164,9 +217,7 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
 
   const currentError = error || localError
   const currentSuccess = success
-
   const selectedClient = clients.find(client => client.id === formData.clientId)
-
   const filteredClients = clients.filter(client =>
     `${client.firstName} ${client.lastName}`.toLowerCase().includes(clientSearchValue.toLowerCase()) ||
     client.email.toLowerCase().includes(clientSearchValue.toLowerCase())
@@ -179,13 +230,13 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
       title="Nueva Cita"
       description="Programar una nueva cita"
       titleIcon={<Calendar className="h-5 w-5" />}
-      size="md"
-      maxHeight="85vh"
+      size="lg"
+      maxHeight="90vh"
       primaryButton={{
         text: loading ? "Creando..." : "Crear Cita",
         onClick: handleSubmit,
         loading: loading,
-        disabled: loading
+        disabled: loading || !validationResult.isValid
       }}
       secondaryButton={{
         text: "Cancelar",
@@ -201,7 +252,6 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
             <AlertDescription>{currentError}</AlertDescription>
           </Alert>
         )}
-
         {currentSuccess && (
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
@@ -274,7 +324,7 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
               <SelectContent className="max-h-64">
                 {serviceTypes.map((service) => (
                   <SelectItem key={service.id} value={service.id.toString()}>
-                    {service.name} {service.price ? `($${service.price})` : ""}
+                    {service.name} ({service.duration} min) {service.price ? `- $${service.price}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -314,7 +364,18 @@ export const CreateAppointmentModal: React.FC<CreateAppointmentModalProps> = ({
             </div>
           </div>
 
-          {/* ...eliminado campo duración... */}
+          {/* Validador de Horarios - COMPONENTE NUEVO */}
+          {brandId && (
+            <ScheduleValidator
+              selectedDate={date}
+              selectedTime={time}
+              selectedServiceId={formData.serviceTypeId}
+              serviceTypes={serviceTypes}
+              brandId={brandId}
+              onValidationChange={handleValidationChange}
+              className="mt-4"
+            />
+          )}
 
           {/* Notas */}
           <div className="space-y-2">
