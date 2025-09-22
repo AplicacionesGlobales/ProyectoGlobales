@@ -15,7 +15,8 @@ import {
   Settings,
   Menu,
   X,
-  Handshake
+  Handshake,
+  UserCheck 
 } from "lucide-react"
 
 interface SidebarItem {
@@ -34,6 +35,11 @@ const sidebarItems: SidebarItem[] = [
     title: "Calendario",
     href: "/panel/calendario",
     icon: Calendar
+  },
+  {
+    title: "Atender Citas",
+    href: "/panel/atender-citas",
+    icon: UserCheck
   },
   {
     title: "Clientes",
