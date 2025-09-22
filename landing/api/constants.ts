@@ -147,6 +147,7 @@ export const API_ENDPOINTS = {
     PHONE: '/validate/phone',
     BRAND_NAME: '/validate/brand-name',
     PAYMENT: '/validate/payment',
+    CALENDAR_AVAILABLE: (brandId: number) => `/validate/calendar-available/${brandId}`,
   },
 
   // Function endpoints

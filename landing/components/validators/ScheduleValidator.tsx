@@ -3,32 +3,8 @@ import React, { useState, useEffect } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  Calendar,
-  XCircle,
-  Info
-} from "lucide-react"
-
-// Tipos para el validador
-interface ValidationResult {
-  isValid: boolean
-  hasConflicts: boolean
-  hasBusinessHourConflict: boolean
-  conflicts: ConflictInfo[]
-  suggestions: string[]
-  warnings: string[]
-}
-
-interface ConflictInfo {
-  id: number
-  startTime: string
-  endTime: string
-  clientName: string
-  type: 'overlap' | 'adjacent' | 'business_hours'
-}
+import { AlertTriangle, CheckCircle, Clock, Calendar, XCircle, Info } from "lucide-react"
+import { scheduleValidatorService, ValidationResult } from "@/services/schedule-validator.service"
 
 interface ScheduleValidatorProps {
   selectedDate?: string
@@ -63,24 +39,26 @@ export const ScheduleValidator: React.FC<ScheduleValidatorProps> = ({
   })
   const [isValidating, setIsValidating] = useState(false)
 
-  // Validar horarios cuando cambian los datos
   useEffect(() => {
     if (selectedDate && selectedTime) {
       validateSchedule()
     } else {
-      // Reset validation si faltan datos
-      const emptyResult: ValidationResult = {
-        isValid: true,
-        hasConflicts: false,
-        hasBusinessHourConflict: false,
-        conflicts: [],
-        suggestions: [],
-        warnings: []
-      }
-      setValidationResult(emptyResult)
-      onValidationChange(emptyResult)
+      resetValidation()
     }
   }, [selectedDate, selectedTime, selectedServiceId])
+
+  const resetValidation = () => {
+    const emptyResult: ValidationResult = {
+      isValid: true,
+      hasConflicts: false,
+      hasBusinessHourConflict: false,
+      conflicts: [],
+      suggestions: [],
+      warnings: []
+    }
+    setValidationResult(emptyResult)
+    onValidationChange(emptyResult)
+  }
 
   const validateSchedule = async () => {
     if (!selectedDate || !selectedTime) return
@@ -88,42 +66,21 @@ export const ScheduleValidator: React.FC<ScheduleValidatorProps> = ({
     setIsValidating(true)
     
     try {
-      // Obtener duración del servicio seleccionado (si hay uno)
-      let serviceDuration = 30 // duración por defecto de 30 minutos
-      let selectedService = null
+      let serviceDuration: number | undefined = undefined
       
       if (selectedServiceId) {
-        selectedService = serviceTypes.find(s => s.id === selectedServiceId)
+        const selectedService = serviceTypes.find(s => s.id === selectedServiceId)
         if (selectedService) {
           serviceDuration = selectedService.duration
         }
       }
 
-      // Crear datetime completo
-      const startDateTime = new Date(`${selectedDate}T${selectedTime}:00`)
-      const endDateTime = new Date(startDateTime.getTime() + (serviceDuration * 60000))
-
-      // Ejecutar validaciones
-      const conflicts = await checkAppointmentConflicts(startDateTime, endDateTime)
-      const businessHourCheck = checkBusinessHours(startDateTime, endDateTime)
-      const timeValidation = checkTimeValidation(startDateTime)
-      
-      const result: ValidationResult = {
-        isValid: conflicts.length === 0 && businessHourCheck.isValid && timeValidation.isValid,
-        hasConflicts: conflicts.length > 0,
-        hasBusinessHourConflict: !businessHourCheck.isValid,
-        conflicts: conflicts,
-        suggestions: [
-          ...getSuggestions(conflicts, startDateTime),
-          ...businessHourCheck.suggestions,
-          ...timeValidation.suggestions
-        ],
-        warnings: [
-          ...getWarnings(startDateTime, selectedService),
-          ...businessHourCheck.warnings,
-          ...timeValidation.warnings
-        ]
-      }
+      const result = await scheduleValidatorService.validateCompleteSchedule(
+        brandId,
+        selectedDate,
+        selectedTime,
+        serviceDuration
+      )
 
       setValidationResult(result)
       onValidationChange(result)
@@ -136,8 +93,8 @@ export const ScheduleValidator: React.FC<ScheduleValidatorProps> = ({
         hasConflicts: false,
         hasBusinessHourConflict: false,
         conflicts: [],
-        suggestions: [],
-        warnings: ['Error validando horario. Intente nuevamente.']
+        suggestions: ['Error validando horario'],
+        warnings: []
       }
       
       setValidationResult(errorResult)
@@ -147,112 +104,6 @@ export const ScheduleValidator: React.FC<ScheduleValidatorProps> = ({
     }
   }
 
-  // Simular verificación de conflictos con citas existentes
-  // En producción, esto haría una llamada al API
-  const checkAppointmentConflicts = async (startTime: Date, endTime: Date): Promise<ConflictInfo[]> => {
-    // Simular delay de API
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    // Ejemplo de conflictos simulados
-    const mockConflicts: ConflictInfo[] = []
-    
-    // Simular conflicto si es entre 2:00 PM y 3:00 PM
-    if (startTime.getHours() >= 14 && startTime.getHours() < 15) {
-      mockConflicts.push({
-        id: 1,
-        startTime: '2024-01-15T14:30:00',
-        endTime: '2024-01-15T15:00:00',
-        clientName: 'María González',
-        type: 'overlap'
-      })
-    }
-
-    return mockConflicts
-  }
-
-  // Validar horarios de negocio
-  const checkBusinessHours = (startTime: Date, endTime: Date) => {
-    const hour = startTime.getHours()
-    const endHour = endTime.getHours()
-    const minute = endTime.getMinutes()
-    
-    const businessStart = 8 // 8:00 AM
-    const businessEnd = 18 // 6:00 PM
-    
-    const isValid = hour >= businessStart && (endHour < businessEnd || (endHour === businessEnd && minute === 0))
-    
-    return {
-      isValid,
-      suggestions: isValid ? [] : ['Seleccione un horario dentro del horario de atención (8:00 AM - 6:00 PM)'],
-      warnings: []
-    }
-  }
-
-  // Validaciones de tiempo general
-  const checkTimeValidation = (startTime: Date) => {
-    const now = new Date()
-    const suggestions: string[] = []
-    const warnings: string[] = []
-    
-    // No permitir citas en el pasado
-    if (startTime < now) {
-      suggestions.push('No se pueden crear citas en el pasado')
-    }
-    
-    // Advertir si es muy pronto (menos de 1 hora)
-    const oneHourFromNow = new Date(now.getTime() + (60 * 60000))
-    if (startTime < oneHourFromNow && startTime > now) {
-      warnings.push('La cita es en menos de 1 hora')
-    }
-    
-    // Advertir si es en fin de semana
-    const dayOfWeek = startTime.getDay()
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      warnings.push('Esta cita es en fin de semana')
-    }
-    
-    return {
-      isValid: startTime >= now,
-      suggestions,
-      warnings
-    }
-  }
-
-  // Generar sugerencias basadas en conflictos
-  const getSuggestions = (conflicts: ConflictInfo[], requestedTime: Date): string[] => {
-    if (conflicts.length === 0) return []
-    
-    const suggestions = ['Horarios alternativos sugeridos:']
-    
-    // Sugerir 30 minutos antes
-    const before = new Date(requestedTime.getTime() - (30 * 60000))
-    suggestions.push(`${before.getHours().toString().padStart(2, '0')}:${before.getMinutes().toString().padStart(2, '0')}`)
-    
-    // Sugerir 30 minutos después
-    const after = new Date(requestedTime.getTime() + (30 * 60000))
-    suggestions.push(`${after.getHours().toString().padStart(2, '0')}:${after.getMinutes().toString().padStart(2, '0')}`)
-    
-    return suggestions
-  }
-
-  // Generar advertencias
-  const getWarnings = (startTime: Date, service: any): string[] => {
-    const warnings: string[] = []
-    
-    // Solo advertir sobre servicios largos si hay un servicio seleccionado
-    if (service && service.duration > 60) {
-      const endTime = new Date(startTime.getTime() + (service.duration * 60000))
-      if (endTime.getHours() >= 17) {
-        warnings.push(`Servicio de ${service.duration} min puede extenderse hasta después del horario normal`)
-      }
-    } else if (!service) {
-      // Advertencia cuando no hay servicio seleccionado
-      warnings.push('No se ha especificado tipo de servicio. Se usará duración estándar de 30 minutos.')
-    }
-    
-    return warnings
-  }
-
   const formatTime = (timeString: string) => {
     try {
       const date = new Date(timeString)
@@ -260,6 +111,15 @@ export const ScheduleValidator: React.FC<ScheduleValidatorProps> = ({
     } catch {
       return timeString
     }
+  }
+
+  const getConflictTypeText = (type: string) => {
+    const typeTexts: Record<string, string> = {
+      'overlap': 'Solapamiento',
+      'adjacent': 'Adyacente', 
+      'business_hours': 'Fuera de horario'
+    }
+    return typeTexts[type] || type
   }
 
   if (!selectedDate || !selectedTime) {
@@ -281,7 +141,7 @@ export const ScheduleValidator: React.FC<ScheduleValidatorProps> = ({
 
       {!isValidating && (
         <>
-          {/* Estado general de validación */}
+          {/* Estado general */}
           <Card className={`border ${
             validationResult.isValid 
               ? 'border-green-200 bg-green-50' 
@@ -297,16 +157,13 @@ export const ScheduleValidator: React.FC<ScheduleValidatorProps> = ({
                 <span className={`text-sm font-medium ${
                   validationResult.isValid ? 'text-green-700' : 'text-red-700'
                 }`}>
-                  {validationResult.isValid 
-                    ? 'Horario disponible' 
-                    : 'Conflicto detectado'
-                  }
+                  {validationResult.isValid ? 'Horario disponible' : 'Conflicto detectado'}
                 </span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Conflictos específicos */}
+          {/* Conflictos */}
           {validationResult.conflicts.length > 0 && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
@@ -316,11 +173,9 @@ export const ScheduleValidator: React.FC<ScheduleValidatorProps> = ({
                   {validationResult.conflicts.map((conflict, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
                       <Calendar className="h-3 w-3" />
-                      <span>
-                        {formatTime(conflict.startTime)} - {formatTime(conflict.endTime)}: {conflict.clientName}
-                      </span>
+                      <span>{scheduleValidatorService.getReasonText(conflict.clientName)}</span>
                       <Badge variant="destructive" className="text-xs">
-                        {conflict.type === 'overlap' ? 'Solapamiento' : 'Adyacente'}
+                        {getConflictTypeText(conflict.type)}
                       </Badge>
                     </div>
                   ))}
