@@ -225,7 +225,12 @@ export default function AtenderCitasPage() {
                     <Timer className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{Math.round(agendaData.totalBookedTime / 60)}h</p>
+                    <p className="text-2xl font-bold">
+                      {agendaData.totalBookedTime >= 60 
+                        ? `${Math.floor(agendaData.totalBookedTime / 60)}h ${agendaData.totalBookedTime % 60 > 0 ? `${agendaData.totalBookedTime % 60}m` : ''}`
+                        : `${agendaData.totalBookedTime}m`
+                      }
+                    </p>
                     <p className="text-sm text-muted-foreground">Tiempo Ocupado</p>
                   </div>
                 </div>
@@ -239,7 +244,12 @@ export default function AtenderCitasPage() {
                     <Clock className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{Math.round(agendaData.totalAvailableTime / 60)}h</p>
+                    <p className="text-2xl font-bold">
+                      {agendaData.totalAvailableTime >= 60 
+                        ? `${Math.floor(agendaData.totalAvailableTime / 60)}h ${agendaData.totalAvailableTime % 60 > 0 ? `${agendaData.totalAvailableTime % 60}m` : ''}`
+                        : `${agendaData.totalAvailableTime}m`
+                      }
+                    </p>
                     <p className="text-sm text-muted-foreground">Tiempo Disponible</p>
                   </div>
                 </div>
