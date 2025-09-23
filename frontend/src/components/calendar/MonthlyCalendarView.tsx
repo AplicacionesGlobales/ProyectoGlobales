@@ -2,11 +2,11 @@
 // Vista mensual del calendario con indicadores de ocupación
 
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   ScrollView,
   RefreshControl,
   Dimensions,
@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useOptimizedMonthlyCalendar } from '@/hooks/useOptimizedMonthlyCalendar';
+import StatusIndicator from './StatusIndicator';
 import type { CalendarConfiguration, CalendarInteractions } from '@/types/calendar';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -34,6 +35,8 @@ interface DayData {
   totalAppointments: number;
   confirmedAppointments: number;
   pendingAppointments: number;
+  completedAppointments: number;
+  cancelledAppointments: number;
   occupancyPercentage: number;
   isBusinessOpen: boolean;
   isToday: boolean;
@@ -49,7 +52,7 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
   onDateSelect
 }) => {
   const { colors } = useTheme();
-  
+
   const {
     currentMonth,
     monthData,
@@ -78,7 +81,7 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
-    
+
     // Ajustar al lunes como primer día de la semana
     const dayOfWeek = firstDay.getDay();
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -92,16 +95,18 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     for (let i = 0; i < 42; i++) { // 6 semanas x 7 días
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
-      
+
       // Formatear fecha local sin problemas de zona horaria
       const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
       const dayInfo = monthData.days.find(d => d.date === dateStr);
-      
+
       grid.push({
         date: dateStr,
         totalAppointments: dayInfo?.totalAppointments || 0,
         confirmedAppointments: dayInfo?.confirmedAppointments || 0,
         pendingAppointments: dayInfo?.pendingAppointments || 0,
+        completedAppointments: dayInfo?.completedAppointments || 0,
+        cancelledAppointments: dayInfo?.cancelledAppointments || 0,
         occupancyPercentage: dayInfo?.occupancyPercentage || 0,
         isBusinessOpen: dayInfo?.isBusinessOpen ?? true,
         isToday: dateStr === today,
@@ -355,7 +360,7 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
             <TouchableOpacity style={styles.navButton} onPress={navigateToPreviousMonth}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
-            
+
             <Text style={styles.monthTitle}>
               {formatMonthYear(currentMonth)}
             </Text>
@@ -365,7 +370,7 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
             </TouchableOpacity>
           </View>
         )}
-        
+
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>
             Error al cargar el calendario: {error.message}
@@ -386,7 +391,7 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
           <TouchableOpacity style={styles.navButton} onPress={navigateToPreviousMonth}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity onPress={navigateToCurrentMonth}>
             <Text style={styles.monthTitle}>
               {formatMonthYear(currentMonth)}
@@ -445,7 +450,7 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
             {calendarGrid.map((dayData, index) => {
               const isInactive = !dayData.isCurrentMonth;
               const isClosed = !dayData.isBusinessOpen;
-              
+
               return (
                 <TouchableOpacity
                   key={`${dayData.date}-${index}`}
@@ -471,19 +476,20 @@ const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                     })()}
                   </Text>
 
-                  {/* Indicadores de ocupación */}
-                  {dayData.isCurrentMonth && dayData.isBusinessOpen && (
-                    <View style={styles.occupancyIndicator}>
-                      {Array.from({ length: Math.min(3, Math.ceil(dayData.occupancyPercentage / 25)) }).map((_, i) => (
-                        <View
-                          key={i}
-                          style={[
-                            styles.occupancyDot,
-                            { backgroundColor: getOccupancyColor(dayData.occupancyPercentage) }
-                          ]}
-                        />
-                      ))}
-                    </View>
+                  {/* Indicadores de estado con StatusIndicator */}
+                  {dayData.isCurrentMonth && dayData.isBusinessOpen && dayData.totalAppointments > 0 && (
+                    <StatusIndicator
+                      variant="dots"
+                      size="small"
+                      statusCounts={{
+                        CONFIRMED: dayData.confirmedAppointments,
+                        PENDING: dayData.pendingAppointments,
+                        COMPLETED: dayData.completedAppointments,
+                        CANCELLED: dayData.cancelledAppointments
+                      }}
+                      showText={false}
+                      maxDots={3}
+                    />
                   )}
 
                   {/* Contador de citas */}

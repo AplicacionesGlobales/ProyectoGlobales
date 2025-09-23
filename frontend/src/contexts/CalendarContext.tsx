@@ -1,12 +1,12 @@
 // src/contexts/CalendarContext.tsx
 // Context centralizado para manejar el estado del calendario
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { 
-  getDayAgenda, 
-  getMonthlyCalendarData, 
+import {
+  getDayAgenda,
+  getMonthlyCalendarData,
   getCalendarAppointments,
   getAppointmentsByDate,
-  getAppointmentsByDateRange 
+  getAppointmentsByDateRange
 } from '@/api/endpoints';
 
 export type CalendarViewType = 'day' | 'week' | 'month';
@@ -142,13 +142,13 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({
     try {
       dispatch({ type: 'SET_LOADING', payload: { view: 'day', loading: true } });
       dispatch({ type: 'SET_ERROR', payload: null });
-      
+
       // Usar el endpoint de agenda del día Y el endpoint de citas por fecha
       const [agendaResponse, appointmentsResponse] = await Promise.all([
         getDayAgenda(state.brandId, date).catch(() => null),
         getAppointmentsByDate(state.brandId, date).catch(() => null)
       ]);
-      
+
       // Procesar datos de agenda
       let dayData: any = {
         date,
@@ -163,31 +163,45 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({
       };
 
       if (agendaResponse?.success && agendaResponse.data) {
-        dayData = { ...agendaResponse.data, appointments: dayData.appointments };
+        dayData = { ...agendaResponse.data, appointments: [] };
+
+        // Extraer citas de la agenda
+        const agendaAppointments = agendaResponse.data.agenda
+          ?.filter((slot: any) => slot.type === 'appointment' && slot.appointment)
+          .map((slot: any) => slot.appointment) || [];
+
+        dayData.appointments = agendaAppointments;
+        dayData.totalAppointments = agendaAppointments.length;
       }
 
-      // Integrar citas específicas del día
-      if (appointmentsResponse?.success && appointmentsResponse.data) {
-        dayData.appointments = appointmentsResponse.data;
-        dayData.totalAppointments = appointmentsResponse.data.length;
+      // Integrar citas específicas del día (combinar con las de agenda)
+      if (appointmentsResponse?.success && appointmentsResponse.data && appointmentsResponse.data.length > 0) {
+        // Combinar citas de agenda con citas del endpoint específico
+        const existingIds = new Set(dayData.appointments.map((apt: any) => apt.id));
+        const additionalAppointments = appointmentsResponse.data.filter((apt: any) => !existingIds.has(apt.id));
+
+        dayData.appointments = [...dayData.appointments, ...additionalAppointments];
+        dayData.totalAppointments = dayData.appointments.length;
       }
 
       dispatch({ type: 'SET_DAY_DATA', payload: dayData });
-      
+
     } catch (error) {
       console.warn('Error loading day data:', error);
       // En caso de error, mostrar estructura vacía
-      dispatch({ type: 'SET_DAY_DATA', payload: {
-        date,
-        businessHours: { start: '08:00', end: '18:00', isClosed: false },
-        agenda: [] as any[],
-        appointments: [] as any[],
-        totalAppointments: 0,
-        totalAvailableSlots: 0,
-        slotDuration: 30,
-        totalAvailableTime: 0,
-        totalBookedTime: 0
-      }});
+      dispatch({
+        type: 'SET_DAY_DATA', payload: {
+          date,
+          businessHours: { start: '08:00', end: '18:00', isClosed: false },
+          agenda: [] as any[],
+          appointments: [] as any[],
+          totalAppointments: 0,
+          totalAvailableSlots: 0,
+          slotDuration: 30,
+          totalAvailableTime: 0,
+          totalBookedTime: 0
+        }
+      });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { view: 'day', loading: false } });
     }
@@ -197,39 +211,157 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({
     try {
       dispatch({ type: 'SET_LOADING', payload: { view: 'week', loading: true } });
       dispatch({ type: 'SET_ERROR', payload: null });
-      
+
       const endDate = addDays(startDate, 6);
-      
-      // Usar el endpoint de appointments que sí funciona con rangos de fechas
-      const response = await getAppointmentsByDateRange(state.brandId, startDate, endDate);
-      
-      if (response.success && response.data) {
-        // Si viene la estructura con .appointments, extraer el array
-        const appointments = response.data.appointments || response.data || [];
-        dispatch({ type: 'SET_WEEK_DATA', payload: appointments });
-      } else {
-        dispatch({ type: 'SET_WEEK_DATA', payload: [] });
+
+      // Usar getDayAgenda para cada día de la semana
+      const weekPromises = [];
+      for (let i = 0; i < 7; i++) {
+        const dayDate = addDays(startDate, i);
+        weekPromises.push(
+          getDayAgenda(state.brandId, dayDate)
+            .then(response => ({ date: dayDate, response }))
+            .catch(error => ({ date: dayDate, response: null, error }))
+        );
       }
+
+      const weekResults = await Promise.all(weekPromises);
+
+      // Extraer todas las citas de todos los días
+      const allAppointments: any[] = [];
+
+      weekResults.forEach(({ date, response, error }: any) => {
+        if (response?.success && response.data?.agenda) {
+          const dayAppointments = response.data.agenda
+            .filter((slot: any) => slot.type === 'appointment' && slot.appointment)
+            .map((slot: any) => slot.appointment);
+
+          allAppointments.push(...dayAppointments);
+        }
+      });
+
+      dispatch({ type: 'SET_WEEK_DATA', payload: allAppointments });
     } catch (error) {
       console.warn('Error loading week data:', error);
       dispatch({ type: 'SET_WEEK_DATA', payload: [] });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { view: 'week', loading: false } });
     }
-  };
-
-  const fetchMonthData = async (month: string) => {
+  }; const fetchMonthData = async (month: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: { view: 'month', loading: true } });
       dispatch({ type: 'SET_ERROR', payload: null });
-      
-      const response = await getMonthlyCalendarData(state.brandId, month);
-      
-      if (response.success && response.data) {
-        dispatch({ type: 'SET_MONTH_DATA', payload: response.data });
-      } else {
-        // Estructura vacía para el mes
-        dispatch({ type: 'SET_MONTH_DATA', payload: {
+
+      // Usar getDayAgenda para cada día del mes
+      const [year, monthNum] = month.split('-').map(Number);
+      const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+      // Crear promesas para todos los días del mes
+      const monthPromises = [];
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayDate = `${year}-${monthNum.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        monthPromises.push(
+          getDayAgenda(state.brandId, dayDate)
+            .then(response => ({ date: dayDate, response }))
+            .catch(() => ({ date: dayDate, response: null }))
+        );
+      }
+
+      const monthResults = await Promise.all(monthPromises);
+
+      // Procesar resultados para crear estructura mensual
+      const monthDays: any[] = [];
+      let totalMonthAppointments = 0;
+      let confirmedAppointments = 0;
+      let pendingAppointments = 0;
+      let completedAppointments = 0;
+      let cancelledAppointments = 0;
+
+      monthResults.forEach(({ date, response }) => {
+        let dayData = {
+          date,
+          totalAppointments: 0,
+          confirmedAppointments: 0,
+          pendingAppointments: 0,
+          completedAppointments: 0,
+          cancelledAppointments: 0,
+          totalOccupiedMinutes: 0,
+          totalAvailableMinutes: 540,
+          occupancyPercentage: 0,
+          isBusinessOpen: true,
+          appointments: [] as any[],
+          statusCounts: {} as any
+        };
+
+        if (response?.success && response.data) {
+          // Extraer appointments de la agenda
+          const dayAppointments = response.data.agenda
+            ?.filter((slot: any) => slot.type === 'appointment' && slot.appointment)
+            .map((slot: any) => slot.appointment) || [];
+
+          if (dayAppointments.length > 0) {
+            // Calcular estadísticas del día
+            const statusCounts: any = {};
+            dayAppointments.forEach((apt: any) => {
+              statusCounts[apt.status] = (statusCounts[apt.status] || 0) + 1;
+
+              // Contar por tipo
+              if (apt.status === 'CONFIRMED') confirmedAppointments++;
+              else if (apt.status === 'PENDING') pendingAppointments++;
+              else if (apt.status === 'COMPLETED') completedAppointments++;
+              else if (apt.status === 'CANCELLED') cancelledAppointments++;
+            });
+
+            dayData = {
+              ...dayData,
+              totalAppointments: dayAppointments.length,
+              appointments: dayAppointments,
+              statusCounts,
+              totalOccupiedMinutes: response.data.totalBookedTime || dayAppointments.length * 30,
+              totalAvailableMinutes: response.data.totalAvailableTime || 540,
+              occupancyPercentage: response.data.totalBookedTime ?
+                (response.data.totalBookedTime / (response.data.totalAvailableTime + response.data.totalBookedTime)) * 100 : 0,
+              isBusinessOpen: !response.data.businessHours?.isClosed,
+              confirmedAppointments: statusCounts.CONFIRMED || 0,
+              pendingAppointments: statusCounts.PENDING || 0,
+              completedAppointments: statusCounts.COMPLETED || 0,
+              cancelledAppointments: statusCounts.CANCELLED || 0
+            };
+
+            totalMonthAppointments += dayAppointments.length;
+          }
+
+          if (response.data.businessHours) {
+            dayData.isBusinessOpen = !response.data.businessHours.isClosed;
+          }
+        }
+
+        monthDays.push(dayData);
+      });
+
+      // Crear estructura final del mes
+      const monthData = {
+        month,
+        summary: {
+          totalAppointments: totalMonthAppointments,
+          confirmedAppointments,
+          pendingAppointments,
+          completedAppointments,
+          cancelledAppointments,
+          totalOccupiedMinutes: monthDays.reduce((sum, day) => sum + day.totalOccupiedMinutes, 0),
+          totalAvailableMinutes: monthDays.reduce((sum, day) => sum + day.totalAvailableMinutes, 0),
+          averageOccupancyPercentage: monthDays.reduce((sum, day) => sum + day.occupancyPercentage, 0) / monthDays.length,
+          businessDaysInMonth: monthDays.filter(day => day.isBusinessOpen).length,
+          daysWithAppointments: monthDays.filter(day => day.totalAppointments > 0).length
+        },
+        days: monthDays
+      };
+
+      dispatch({ type: 'SET_MONTH_DATA', payload: monthData });
+    } catch (error) {
+      console.warn('Error loading month data:', error);
+      dispatch({
+        type: 'SET_MONTH_DATA', payload: {
           month,
           summary: {
             totalAppointments: 0,
@@ -244,26 +376,8 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({
             daysWithAppointments: 0
           },
           days: []
-        }});
-      }
-    } catch (error) {
-      console.warn('Error loading month data:', error);
-      dispatch({ type: 'SET_MONTH_DATA', payload: {
-        month,
-        summary: {
-          totalAppointments: 0,
-          confirmedAppointments: 0,
-          pendingAppointments: 0,
-          completedAppointments: 0,
-          cancelledAppointments: 0,
-          totalOccupiedMinutes: 0,
-          totalAvailableMinutes: 0,
-          averageOccupancyPercentage: 0,
-          businessDaysInMonth: 0,
-          daysWithAppointments: 0
-        },
-        days: []
-      }});
+        }
+      });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { view: 'month', loading: false } });
     }

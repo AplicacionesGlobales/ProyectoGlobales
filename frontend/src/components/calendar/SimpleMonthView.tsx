@@ -1,17 +1,18 @@
 // src/components/calendar/SimpleMonthView.tsx
 // Vista mensual simplificada
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
   RefreshControl,
   StyleSheet,
-  Dimensions 
+  Dimensions
 } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCalendar } from '@/contexts/CalendarContext';
+import StatusIndicator from './StatusIndicator';
 import type { MonthlyDayData } from '@/types/calendar';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -30,11 +31,11 @@ const SimpleMonthView: React.FC<SimpleMonthViewProps> = ({ onDateSelect }) => {
 
     const month = state.currentDate.substring(0, 7); // YYYY-MM
     const [year, monthNum] = month.split('-').map(Number);
-    
+
     const firstDay = new Date(year, monthNum - 1, 1);
     const lastDay = new Date(year, monthNum, 0);
     const startDate = new Date(firstDay);
-    
+
     // Ajustar al lunes como primer día
     const dayOfWeek = firstDay.getDay();
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -46,17 +47,19 @@ const SimpleMonthView: React.FC<SimpleMonthViewProps> = ({ onDateSelect }) => {
     for (let i = 0; i < 42; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
-      
+
       const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
       const dayInfo = state.monthData.days?.find((d: MonthlyDayData) => d.date === dateStr);
-      
+
       grid.push({
         date: dateStr,
         day: currentDate.getDate(),
         isCurrentMonth: currentDate.getMonth() === monthNum - 1,
         isToday: dateStr === today,
         hasAppointments: (dayInfo?.totalAppointments || 0) > 0,
-        appointmentCount: dayInfo?.totalAppointments || 0
+        appointmentCount: dayInfo?.totalAppointments || 0,
+        statusCounts: dayInfo?.statusCounts || undefined,
+        dayInfo: dayInfo
       });
     }
 
@@ -216,16 +219,34 @@ const SimpleMonthView: React.FC<SimpleMonthViewProps> = ({ onDateSelect }) => {
               ]}>
                 {dayData.day}
               </Text>
-              
+
               {dayData.hasAppointments && dayData.isCurrentMonth && (
-                <>
-                  <View style={styles.appointmentDot} />
-                  {dayData.appointmentCount > 1 && (
-                    <Text style={styles.appointmentCount}>
-                      {dayData.appointmentCount}
-                    </Text>
+                <View style={{ alignItems: 'center', marginTop: 2 }}>
+                  {dayData.appointmentCount === 1 ? (
+                    // Una sola cita: mostrar punto con color del estado
+                    <StatusIndicator
+                      status={dayData.dayInfo?.appointments?.[0]?.status}
+                      serviceColor={dayData.dayInfo?.appointments?.[0]?.serviceType?.color}
+                      variant="dot"
+                      size="small"
+                      showText={false}
+                    />
+                  ) : (
+                    // Múltiples citas: mostrar dots con conteo
+                    <>
+                      <StatusIndicator
+                        statusCounts={dayData.statusCounts}
+                        variant="dots"
+                        size="small"
+                        showText={false}
+                        maxDots={2}
+                      />
+                      <Text style={styles.appointmentCount}>
+                        {dayData.appointmentCount}
+                      </Text>
+                    </>
                   )}
-                </>
+                </View>
               )}
             </TouchableOpacity>
           ))}
