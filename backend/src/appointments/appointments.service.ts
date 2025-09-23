@@ -20,6 +20,8 @@ import {
   CancelAppointmentDto,
   GetAppointmentsQueryDto,
   AvailableTimeSlotsDto,
+  CalculateAvailabilityDto,
+  AvailabilityCalculationResultDto,
   TimeSlotDto,
   AppointmentStatus
 } from './dto/appointment.dto';
@@ -2069,5 +2071,222 @@ async updateAppointmentStatus(
       client: appointment.client,
       creator: appointment.createdBy
     };
+  }
+
+  // TASK-024B#: Cálculo avanzado de disponibilidad
+  async calculateAvailability(
+    brandId: number,
+    query: CalculateAvailabilityDto
+  ): Promise<BaseResponseDto<AvailabilityCalculationResultDto>> {
+    try {
+      // Validar que la marca exista
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId }
+      });
+
+      if (!brand) {
+        throw new NotFoundException('Marca no encontrada');
+      }
+
+      // COMENTADO: Validar que la fecha no sea en el pasado (desactivado para permitir consultas históricas)
+      const requestedDate = new Date(query.date);
+      // const today = new Date();
+      // today.setHours(0, 0, 0, 0);
+      // requestedDate.setHours(0, 0, 0, 0);
+
+      // if (requestedDate < today) {
+      //   throw new BadRequestException('No se puede calcular disponibilidad para fechas pasadas');
+      // }
+
+      // Obtener configuraciones del negocio (reutilizando método existente)
+      const { appointmentSettings, businessHours, specialHours } =
+        await this.getBrandConfigurations(brandId);
+
+      // Determinar parámetros de cálculo
+      const duration = query.duration || appointmentSettings.defaultDuration;
+      const includeUnavailable = query.includeUnavailable || false;
+      const includeReasons = query.includeReasons !== false; // true por defecto
+
+      // Calcular disponibilidad usando la lógica existente mejorada
+      const dayOfWeek = requestedDate.getDay();
+      const dateStr = requestedDate.toISOString().split('T')[0];
+      
+      // Verificar si el negocio está abierto ese día
+      const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
+      
+      // Verificar horarios especiales
+      const specialHour = specialHours.find(
+        sh => sh.date.toISOString().split('T')[0] === dateStr
+      );
+
+      // Determinar si está abierto y horarios
+      let isOpen = businessHour?.isOpen || false;
+      let openTime = businessHour?.openTime;
+      let closeTime = businessHour?.closeTime;
+      let specialNote: string | undefined;
+
+      // Aplicar horarios especiales si existen
+      if (specialHour) {
+        isOpen = specialHour.isOpen;
+        openTime = specialHour.openTime || openTime;
+        closeTime = specialHour.closeTime || closeTime;
+        specialNote = specialHour.reason || 'Horario especial';
+      }
+
+      const result: AvailabilityCalculationResultDto = {
+        date: dateStr,
+        dayName: this.getDayName(dayOfWeek),
+        isOpen,
+        openTime: openTime || undefined,
+        closeTime: closeTime || undefined,
+        slots: [],
+        totalAvailableSlots: 0,
+        totalOccupiedSlots: 0,
+        totalSlots: 0,
+        usedDuration: duration,
+        calculatedAt: new Date().toISOString(),
+        specialNote
+      };
+
+      // Si no está abierto, retornar sin slots
+      if (!isOpen || !openTime || !closeTime) {
+        return BaseResponseDto.success(result);
+      }
+
+      // Obtener citas existentes del día (reutilizando lógica existente)
+      const existingAppointments = await this.prisma.appointment.findMany({
+        where: {
+          brandId,
+          status: {
+            notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW]
+          },
+          startTime: {
+            gte: new Date(`${dateStr}T00:00:00.000Z`),
+            lt: new Date(`${dateStr}T23:59:59.999Z`)
+          }
+        },
+        include: {
+          client: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          },
+          serviceType: {
+            select: {
+              name: true
+            }
+          }
+        },
+        orderBy: {
+          startTime: 'asc'
+        }
+      });
+
+      // Generar slots usando lógica similar a getAvailableTimeSlots pero mejorada
+      const slots: TimeSlotDto[] = [];
+      const [openHour, openMinute] = openTime.split(':').map(Number);
+      const [closeHour, closeMinute] = closeTime.split(':').map(Number);
+
+      let currentTime = new Date(requestedDate);
+      currentTime.setHours(openHour, openMinute, 0, 0);
+
+      const endOfDay = new Date(requestedDate);
+      endOfDay.setHours(closeHour, closeMinute, 0, 0);
+
+      while (currentTime < endOfDay) {
+        const slotEndTime = new Date(currentTime.getTime() + duration * 60000);
+
+        if (slotEndTime <= endOfDay) {
+          const timeStr = currentTime.toTimeString().substring(0, 5);
+
+          // Verificar disponibilidad mejorada
+          const availabilityCheck = this.checkSlotAvailabilityAdvanced(
+            currentTime,
+            slotEndTime,
+            existingAppointments,
+            includeReasons,
+            requestedDate
+          );
+
+          const slot: TimeSlotDto = {
+            time: timeStr,
+            available: availabilityCheck.available,
+            ...(includeReasons && availabilityCheck.reason && { reason: availabilityCheck.reason })
+          };
+
+          // Incluir slot según configuración
+          if (availabilityCheck.available || includeUnavailable) {
+            slots.push(slot);
+          }
+        }
+
+        // Avanzar usando la lógica existente (duración + buffer)
+        currentTime.setTime(currentTime.getTime() + (duration + appointmentSettings.bufferTime) * 60000);
+      }
+
+      result.slots = slots;
+      result.totalSlots = slots.length;
+      result.totalAvailableSlots = slots.filter(slot => slot.available).length;
+      result.totalOccupiedSlots = slots.filter(slot => !slot.available).length;
+
+      return BaseResponseDto.success(result);
+
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      
+      console.error('Error calculating availability:', error);
+      throw new BadRequestException('Error calculando disponibilidad');
+    }
+  }
+
+  // Método auxiliar para verificar disponibilidad de slot con información detallada
+  private checkSlotAvailabilityAdvanced(
+    slotStart: Date,
+    slotEnd: Date,
+    existingAppointments: any[],
+    includeReasons: boolean,
+    requestedDate: Date
+  ): { available: boolean; reason?: string } {
+    // Verificar conflictos con citas existentes
+    for (const appointment of existingAppointments) {
+      if (slotStart < appointment.endTime && slotEnd > appointment.startTime) {
+        const reason = includeReasons 
+          ? `Ocupado - ${appointment.serviceType?.name || 'Cita'} (${appointment.client?.firstName || 'Cliente'} ${appointment.client?.lastName || ''})`
+          : 'Horario ocupado';
+        
+        return { available: false, reason };
+      }
+    }
+
+    // Verificar si es muy próximo al horario actual (solo para fechas actuales/futuras)
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    requestedDate.setHours(0, 0, 0, 0);
+
+    // Solo aplicar validación de "muy próximo" si la fecha consultada es hoy o futura
+    if (requestedDate >= today) {
+      const minimumAdvanceTime = 30; // 30 minutos de anticipación mínima
+      const earliestBooking = new Date(now.getTime() + minimumAdvanceTime * 60000);
+
+      if (slotStart <= earliestBooking) {
+        const reason = includeReasons 
+          ? 'Muy próximo al horario actual'
+          : 'No disponible';
+        
+        return { available: false, reason };
+      }
+    }
+
+    return { available: true };
+  }
+
+  // Método auxiliar para obtener nombre del día
+  private getDayName(dayOfWeek: number): string {
+    const days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    return days[dayOfWeek];
   }
 }

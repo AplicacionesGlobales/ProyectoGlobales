@@ -10,9 +10,10 @@ import {
   Max,
   IsNotEmpty,
   MinLength,
-  MaxLength
+  MaxLength,
+  IsBoolean
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export enum AppointmentStatus {
   PENDING = 'PENDING',
@@ -332,6 +333,123 @@ export class TimeSlotDto {
 
   @ApiPropertyOptional({ example: 'Horario ocupado' })
   reason?: string;
+}
+
+// NUEVO: DTO para cálculo avanzado de disponibilidad
+export class CalculateAvailabilityDto {
+  @ApiProperty({ 
+    example: '2024-08-20', 
+    description: 'Fecha para calcular disponibilidad (YYYY-MM-DD)' 
+  })
+  @IsDateString()
+  @IsNotEmpty()
+  date: string;
+
+  @ApiPropertyOptional({ 
+    example: 30, 
+    description: 'Duración deseada en minutos (opcional, usa la configuración del negocio)',
+    minimum: 15,
+    maximum: 480
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(15)
+  @Max(480)
+  @IsOptional()
+  duration?: number;
+
+  @ApiPropertyOptional({ 
+    example: false, 
+    description: 'Incluir slots no disponibles en la respuesta (por defecto false)' 
+  })
+  @Type(() => Boolean)
+  @IsBoolean()
+  @IsOptional()
+  includeUnavailable?: boolean;
+
+  @ApiPropertyOptional({ 
+    example: true, 
+    description: 'Incluir razones por las que un slot no está disponible (por defecto true)' 
+  })
+  @Type(() => Boolean)
+  @IsBoolean()
+  @IsOptional()
+  includeReasons?: boolean;
+}
+
+// NUEVO: DTO para respuesta de cálculo de disponibilidad
+export class AvailabilityCalculationResultDto {
+  @ApiProperty({ 
+    example: '2024-08-20', 
+    description: 'Fecha consultada' 
+  })
+  date: string;
+
+  @ApiProperty({ 
+    example: 'lunes', 
+    description: 'Nombre del día de la semana' 
+  })
+  dayName: string;
+
+  @ApiProperty({ 
+    example: true, 
+    description: 'Indica si el negocio está abierto este día' 
+  })
+  isOpen: boolean;
+
+  @ApiProperty({ 
+    example: '09:00', 
+    description: 'Hora de apertura' 
+  })
+  openTime?: string;
+
+  @ApiProperty({ 
+    example: '18:00', 
+    description: 'Hora de cierre' 
+  })
+  closeTime?: string;
+
+  @ApiProperty({ 
+    type: [TimeSlotDto],
+    description: 'Lista de slots de tiempo disponibles'
+  })
+  slots: TimeSlotDto[];
+
+  @ApiProperty({ 
+    example: 15, 
+    description: 'Total de slots disponibles' 
+  })
+  totalAvailableSlots: number;
+
+  @ApiProperty({ 
+    example: 3, 
+    description: 'Total de slots ocupados' 
+  })
+  totalOccupiedSlots: number;
+
+  @ApiProperty({ 
+    example: 18, 
+    description: 'Total de slots calculados' 
+  })
+  totalSlots: number;
+
+  @ApiProperty({ 
+    example: 30, 
+    description: 'Duración utilizada para el cálculo (en minutos)' 
+  })
+  usedDuration: number;
+
+  @ApiProperty({ 
+    example: '2024-08-19T10:30:00.000Z', 
+    description: 'Timestamp de cuando se realizó el cálculo' 
+  })
+  calculatedAt: string;
+
+  @ApiPropertyOptional({ 
+    example: 'Día especial - Feriado', 
+    description: 'Información adicional sobre el día (horarios especiales, etc.)' 
+  })
+  specialNote?: string;
 }
 
 export class CancelAppointmentDto {
