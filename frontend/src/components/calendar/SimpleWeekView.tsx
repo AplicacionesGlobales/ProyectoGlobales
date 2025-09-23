@@ -1,17 +1,18 @@
 // src/components/calendar/SimpleWeekView.tsx
 // Vista semanal simplificada tipo cards
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
   RefreshControl,
-  StyleSheet 
+  StyleSheet
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCalendar } from '@/contexts/CalendarContext';
+import StatusIndicator from './StatusIndicator';
 
 interface SimpleWeekViewProps {
   onDateSelect?: (date: string) => void;
@@ -34,14 +35,20 @@ const SimpleWeekView: React.FC<SimpleWeekViewProps> = ({ onDateSelect }) => {
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
       day.setDate(startOfWeek.getDate() + i);
-      
+
       const dateStr = day.toISOString().split('T')[0];
-      
+
       // Buscar citas para este día en los datos de la semana
       const dayAppointments = state.weekData?.filter((apt: any) => {
         const aptDate = new Date(apt.startTime).toISOString().split('T')[0];
         return aptDate === dateStr;
       }) || [];
+
+      // Calcular conteos por estado para StatusIndicator
+      const statusCounts = dayAppointments.reduce((counts: any, apt: any) => {
+        counts[apt.status] = (counts[apt.status] || 0) + 1;
+        return counts;
+      }, {});
 
       weekDays.push({
         date: dateStr,
@@ -49,7 +56,8 @@ const SimpleWeekView: React.FC<SimpleWeekViewProps> = ({ onDateSelect }) => {
         dayName: day.toLocaleDateString('es-ES', { weekday: 'short' }),
         isToday: dateStr === today,
         appointmentCount: dayAppointments.length,
-        hasAppointments: dayAppointments.length > 0
+        hasAppointments: dayAppointments.length > 0,
+        statusCounts: dayAppointments.length > 0 ? statusCounts : undefined
       });
     }
 
@@ -223,27 +231,34 @@ const SimpleWeekView: React.FC<SimpleWeekViewProps> = ({ onDateSelect }) => {
                   </View>
                 )}
               </View>
-              
+
               <View style={styles.appointmentInfo}>
                 {dayData.hasAppointments ? (
-                  <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <StatusIndicator
+                      statusCounts={dayData.statusCounts}
+                      variant="dots"
+                      size="small"
+                      showText={false}
+                      maxDots={3}
+                    />
                     <Text style={styles.appointmentCount}>
                       {dayData.appointmentCount}
                     </Text>
                     <Text style={styles.appointmentLabel}>
                       {dayData.appointmentCount === 1 ? 'cita' : 'citas'}
                     </Text>
-                  </>
+                  </View>
                 ) : (
                   <Text style={styles.noAppointments}>Sin citas</Text>
                 )}
               </View>
             </View>
-            
-            <Ionicons 
-              name="chevron-forward" 
-              size={20} 
-              color={colors.textSecondary} 
+
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textSecondary}
               style={styles.chevronIcon}
             />
           </TouchableOpacity>

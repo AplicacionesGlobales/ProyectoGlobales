@@ -1,9 +1,10 @@
 // src/components/calendar/base/CalendarTimeSlot.tsx  
-// Componente TimeSlot con colores unificados del tema
+// Componente TimeSlot con StatusIndicator integrado
 
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import StatusIndicator from '../StatusIndicator';
 import type { CalendarAppointment } from '@/types/calendar';
 
 interface CalendarTimeSlotProps {
@@ -45,27 +46,9 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
 
   const getSlotStyle = () => {
     if (disabled) return styles.disabled;
-    if (appointment) return styles.occupied;
     if (isCurrentTime) return styles.currentTime;
     if (isAvailable) return styles.available;
     return styles.unavailable;
-  };
-
-  const getAppointmentColor = () => {
-    if (!appointment) return colors.primary;
-    
-    switch (appointment.status) {
-      case 'CONFIRMED':
-        return '#10B981'; // green
-      case 'PENDING':
-        return '#F59E0B'; // amber
-      case 'COMPLETED':
-        return '#6B7280'; // gray
-      case 'CANCELLED':
-        return '#EF4444'; // red
-      default:
-        return colors.primary;
-    }
   };
 
   const styles = StyleSheet.create({
@@ -103,9 +86,7 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
       backgroundColor: colors.textSecondary + '05',
     },
     occupied: {
-      backgroundColor: getAppointmentColor() + '20',
-      borderLeftWidth: 4,
-      borderLeftColor: getAppointmentColor(),
+      backgroundColor: colors.surface,
       borderRadius: 8,
     },
     currentTime: {
@@ -125,29 +106,12 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
       fontSize: 12,
       fontWeight: '600',
       color: colors.text,
+      marginBottom: 2,
     },
     appointmentSubtitle: {
       fontSize: 10,
       color: colors.textSecondary,
-      marginTop: 2,
-    },
-    appointmentStatus: {
-      fontSize: 9,
-      fontWeight: '500',
-      marginTop: 2,
-      textTransform: 'uppercase',
-    },
-    statusConfirmed: {
-      color: '#10B981',
-    },
-    statusPending: {
-      color: '#F59E0B',
-    },
-    statusCompleted: {
-      color: '#6B7280',
-    },
-    statusCancelled: {
-      color: '#EF4444',
+      marginBottom: 4,
     },
     availableText: {
       fontSize: 11,
@@ -161,23 +125,13 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
   });
 
   const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'CONFIRMED': return styles.statusConfirmed;
-      case 'PENDING': return styles.statusPending;
-      case 'COMPLETED': return styles.statusCompleted;
-      case 'CANCELLED': return styles.statusCancelled;
-      default: return styles.statusPending;
-    }
+    // Esta función ya no se usa, se mantiene para compatibilidad
+    return {};
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case 'CONFIRMED': return 'Confirmada';
-      case 'PENDING': return 'Pendiente';
-      case 'COMPLETED': return 'Completada';
-      case 'CANCELLED': return 'Cancelada';
-      default: return status;
-    }
+    // Esta función ya no se usa, se mantiene para compatibilidad
+    return status;
   };
 
   const handlePress = () => {
@@ -205,7 +159,11 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
 
       {/* Slot Content */}
       <Pressable
-        style={[styles.slotContainer, getSlotStyle()]}
+        style={[
+          styles.slotContainer,
+          getSlotStyle(),
+          appointment && styles.occupied
+        ]}
         onPress={handlePress}
         onLongPress={handleLongPress}
         disabled={disabled}
@@ -221,9 +179,14 @@ const CalendarTimeSlot: React.FC<CalendarTimeSlotProps> = ({
                 {appointment.serviceType.name}
               </Text>
             )}
-            <Text style={[styles.appointmentStatus, getStatusStyle(appointment.status)]}>
-              {getStatusText(appointment.status)}
-            </Text>
+            <StatusIndicator
+              status={appointment.status as any}
+              serviceColor={appointment.serviceType?.color}
+              variant="badge"
+              size="small"
+              showText={true}
+              showIcon={false}
+            />
           </View>
         ) : isAvailable ? (
           <Text style={styles.availableText}>

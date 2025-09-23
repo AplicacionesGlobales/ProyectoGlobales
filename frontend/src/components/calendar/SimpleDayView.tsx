@@ -1,17 +1,18 @@
 // src/components/calendar/SimpleDayView.tsx
 // Vista diaria simplificada y robusta
 import React from 'react';
-import { 
-  View, 
-  ScrollView, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  ScrollView,
+  Text,
+  StyleSheet,
   RefreshControl,
-  TouchableOpacity 
+  TouchableOpacity
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCalendar } from '@/contexts/CalendarContext';
+import StatusIndicator from './StatusIndicator';
 
 interface SimpleDayViewProps {
   onSlotPress?: (time: string) => void;
@@ -27,7 +28,7 @@ const SimpleDayView: React.FC<SimpleDayViewProps> = ({
 
   const generateTimeSlots = () => {
     if (!state.dayData?.businessHours) return [];
-    
+
     const { start, end, isClosed } = state.dayData.businessHours;
     if (isClosed) return [];
 
@@ -41,14 +42,14 @@ const SimpleDayView: React.FC<SimpleDayViewProps> = ({
     for (let hour = startHour; hour < endHour; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        
+
         // Buscar si hay una cita en este horario
         const appointment = dayAppointments.find((apt: any) => {
           const aptStartTime = new Date(apt.startTime);
           const aptHour = aptStartTime.getUTCHours();
           const aptMinute = aptStartTime.getUTCMinutes();
           const aptTimeStr = `${aptHour.toString().padStart(2, '0')}:${aptMinute.toString().padStart(2, '0')}`;
-          
+
           return aptTimeStr === timeStr;
         });
 
@@ -166,10 +167,10 @@ const SimpleDayView: React.FC<SimpleDayViewProps> = ({
   if (state.dayData?.businessHours?.isClosed) {
     return (
       <View style={styles.closedContainer}>
-        <Ionicons 
-          name="lock-closed" 
-          size={48} 
-          color={colors.textSecondary + '40'} 
+        <Ionicons
+          name="lock-closed"
+          size={48}
+          color={colors.textSecondary + '40'}
         />
         <Text style={styles.closedText}>
           Cerrado este día
@@ -181,10 +182,10 @@ const SimpleDayView: React.FC<SimpleDayViewProps> = ({
   if (!timeSlots.length) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons 
-          name="calendar-outline" 
-          size={48} 
-          color={colors.textSecondary + '40'} 
+        <Ionicons
+          name="calendar-outline"
+          size={48}
+          color={colors.textSecondary + '40'}
         />
         <Text style={styles.emptyText}>
           No hay horarios disponibles
@@ -221,15 +222,37 @@ const SimpleDayView: React.FC<SimpleDayViewProps> = ({
           <View style={styles.timeColumn}>
             <Text style={styles.timeText}>{slot.time}</Text>
           </View>
-          
+
           <View style={[
             styles.slotContent,
             slot.isAvailable ? styles.availableSlot : styles.occupiedSlot
           ]}>
             {slot.appointment ? (
               <>
-                <Text style={styles.appointmentText}>Reservado</Text>
-                <Text style={styles.reservedText}>Cita programada</Text>
+                <Text style={styles.appointmentText}>
+                  Cita Reservada
+                </Text>
+                {slot.appointment.serviceType ? (
+                  <Text style={styles.reservedText}>
+                    {slot.appointment.serviceType.name}
+                  </Text>
+                ) : slot.appointment.serviceTypeId ? (
+                  <Text style={styles.reservedText}>
+                    Servicio #{slot.appointment.serviceTypeId}
+                  </Text>
+                ) : (
+                  <Text style={styles.reservedText}>
+                    Servicio programado
+                  </Text>
+                )}
+                <StatusIndicator
+                  status={slot.appointment.status}
+                  serviceColor={slot.appointment.serviceType?.color}
+                  variant="badge"
+                  size="small"
+                  showText={true}
+                  showIcon={false}
+                />
               </>
             ) : (
               <Text style={styles.availableText}>Disponible</Text>

@@ -2,11 +2,11 @@
 // Vista semanal simplificada tipo cards con indicadores de ocupación
 
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   ScrollView,
   RefreshControl,
   Dimensions
@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useOptimizedWeeklyCalendar } from '@/hooks/useOptimizedWeeklyCalendar';
+import StatusIndicator from './StatusIndicator';
 import type { CalendarConfiguration, CalendarInteractions } from '@/types/calendar';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -32,6 +33,8 @@ interface WeekDayData {
   totalAppointments: number;
   confirmedAppointments: number;
   pendingAppointments: number;
+  completedAppointments: number;
+  cancelledAppointments: number;
   occupancyPercentage: number;
   isBusinessOpen: boolean;
   isToday: boolean;
@@ -46,7 +49,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
   onDateSelect
 }) => {
   const { colors } = useTheme();
-  
+
   const {
     currentWeekStart,
     weekData,
@@ -80,7 +83,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       };
-      
+
       return normalizeDate(date1) === normalizeDate(date2);
     } catch (error) {
       console.error('Error comparing dates:', error, { date1, date2 });
@@ -94,9 +97,11 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
       const appointments = getDayAppointments(day.date);
       const confirmedAppointments = appointments.filter(apt => apt.status === 'CONFIRMED').length;
       const pendingAppointments = appointments.filter(apt => apt.status === 'PENDING').length;
-      
+      const completedAppointments = appointments.filter(apt => apt.status === 'COMPLETED').length;
+      const cancelledAppointments = appointments.filter(apt => apt.status === 'CANCELLED').length;
+
       // Calcular ocupación basado en horas de negocio
-      const businessMinutes = day.businessHours.isClosed ? 0 : 
+      const businessMinutes = day.businessHours.isClosed ? 0 :
         (parseInt(day.businessHours.end.split(':')[0]) - parseInt(day.businessHours.start.split(':')[0])) * 60;
       const occupiedMinutes = appointments.reduce((total, apt) => total + apt.duration, 0);
       const occupancyPercentage = businessMinutes > 0 ? (occupiedMinutes / businessMinutes) * 100 : 0;
@@ -110,6 +115,8 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
         totalAppointments: appointments.length,
         confirmedAppointments,
         pendingAppointments,
+        completedAppointments,
+        cancelledAppointments,
         occupancyPercentage,
         isBusinessOpen: !day.businessHours.isClosed,
         isToday: isSameDate(day.date, todayStr)
@@ -356,7 +363,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
             <TouchableOpacity style={styles.navButton} onPress={navigateToPreviousWeek}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </TouchableOpacity>
-            
+
             <Text style={styles.weekRange}>
               {formatWeekRange()}
             </Text>
@@ -366,7 +373,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
             </TouchableOpacity>
           </View>
         )}
-        
+
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>
             Error al cargar el calendario: {error.message}
@@ -385,7 +392,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
     totalBusinessDays: weekDaysData.filter(day => day.isBusinessOpen).length,
     averageOccupancy: weekDaysData
       .filter(day => day.isBusinessOpen)
-      .reduce((sum, day) => sum + day.occupancyPercentage, 0) / 
+      .reduce((sum, day) => sum + day.occupancyPercentage, 0) /
       weekDaysData.filter(day => day.isBusinessOpen).length || 0
   };
 
@@ -397,7 +404,7 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
           <TouchableOpacity style={styles.navButton} onPress={navigateToPreviousWeek}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity onPress={navigateToCurrentWeek}>
             <Text style={styles.weekRange}>
               {formatWeekRange()}
@@ -491,29 +498,27 @@ const WeeklyCalendarView: React.FC<WeeklyCalendarViewProps> = ({
                   )}
                 </View>
 
-                {/* Indicador de ocupación */}
+                {/* Indicador de ocupación con StatusIndicator */}
                 {dayData.isBusinessOpen && (
-                  <View style={styles.occupancyIndicator}>
-                    <View style={[
-                      styles.occupancyDot,
-                      { backgroundColor: getOccupancyColor(dayData.occupancyPercentage) }
-                    ]} />
-                    <Text style={[
-                      styles.occupancyLevel,
-                      { color: getOccupancyColor(dayData.occupancyPercentage) }
-                    ]}>
-                      {getOccupancyLevel(dayData.occupancyPercentage)}
-                    </Text>
-                    <Text style={styles.occupancyPercentage}>
-                      {dayData.occupancyPercentage.toFixed(0)}%
-                    </Text>
-                  </View>
+                  <StatusIndicator
+                    variant="dots"
+                    size="small"
+                    statusCounts={{
+                      CONFIRMED: dayData.confirmedAppointments,
+                      PENDING: dayData.pendingAppointments,
+                      COMPLETED: dayData.completedAppointments,
+                      CANCELLED: dayData.cancelledAppointments
+                    }}
+                    showText={true}
+                    customText={`${dayData.totalAppointments} citas`}
+                    maxDots={3}
+                  />
                 )}
 
-                <Ionicons 
-                  name="chevron-forward" 
-                  size={20} 
-                  color={colors.textSecondary} 
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textSecondary}
                   style={styles.chevronIcon}
                 />
               </TouchableOpacity>
