@@ -39,7 +39,7 @@ import {
 
 @ApiTags('Schedule Management')
 @Controller('brand/:brandId')
-@UseGuards(JwtAuthGuard, BrandOwnerGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) { }
@@ -56,7 +56,7 @@ export class ScheduleController {
     description: 'Horarios de negocio obtenidos exitosamente',
     type: BaseResponseDto
   })
-  async getBusinessHours(
+  async getBusinessHours( 
     @Param('brandId') brandId: string,
     @Request() req: any
   ): Promise<BaseResponseDto<BusinessHoursDto[]>> {
@@ -64,6 +64,7 @@ export class ScheduleController {
   }
 
   @Put('business-hours')
+  @UseGuards(BrandOwnerGuard)
   @ApiOperation({
     summary: 'Actualizar horarios de negocio',
     description: 'Actualiza los horarios regulares de operación para cada día de la semana'
@@ -89,6 +90,7 @@ export class ScheduleController {
 
   // Availability Schedule Endpoints
   @Post('availability/schedule')
+  @UseGuards(BrandOwnerGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Registrar horarios de disponibilidad inicial',
@@ -154,6 +156,7 @@ export class ScheduleController {
   }
 
   @Post('special-hours')
+  @UseGuards(BrandOwnerGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Crear horario especial',
@@ -179,6 +182,7 @@ export class ScheduleController {
   }
 
   @Put('special-hours/:specialHourId')
+  @UseGuards(BrandOwnerGuard)
   @ApiOperation({
     summary: 'Actualizar horario especial',
     description: 'Actualiza una excepción en el horario regular existente'
@@ -206,6 +210,7 @@ export class ScheduleController {
   }
 
   @Delete('special-hours/:specialHourId')
+  @UseGuards(BrandOwnerGuard) 
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Eliminar horario especial',
@@ -252,6 +257,7 @@ export class ScheduleController {
   }
 
   @Put('appointment-settings')
+  @UseGuards(BrandOwnerGuard)
   @ApiOperation({
     summary: 'Actualizar configuración de citas',
     description: 'Actualiza la configuración general para las citas'

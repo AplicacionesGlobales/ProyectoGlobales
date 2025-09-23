@@ -9,6 +9,7 @@ import { FileService } from '../common/services/file.service';
 import { PlanService } from '../common/services/plan.service';
 import { PaymentService } from '../common/services/payment.service';
 import { ColorPaletteService } from './services/color-palette.service';
+import { GoogleAuthService } from './services/google-auth.service';
 import { UserRole } from '../../generated/prisma';
 import * as bcrypt from 'bcryptjs';
 
@@ -94,6 +95,11 @@ const mockServices = {
     processPaymentForPlan: jest.fn(),
   },
   colorPalette: {},
+  googleAuth: {
+    validateGoogleToken: jest.fn(),
+    getGoogleAuthUrl: jest.fn(),
+    handleGoogleCallback: jest.fn(),
+  },
 } as any;
 
 describe('AuthService', () => {
@@ -113,6 +119,7 @@ describe('AuthService', () => {
         { provide: PlanService, useValue: mockServices.plan },
         { provide: PaymentService, useValue: mockServices.payment },
         { provide: ColorPaletteService, useValue: mockServices.colorPalette },
+        { provide: GoogleAuthService, useValue: mockServices.googleAuth },
       ],
     }).compile();
 
@@ -121,8 +128,8 @@ describe('AuthService', () => {
 
     // Setup default mocks
     mockServices.config.get.mockReturnValue('TestApp');
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => { });
+    jest.spyOn(console, 'error').mockImplementation(() => { });
     jest.clearAllMocks();
   });
 

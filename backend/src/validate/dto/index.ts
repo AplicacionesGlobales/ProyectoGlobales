@@ -2,3 +2,4 @@
 export * from './validate-email.dto';
 export * from './validate-username.dto';
 export * from './validate-payment.dto';
+export * from './validate-calendar.dto';

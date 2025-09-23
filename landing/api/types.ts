@@ -272,3 +272,28 @@ export interface CalendarEvent extends Appointment {
     serviceName: string;
   };
 }
+
+// Calendar Validation types
+export interface ValidateCalendarRequest {
+  date: string; // YYYY-MM-DD format
+  time: string; // HH:MM format (24 hours)
+}
+
+export interface CalendarValidationResponse {
+  isAvailable: boolean;
+  message: string;
+  date: string;
+  time: string;
+  reason?: string;
+}
+// Appointment Settings types
+export interface AppointmentSettings {
+  id: number;
+  defaultDuration: number;
+  bufferTime: number;
+  maxAdvanceBookingDays: number;
+  minAdvanceBookingHours: number;
+  allowSameDayBooking: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

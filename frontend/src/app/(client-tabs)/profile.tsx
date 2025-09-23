@@ -24,6 +24,7 @@ import {
   ProfileStats,
   RecentAppointment,
 } from '@/types/profile.types';
+import { ClientHistoryView } from '@/components/History';
 
 export default function ProfileScreen() {
   const { user, logout, appointments } = useApp();
@@ -173,6 +174,11 @@ export default function ProfileScreen() {
     Alert.alert('Ayuda', 'Próximamente disponible');
   };
 
+  // Manejar historial completo
+  const handleFullHistory = () => {
+    router.push('./history');
+  };
+
   // Manejar historial de pagos
   const handlePaymentHistory = () => {
     Alert.alert('Historial de Pagos', 'Próximamente disponible');
@@ -273,6 +279,15 @@ export default function ProfileScreen() {
               isLast
             />
           )}
+        </ProfileSection>
+
+        {/* Historial Completo */}
+        <ProfileSection title="Historial Reciente">
+          <ClientHistoryView
+            showTitle={false}
+            maxItems={5}
+            onSeeAll={handleFullHistory}
+          />
         </ProfileSection>
 
         {/* Configuración */}

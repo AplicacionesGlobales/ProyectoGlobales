@@ -16,6 +16,8 @@ import { ScheduleModule } from './schedule/schedule.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { ClientModule } from './client/client.module';
 import { PublicAvailabilityModule } from './public-availability/public-availability.module';
+import { ServiceTypeModule } from './service-type/service-type.module';
+import { BrandFeaturesModule } from './brand-features/brand-features.module';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { PublicAvailabilityModule } from './public-availability/public-availabil
     AppointmentsModule,
     ClientModule,
     PublicAvailabilityModule,
+    ServiceTypeModule,
+    BrandFeaturesModule,
   ],
   controllers: [],
   providers: [

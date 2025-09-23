@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useError, ErrorUtils } from '@/components/ui/errors';
 import { useTheme } from '@/contexts/ThemeContext';
 import { authService } from '../../services/authService';
+import { googleAuthService } from '../../services/googleAuth.universal.service';
 import { useEmailValidation } from '../../hooks/useEmailValidation';
 import { useUsernameValidation } from '../../hooks/useUsernameValidation';
 import { usePasswordValidation } from '../../hooks/usePasswordValidation';
@@ -20,7 +21,7 @@ import ThemedButton from '@/components/ui/ThemedButton';
 export default function RegisterScreen() {
   // Theme and config
   const { colors, isConfigLoaded } = useTheme();
-  
+
   // Form states
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -28,7 +29,7 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   // UI states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -40,19 +41,19 @@ export default function RegisterScreen() {
   const { showToast, showSuccess, showValidationErrors } = useError();
 
   // Email validation hook
-  const { 
-    isValidating: isValidatingEmail, 
-    isEmailAvailable, 
-    validateEmailRealtime, 
-    clearValidation: clearEmailValidation 
+  const {
+    isValidating: isValidatingEmail,
+    isEmailAvailable,
+    validateEmailRealtime,
+    clearValidation: clearEmailValidation
   } = useEmailValidation();
 
   // Username validation hook
-  const { 
-    isValidating: isValidatingUsername, 
-    isUsernameAvailable, 
-    validateUsernameRealtime, 
-    clearValidation: clearUsernameValidation 
+  const {
+    isValidating: isValidatingUsername,
+    isUsernameAvailable,
+    validateUsernameRealtime,
+    clearValidation: clearUsernameValidation
   } = useUsernameValidation();
 
   // Password validation hook
@@ -125,16 +126,16 @@ export default function RegisterScreen() {
       password,
       confirmPassword
     );
-    
+
     setValidationErrors(localErrors);
-    
+
     const hasErrors = Object.values(localErrors).some(error => error !== null);
-    
+
     if (hasErrors) {
       const fieldErrors = Object.entries(localErrors)
         .filter(([_, error]) => error !== null)
         .map(([field, message]) => ({ field, message: message! }));
-      
+
       showValidationErrors(fieldErrors);
       return;
     }
@@ -145,7 +146,7 @@ export default function RegisterScreen() {
     }
 
     setLoading(true);
-    
+
     try {
       // Check password validation
       if (!passwordValidation.validation.isValid) {
@@ -178,10 +179,10 @@ export default function RegisterScreen() {
       setTimeout(() => {
         router.replace('/');
       }, 1000);
-      
+
     } catch (error: any) {
       console.error('Registration error:', error);
-      
+
       // Handle backend validation errors
       if (error?.message) {
         if (error.message.includes('email')) {
@@ -207,8 +208,42 @@ export default function RegisterScreen() {
     router.navigate('./login');
   };
 
-  const handleGoogleSignUp = () => {
-    showToast('Google sign up coming soon!', 'info', 'medium');
+  const handleGoogleSignUp = async () => {
+    try {
+      console.log('🔍 Iniciando Google Sign-Up...');
+
+      const result = await googleAuthService.signIn();
+
+      if (!result.success) {
+        showToast(result.error || 'Google sign-up failed', 'error', 'high');
+        return;
+      }
+
+      if (!result.idToken) {
+        showToast('No se pudo obtener el token de Google', 'error', 'high');
+        return;
+      }
+
+      console.log('🔑 Token obtenido, registrando con backend...');
+
+      // Para registro, siempre usar rememberMe false inicialmente
+      const authResponse = await authService.loginWithGoogle(result.idToken, false);
+
+      showSuccess(`¡Bienvenido ${result.user?.name || authResponse.user.firstName}! Tu cuenta ha sido creada.`, 4000);
+
+      setTimeout(() => {
+        router.replace('/');
+      }, 1000);
+
+    } catch (error: any) {
+      console.error('❌ Error en Google sign-up:', error);
+
+      if (error.message?.includes('cancelled')) {
+        showToast('Sign-up cancelado', 'info', 'medium');
+      } else {
+        showToast(error.message || 'Error en Google sign-up', 'error', 'high');
+      }
+    }
   };
 
   const handleAppleSignUp = () => {
@@ -218,11 +253,11 @@ export default function RegisterScreen() {
   // Show loading state while config loads
   if (!isConfigLoaded) {
     return (
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
+      <View style={{
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.background 
+        backgroundColor: colors.background
       }}>
         {/* Loading spinner while theme loads */}
       </View>
@@ -232,7 +267,7 @@ export default function RegisterScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar style="light" />
-      
+
       {/* Dynamic Gradient Background */}
       <LinearGradient
         colors={[colors.primary, colors.accent, colors.secondary]}
@@ -247,11 +282,11 @@ export default function RegisterScreen() {
         }}
       />
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView 
+        <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
@@ -267,7 +302,7 @@ export default function RegisterScreen() {
             paddingBottom: 40,
           }}>
             {/* Header with progress */}
-            <RegisterHeader 
+            <RegisterHeader
               title="Create Account"
               subtitle="Join Agenda Pro today"
               icon="person-add"

@@ -40,3 +40,8 @@ app-example
 
 # Android build files
 frontend/android/
+
+# Google Services (production files - keep placeholders)
+google-services.json
+GoogleService-Info.plist
+# Note: Keep placeholder files in repo, but ignore real ones

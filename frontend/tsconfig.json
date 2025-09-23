@@ -9,7 +9,10 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ]
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
     }
   },
   "include": [
@@ -17,5 +20,8 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "src/deprecated/**/*"
   ]
 }

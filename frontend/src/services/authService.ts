@@ -23,9 +23,8 @@ import { EditProfileData } from '../types/profile.types';
 import { secureStorage, TokenUtils } from '../utils/secureStorage';
 import Constants from 'expo-constants';
 
-// Obtener brandId del .env
 const getBrandId = (): number => {
-  const brandId = process.env.EXPO_PUBLIC_BRAND_ID || Constants.expoConfig?.extra?.brand_id || '1';
+  const brandId = process.env.EXPO_PUBLIC_BRAND_ID || Constants.expoConfig?.extra?.brand_id;
   console.log('🏷️ Usando brandId:', brandId);
   return parseInt(brandId);
 };
@@ -46,6 +45,8 @@ export interface IAuthService {
   autoRefreshToken(): Promise<boolean>;
   // Métodos de perfil
   updateProfile(data: EditProfileData): Promise<any>;
+  // Método de Google Sign-In
+  loginWithGoogle(idToken: string, rememberMe?: boolean): Promise<AuthResponse>;
 }
 
 class AuthService implements IAuthService {
@@ -425,6 +426,65 @@ class AuthService implements IAuthService {
       return result;
     } catch (error) {
       console.error('❌ Error en updateProfile:', error);
+      throw error;
+    }
+  }
+
+  async loginWithGoogle(idToken: string, rememberMe: boolean = false): Promise<AuthResponse> {
+    try {
+      console.log('🔍 Login con Google iniciado');
+
+      const response = await fetch(`${this.baseURL}/auth/google/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          idToken,
+          brandId: getBrandId(),
+          rememberMe,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Google authentication failed');
+      }
+
+      const result = await response.json();
+
+      if (!result.success || !result.data) {
+        throw new Error(result.errors?.[0]?.description || 'Google login failed');
+      }
+
+      const authData: AuthResponse = {
+        user: result.data.user,
+        brand: result.data.brand,
+        token: result.data.token,
+        refreshToken: result.data.refreshToken,
+        rememberMe: result.data.rememberMe || false,
+      };
+
+      console.log('✅ Google login exitoso');
+
+      // Almacenar tokens y datos
+      await secureStorage.storeAccessToken(authData.token, authData.rememberMe);
+      await secureStorage.storeRememberMe(authData.rememberMe);
+      await secureStorage.storeUserData({
+        user: authData.user,
+        brand: authData.brand,
+      }, authData.rememberMe);
+
+      // Almacenar refresh token si existe
+      if (authData.refreshToken) {
+        await secureStorage.storeRefreshToken(authData.refreshToken);
+        this.startTokenAutoRenewal();
+        console.log('🔄 Auto-renovación iniciada para Google login');
+      }
+
+      return authData;
+    } catch (error: any) {
+      console.error('❌ Error en loginWithGoogle:', error);
       throw error;
     }
   }

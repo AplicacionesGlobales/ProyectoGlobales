@@ -211,3 +211,103 @@ export interface AppConfigData {
     height: number;
   };
 }
+
+export interface ServiceType {
+  id: number;
+  brandId: number;
+  name: string;
+  description: string | null;
+  duration: number;
+  price: number | null;
+  color: string | null;
+  icon: string | null;
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceTypesResponse {
+  data: ServiceType[];
+}
+
+export interface CreateAppointmentRequest {
+  startTime: string; 
+  serviceTypeId?: number;
+  notes?: string;
+}
+
+export interface CreateAppointmentResponse {
+  success: boolean;
+  data: {
+    id: number;
+    brandId: number;
+    clientId: number;
+    serviceTypeId: number;
+    serviceType: {
+      id: number;
+      name: string;
+      description: string | null;
+      duration: number;
+      color: string;
+      icon: string | null;
+    };
+    startTime: string; 
+    endTime: string;  
+    duration: number;
+    status: "PENDING" | "CONFIRMED" | "CANCELLED" | string;
+    notes?: string;
+    createdBy: number;
+    createdAt: string;
+    updatedAt: string;
+    client: {
+      id: number;
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+    creator: {
+      id: number;
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+  };
+  message?: string;
+  errors?: Array<{ description: string }>;
+}
+
+export interface TimeSlot {
+  time: string;
+  available: boolean;
+  date: string;
+}
+
+export interface AvailableTimeSlotsResponse {
+  success: boolean;
+  data: TimeSlot[];
+  message?: string;
+}
+
+export interface AppointmentFormData {
+  selectedDate: Date | null;
+  selectedTime: string | null;
+  notes: string;
+  serviceTypeId: number | null;
+}
+
+// New types for appointment by date endpoints
+export interface AppointmentsByDateResponse {
+  success: boolean;
+  data: any[];
+}
+
+export interface AppointmentsByDateRangeResponse {
+  success: boolean;
+  data: {
+    appointments: any[];
+    total: number;
+    pages: number;
+  };
+}
+

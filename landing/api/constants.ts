@@ -147,6 +147,7 @@ export const API_ENDPOINTS = {
     PHONE: '/validate/phone',
     BRAND_NAME: '/validate/brand-name',
     PAYMENT: '/validate/payment',
+    CALENDAR_AVAILABLE: (brandId: number) => `/validate/calendar-available/${brandId}`,
   },
 
   // Function endpoints
@@ -172,6 +173,10 @@ export const API_ENDPOINTS = {
     IMAGE: '/upload/image',
     BRAND_LOGO: (brandId: number) => `/brand/${brandId}/upload/logo`,
     BRAND_IMAGES: (brandId: number) => `/brand/${brandId}/upload/images`,
+  },
+
+  SERVICES_TYPES: {
+    GET: (brandId: number) => `/brand/${brandId}/service-types`,
   },
   
   // Health check

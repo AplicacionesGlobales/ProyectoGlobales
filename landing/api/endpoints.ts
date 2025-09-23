@@ -13,6 +13,8 @@ import {
   BusinessType,
   Feature,
   Plan,
+  CalendarValidationResponse,
+  AppointmentSettings
 } from './types';
 
 class ApiClient {
@@ -33,10 +35,10 @@ class ApiClient {
       baseUrl: this.baseURL,
       endpoint
     });
-    
+
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-    
+
     const config: RequestInit = {
       ...API_CONFIG,
       ...options,
@@ -74,7 +76,7 @@ class ApiClient {
         try {
           const errorData = await response.json();
           if (errorData.message) {
-            errorMessage = Array.isArray(errorData.message) 
+            errorMessage = Array.isArray(errorData.message)
               ? errorData.message.join(', ')
               : errorData.message;
           } else if (errorData.errors && errorData.errors.length > 0) {
@@ -92,7 +94,7 @@ class ApiClient {
         hasData: !!data.data,
         dataType: typeof data.data
       });
-      
+
       return data;
     } catch (error) {
       console.error('🚨 API request failed:', {
@@ -118,16 +120,16 @@ class ApiClient {
 
   async postFormData<T>(endpoint: string, formData: FormData, options?: RequestInit): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     // Get auth token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-    
+
     console.log('📤 PostFormData request:', {
       url,
       hasToken: !!token,
       formDataKeys: Array.from(formData.keys())
     });
-    
+
     try {
       const headers: Record<string, string> = {
         // Don't set Content-Type for FormData - browser will set it automatically with boundary
@@ -155,7 +157,7 @@ class ApiClient {
         try {
           const errorData = await response.json();
           if (errorData.message) {
-            errorMessage = Array.isArray(errorData.message) 
+            errorMessage = Array.isArray(errorData.message)
               ? errorData.message.join(', ')
               : errorData.message;
           } else if (errorData.errors && errorData.errors.length > 0) {
@@ -190,6 +192,18 @@ class ApiClient {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     });
+  }
+
+  // Appointment settings methods
+  async getAppointmentSettings(brandId: number): Promise<ApiResponse<AppointmentSettings>> {
+    return this.get<AppointmentSettings>(API_ENDPOINTS.SCHEDULE.GET_APPOINTMENT_SETTINGS(brandId));
+  }
+
+  // Calendar validation methods  
+  async validateCalendarAvailability(brandId: number, date: string, time: string): Promise<ApiResponse<CalendarValidationResponse>> {
+    const params = new URLSearchParams({ date, time });
+    const endpoint = `${API_ENDPOINTS.VALIDATION.CALENDAR_AVAILABLE(brandId)}?${params}`;
+    return this.get<CalendarValidationResponse>(endpoint);
   }
 
   async delete<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
@@ -272,14 +286,14 @@ export const landingService = {
     try {
       const endpoint = API_ENDPOINTS.LANDING.CONFIG;
       console.log('📍 Making request to:', endpoint);
-      
+
       const response = await apiClient.get<LandingConfig>(endpoint);
       console.log('✅ landingService response received:', {
         success: response.success,
         hasData: !!response.data,
         errors: response.errors
       });
-      
+
       return response;
     } catch (error) {
       console.error('❌ landingService.getLandingConfig() failed:', error);

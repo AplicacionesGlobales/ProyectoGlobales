@@ -16,6 +16,8 @@ import {
   StatusStatisticsDto 
 } from './dto/status-transition.dto';
 
+// Contexto para la transición de estado
+
 export interface StatusTransitionContext {
   appointmentId: number;
   currentStatus: AppointmentStatus;
@@ -97,7 +99,7 @@ export class AppointmentStatusManagerService {
 
     // Verificar campos requeridos
     const requiredFields: string[] = [];
-    
+
     if (STATUS_CHANGE_REASONS_REQUIRED.includes(newStatus)) {
       requiredFields.push('reason');
     }
@@ -324,7 +326,7 @@ export class AppointmentStatusManagerService {
     endDate?: Date
   ): Promise<StatusStatisticsDto> {
     const where: any = { brandId };
-    
+
     if (startDate && endDate) {
       where.createdAt = {
         gte: startDate,
@@ -444,7 +446,7 @@ export class AppointmentStatusManagerService {
       if (appointment.status !== AppointmentStatus.CONFIRMED) {
         throw new BadRequestException('Solo se pueden iniciar citas confirmadas');
       }
-      
+
       // Solo ROOT/ADMIN pueden iniciar citas
       if (context.userRole !== UserRole.ROOT && !context.isOwner) {
         throw new ForbiddenException('Solo administradores pueden iniciar citas');
@@ -454,7 +456,7 @@ export class AppointmentStatusManagerService {
     // Regla: Validar tiempo mínimo para cancelación
     if (context.newStatus === AppointmentStatus.CANCELLED) {
       const hoursUntil = this.getHoursUntilAppointment(appointment.startTime);
-      
+
       if (hoursUntil < CANCELLATION_MIN_HOURS && hoursUntil >= 0) {
         // Solo clientes tienen restricción de tiempo mínimo
         if (context.userRole === UserRole.CLIENT && !context.isOwner) {
@@ -514,7 +516,7 @@ export class AppointmentStatusManagerService {
 
     // TODO: Implementar notificaciones cuando se configure el sistema de eventos
     // Por ejemplo: enviar email, SMS, webhook, etc.
-    
+
     // Eventos específicos por tipo de cambio
     const eventMap = {
       [AppointmentStatus.CONFIRMED]: 'appointment.confirmed',

@@ -3,14 +3,14 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AppointmentStatus } from 'generated/prisma';
 
 export class StatusTransitionDto {
-  @ApiProperty({ 
+  @ApiProperty({
     enum: AppointmentStatus,
-    description: 'Nuevo estado de la cita' 
+    description: 'Nuevo estado de la cita'
   })
   @IsEnum(AppointmentStatus)
   newStatus: AppointmentStatus;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Razón del cambio de estado',
     example: 'Cliente solicitó cancelar por motivos personales'
   })
@@ -19,7 +19,7 @@ export class StatusTransitionDto {
   @MinLength(10)
   reason?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Nueva fecha/hora si es reprogramación',
     example: '2024-08-20T10:00:00Z'
   })
@@ -27,7 +27,7 @@ export class StatusTransitionDto {
   @IsDateString()
   rescheduleDateTime?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Notas internas adicionales',
     example: 'Cliente prefiere horarios matutinos para futuras citas'
   })

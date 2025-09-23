@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.jmovi.frontend"
+      "package": "com.jmovi.frontend",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -34,13 +36,17 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "brand_id": "1"
+      "brand_id": "1",
+      "googleWebClientId": "669086356546-s09o10kfj8hnhur1042l3kbvm158j0i7.apps.googleusercontent.com",
+      "googleAndroidClientId": "669086356546-gjd6uud9egbg1in8svp1ll8omej0brf4.apps.googleusercontent.com",
+      "googleIosClientId": "669086356546-gjd6uud9egbg1in8svp1ll8omej0brf4.apps.googleusercontent.com"
     }
   }
 }
