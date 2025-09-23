@@ -13,7 +13,8 @@ import {
   HttpStatus,
   UseGuards,
   Request,
-  BadRequestException
+  BadRequestException,
+  ParseIntPipe
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -38,6 +39,8 @@ import {
   CancelAppointmentDto,
   GetAppointmentsQueryDto,
   AvailableTimeSlotsDto,
+  CalculateAvailabilityDto,
+  AvailabilityCalculationResultDto,
   TimeSlotDto,
   AppointmentStatus
 } from './dto/appointment.dto';
@@ -809,5 +812,103 @@ async getStatusStatistics(
   );
 
   return BaseResponseDto.success(statistics);
+}
+
+// TASK-024B#: Cálculo de disponibilidad mejorado
+@Get('availability/calculate')
+@UseGuards(JwtAuthGuard, BrandOwnerGuard)
+@ApiOperation({
+  summary: 'Calcular disponibilidad completa para una fecha específica',
+})
+@ApiParam({
+  name: 'brandId',
+  required: true,
+  description: 'ID de la marca para calcular disponibilidad',
+  example: 1,
+  type: Number
+})
+@ApiQuery({
+  name: 'date',
+  required: true,
+  description: 'Fecha para calcular disponibilidad (YYYY-MM-DD)',
+  example: '2024-08-20',
+  type: String
+})
+@ApiQuery({
+  name: 'duration',
+  required: false,
+  description: 'Duración deseada en minutos (opcional, usa la configuración del negocio)',
+  example: 30,
+  type: Number
+})
+@ApiQuery({
+  name: 'includeUnavailable',
+  required: false,
+  description: 'Incluir slots no disponibles en la respuesta (por defecto false)',
+  example: false,
+  type: Boolean
+})
+@ApiQuery({
+  name: 'includeReasons',
+  required: false,
+  description: 'Incluir razones por las que un slot no está disponible (por defecto true)',
+  example: true,
+  type: Boolean
+})
+@ApiResponse({
+  status: 200,
+  description: 'Disponibilidad calculada exitosamente',
+  type: BaseResponseDto,
+  schema: {
+    example: {
+      success: true,
+      message: "Disponibilidad calculada exitosamente",
+      data: {
+        date: "2024-08-20",
+        dayName: "martes",
+        isOpen: true,
+        openTime: "09:00",
+        closeTime: "18:00",
+        slots: [
+          {
+            time: "09:00",
+            available: true
+          },
+          {
+            time: "09:30",
+            available: false,
+            reason: "Ocupado - Corte de Cabello (Juan Pérez)"
+          }
+        ],
+        totalAvailableSlots: 24,
+        totalOccupiedSlots: 3,
+        totalSlots: 27,
+        usedDuration: 30,
+        calculatedAt: "2024-08-19T10:30:00.000Z"
+      }
+    }
+  }
+})
+@ApiResponse({
+  status: 400,
+  description: 'Parámetros inválidos o configuración incompleta'
+})
+@ApiResponse({
+  status: 401,
+  description: 'No autorizado'
+})
+@ApiResponse({
+  status: 403,
+  description: 'No tiene permisos para acceder a esta marca'
+})
+@ApiResponse({
+  status: 404,
+  description: 'Marca no encontrada'
+})
+async calculateAvailability(
+  @Param('brandId', ParseIntPipe) brandId: number,
+  @Query(ValidationPipe) query: CalculateAvailabilityDto
+): Promise<BaseResponseDto<AvailabilityCalculationResultDto>> {
+  return this.appointmentsService.calculateAvailability(brandId, query);
 }
 }
