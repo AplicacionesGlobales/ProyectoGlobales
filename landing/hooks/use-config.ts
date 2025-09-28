@@ -1,6 +1,7 @@
 // hooks/useConfiguraciones.ts
 import { useState, useEffect } from "react"
 import { brandService } from "@/services/brand.service"
+import { subscriptionService, SubscriptionFeatures } from "@/services/subscription.service"
 import { 
   UserData, 
   BrandData, 
@@ -22,6 +23,10 @@ export const useConfiguraciones = () => {
   
   const [userData, setUserData] = useState<UserData | null>(null)
   const [brandData, setBrandData] = useState<BrandData | null>(null)
+  
+  // Estado para suscripción - usando SubscriptionFeatures del servicio
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionFeatures | null>(null)
+  const [loadingSubscription, setLoadingSubscription] = useState(false)
 
   const [businessForm, setBusinessForm] = useState<BusinessForm>({
     name: '',
@@ -85,11 +90,33 @@ export const useConfiguraciones = () => {
         }
       }
 
+      // Cargar datos de suscripción
+      await loadSubscriptionData()
+
     } catch (error) {
       console.error('Error loading initial data:', error)
       setError('Error cargando la configuración')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadSubscriptionData = async () => {
+    try {
+      setLoadingSubscription(true)
+      
+      const response = await subscriptionService.getMySubscriptionFeatures()
+      
+      if (response.success && response.data) {
+        setSubscriptionData(response.data)
+      } else {
+        console.error('Error loading subscription:', response.errors)
+      }
+    } catch (error) {
+      console.error('Error loading subscription data:', error)
+      // No mostrar error al usuario, solo en consola
+    } finally {
+      setLoadingSubscription(false)
     }
   }
 
@@ -186,6 +213,16 @@ export const useConfiguraciones = () => {
     }
   }
 
+  const handleUpgradePlan = async () => {
+    // TODO: Implementar cuando esté la funcionalidad de upgrade de plan
+    setSuccess('Redirigiendo a página de planes...')
+  }
+
+  const handleUpdatePaymentMethod = async () => {
+    // TODO: Implementar cuando esté la funcionalidad de métodos de pago
+    setSuccess('Redirigiendo a configuración de pago...')
+  }
+
   return {
     // Estado
     loading,
@@ -199,6 +236,10 @@ export const useConfiguraciones = () => {
     notificationSettings,
     appearanceSettings,
     
+    // Estado de suscripción
+    subscriptionData,
+    loadingSubscription,
+    
     // Métodos
     clearMessages,
     handleBusinessFormChange,
@@ -207,6 +248,11 @@ export const useConfiguraciones = () => {
     handleAppearanceChange,
     handleSaveBusinessInfo,
     handleSaveNotifications,
-    handleSaveAppearance
+    handleSaveAppearance,
+    
+    // Métodos de suscripción
+    loadSubscriptionData,
+    handleUpgradePlan,
+    handleUpdatePaymentMethod
   }
 }

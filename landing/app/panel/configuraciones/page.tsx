@@ -1,3 +1,4 @@
+// app/panel/configuraciones/page.tsx
 "use client"
 import { useConfiguraciones } from "@/hooks/use-config"
 import { AlertMessages } from "@/components/panel/config/alert-messages"
@@ -14,13 +15,17 @@ export default function ConfiguracionesPage() {
     userForm,
     notificationSettings,
     appearanceSettings,
+    subscriptionData,
+    loadingSubscription,
     handleBusinessFormChange,
     handleUserFormChange,
     handleNotificationChange,
     handleAppearanceChange,
     handleSaveBusinessInfo,
     handleSaveNotifications,
-    handleSaveAppearance
+    handleSaveAppearance,
+    handleUpgradePlan,
+    handleUpdatePaymentMethod
   } = useConfiguraciones()
 
   if (loading) {
@@ -42,7 +47,7 @@ export default function ConfiguracionesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Configuraciones</h1>
           <p className="text-muted-foreground">
-            Personaliza la configuración de tu negocio y cuenta.
+            Personaliza la configuración de tu negocio, cuenta y suscripción.
           </p>
         </div>
       </div>
@@ -55,6 +60,8 @@ export default function ConfiguracionesPage() {
         userForm={userForm}
         notificationSettings={notificationSettings}
         appearanceSettings={appearanceSettings}
+        subscriptionData={subscriptionData}
+        loadingSubscription={loadingSubscription}
         saving={saving}
         onBusinessFormChange={handleBusinessFormChange}
         onUserFormChange={handleUserFormChange}
@@ -63,6 +70,8 @@ export default function ConfiguracionesPage() {
         onSaveBusinessInfo={handleSaveBusinessInfo}
         onSaveNotifications={handleSaveNotifications}
         onSaveAppearance={handleSaveAppearance}
+        onUpgradePlan={handleUpgradePlan}
+        onUpdatePaymentMethod={handleUpdatePaymentMethod}
       />
     </div>
   )
