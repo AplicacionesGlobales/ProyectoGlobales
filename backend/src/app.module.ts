@@ -18,6 +18,7 @@ import { ClientModule } from './client/client.module';
 import { PublicAvailabilityModule } from './public-availability/public-availability.module';
 import { ServiceTypeModule } from './service-type/service-type.module';
 import { BrandFeaturesModule } from './brand-features/brand-features.module';
+import { SubscriptionModule } from './subscription/subscription.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { BrandFeaturesModule } from './brand-features/brand-features.module';
     PublicAvailabilityModule,
     ServiceTypeModule,
     BrandFeaturesModule,
+    SubscriptionModule
   ],
   controllers: [],
   providers: [

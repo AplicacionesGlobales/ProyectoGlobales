@@ -1,13 +1,15 @@
-// components/configuraciones/ConfiguracionesTabs.tsx
+// components/panel/config/config-tabs.tsx
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { User, Building, Bell, Clock, Palette } from "lucide-react"
+import { User, Building, Bell, Clock, Palette, CreditCard } from "lucide-react"
 import { BusinessInfoTab } from "@/components/panel/config/business-info-tab"
 import { UserInfoTab } from "@/components/panel/config/user-info-tab"
 import { ScheduleTab } from "@/components/panel/config/schedule-tab"
 import { NotificationsTab } from "@/components/panel/config/notifications-tab"
 import { AppearanceTab } from "@/components/panel/config/appearance-tab"
+import { SubscriptionTab } from "@/components/panel/config/subscription-tab"
 import { BusinessForm, UserForm, NotificationSettings, AppearanceSettings } from "@/types/config"
+import { SubscriptionFeatures } from "@/services/subscription.service"
 
 interface ConfiguracionesTabsProps {
   brandId?: number
@@ -15,6 +17,8 @@ interface ConfiguracionesTabsProps {
   userForm: UserForm
   notificationSettings: NotificationSettings
   appearanceSettings: AppearanceSettings
+  subscriptionData: SubscriptionFeatures | null
+  loadingSubscription: boolean
   saving: boolean
   onBusinessFormChange: (field: keyof BusinessForm, value: string) => void
   onUserFormChange: (field: keyof UserForm, value: string) => void
@@ -23,6 +27,8 @@ interface ConfiguracionesTabsProps {
   onSaveBusinessInfo: () => void
   onSaveNotifications: () => void
   onSaveAppearance: () => void
+  onUpgradePlan: () => void
+  onUpdatePaymentMethod: () => void
 }
 
 export const ConfiguracionesTabs = ({
@@ -31,6 +37,8 @@ export const ConfiguracionesTabs = ({
   userForm,
   notificationSettings,
   appearanceSettings,
+  subscriptionData,
+  loadingSubscription,
   saving,
   onBusinessFormChange,
   onUserFormChange,
@@ -38,7 +46,9 @@ export const ConfiguracionesTabs = ({
   onAppearanceChange,
   onSaveBusinessInfo,
   onSaveNotifications,
-  onSaveAppearance
+  onSaveAppearance,
+  onUpgradePlan,
+  onUpdatePaymentMethod
 }: ConfiguracionesTabsProps) => {
   const [activeTab, setActiveTab] = useState("business")
 
@@ -52,6 +62,11 @@ export const ConfiguracionesTabs = ({
       value: "user",
       label: "Personal",
       icon: User
+    },
+    {
+      value: "subscription",
+      label: "Suscripción",
+      icon: CreditCard
     },
     {
       value: "schedule",
@@ -72,11 +87,12 @@ export const ConfiguracionesTabs = ({
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="grid w-full grid-cols-5">
+      <TabsList className="grid w-full grid-cols-6">
         {tabs.map(({ value, label, icon: Icon }) => (
           <TabsTrigger key={value} value={value} className="flex items-center gap-2">
             <Icon className="h-4 w-4" />
-            {label}
+            <span className="hidden lg:inline">{label}</span>
+            <span className="lg:hidden">{label.slice(0, 3)}</span>
           </TabsTrigger>
         ))}
       </TabsList>
@@ -94,6 +110,15 @@ export const ConfiguracionesTabs = ({
         <UserInfoTab
           userForm={userForm}
           onFormChange={onUserFormChange}
+        />
+      </TabsContent>
+
+      <TabsContent value="subscription" className="space-y-6">
+        <SubscriptionTab
+          subscriptionData={subscriptionData}
+          loading={loadingSubscription}
+          onUpgradePlan={onUpgradePlan}
+          onUpdatePaymentMethod={onUpdatePaymentMethod}
         />
       </TabsContent>
 

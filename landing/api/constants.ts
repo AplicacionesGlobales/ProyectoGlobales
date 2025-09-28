@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
     FEATURES_FOR_BUSINESS: (businessType: string) => `/landing-data/features/business-type/${businessType}`,
   },
   
+
   // Auth endpoints
   AUTH: {
     REGISTER_BRAND: '/auth/register/brand',
@@ -139,6 +140,16 @@ export const API_ENDPOINTS = {
     CREATE: (brandId: number) => `/brand/${brandId}/services`,
     UPDATE: (brandId: number, serviceId: number) => `/brand/${brandId}/services/${serviceId}`,
     DELETE: (brandId: number, serviceId: number) => `/brand/${brandId}/services/${serviceId}`,
+  },
+
+  SUBSCRIPTION: {
+    FEATURES: '/api/subscription/features',
+    AVAILABLE_PLANS: '/api/subscription/plans',
+    UPGRADE: '/api/subscription/upgrade',
+    CANCEL: '/api/subscription/cancel',
+    PAYMENT_HISTORY: '/api/subscription/payments',
+    PAYMENT_METHOD: '/api/subscription/payment-method',
+    REACTIVATE: '/api/subscription/reactivate'
   },
 
   // Validation endpoints
