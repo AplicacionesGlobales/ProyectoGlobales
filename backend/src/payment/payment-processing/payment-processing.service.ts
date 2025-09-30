@@ -87,6 +87,7 @@ export class PaymentProcessingService {
 
     // 4. Decodificar brandData del returnData
     let brandData: BrandData | null = null;
+
     if (returnData) {
       try {
         const decoded = Buffer.from(decodeURIComponent(returnData), 'base64').toString();
@@ -98,8 +99,19 @@ export class PaymentProcessingService {
       }
     }
 
+    // Si no hay returnData, usar el email de la transacción de Tilopay
     if (!brandData || !brandData.email) {
-      throw new NotFoundException('No se pudo obtener información del brand');
+      console.log('⚠️ No hay returnData, usando email de transacción Tilopay');
+      brandData = {
+        email: transaction.email,
+        name: '', // Se obtendrá del brand
+        planType: 'app', // Por defecto
+        billingCycle: 'monthly' // Por defecto
+      };
+    }
+
+    if (!brandData.email) {
+      throw new NotFoundException('No se pudo obtener email del brand');
     }
 
     // 5. Buscar el brand y crear plan si no existe
@@ -113,14 +125,14 @@ export class PaymentProcessingService {
 
     // Si el brand no tiene planes activos, crear uno
     let brandPlanId: number;
-    
+
     if (!brand.brandPlans || brand.brandPlans.length === 0) {
       console.log('🆕 Creando nuevo BrandPlan...');
-      
+
       // Buscar el plan según el tipo
       const planTypeInput = brandData.planType?.toLowerCase() || 'app';
       let normalizedPlanType: PlanType;
-      
+
       if (planTypeInput === 'completo' || planTypeInput === 'complete') {
         normalizedPlanType = PlanType.complete;
       } else if (planTypeInput === 'web') {
@@ -209,7 +221,7 @@ export class PaymentProcessingService {
       );
 
       const transactions = response.data.response;
-      
+
       if (!transactions || transactions.length === 0) {
         return null;
       }
@@ -398,7 +410,7 @@ export class PaymentProcessingService {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
-    
+
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }
 }
