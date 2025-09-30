@@ -8,6 +8,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PaymentType {
+  SUBSCRIPTION      // Pago de suscripción/plan (actual)
+  SERVICE           // Pago de servicio específico
+  APPOINTMENT       // Pago de cita
+  PRODUCT           // Pago de producto
+  OTHER             // Otros tipos
+}
+
 model User {
   id                 Int                 @id @default(autoincrement())
   email              String              @unique
@@ -200,7 +208,7 @@ model BrandFeature {
 model Payment {
   id                   Int           @id @default(autoincrement())
   brandId              Int
-  brandPlanId          Int
+  brandPlanId          Int?          // ← Ahora OPCIONAL (antes era requerido)
   amount               Decimal       @db.Decimal(10, 2)
   currency             String        @default("CRC")
   status               PaymentStatus @default(pending)
@@ -212,11 +220,18 @@ model Payment {
   failureReason        String?
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
+  paymentType          PaymentType   @default(SUBSCRIPTION) // ← Tipo de pago
+  entityId             Int?          // ← ID genérico de la entidad relacionada
+  entityType           String?       // ← Tipo de entidad (appointment, service, product)
+  description          String?       // ← Descripción del pago
+
   brand                Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  brandPlan            BrandPlan     @relation(fields: [brandPlanId], references: [id])
+  brandPlan            BrandPlan?    @relation(fields: [brandPlanId], references: [id]) // ← Ahora opcional
 
   @@index([brandId])
   @@index([status])
+  @@index([paymentType])              // ← Nuevo índice
+  @@index([entityId, entityType])     // ← Nuevo índice
   @@map("payments")
 }
 

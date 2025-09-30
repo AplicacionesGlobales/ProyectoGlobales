@@ -4,11 +4,12 @@ import { ConfigModule } from '@nestjs/config';
 import { PaymentController } from './payment-tilopay/tilopay.controller';
 import { TilopayService } from './payment-tilopay/tilopay.service';
 import { CommonModule } from '../common/common.module';
+import { PaymentProcessingModule } from './payment-processing/payment-processing.module';
 
 @Module({
-  imports: [HttpModule, ConfigModule, CommonModule],
+  imports: [HttpModule, ConfigModule, CommonModule, PaymentProcessingModule],
   controllers: [PaymentController],
   providers: [TilopayService],
-  exports: [TilopayService],
+  exports: [TilopayService, ],
 })
 export class PaymentModule {}
