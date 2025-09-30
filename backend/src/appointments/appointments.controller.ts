@@ -814,9 +814,9 @@ async getStatusStatistics(
   return BaseResponseDto.success(statistics);
 }
 
-// TASK-024B#: Cálculo de disponibilidad mejorado
+// TASK-024B#: Cálculo de disponibilidad
 @Get('availability/calculate')
-@UseGuards(JwtAuthGuard, BrandOwnerGuard)
+@UseGuards(JwtAuthGuard)
 @ApiOperation({
   summary: 'Calcular disponibilidad completa para una fecha específica',
 })
