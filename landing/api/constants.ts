@@ -155,6 +155,12 @@ export const API_ENDPOINTS = {
     REACTIVATE: '/api/subscription/reactivate'
   },
 
+  // Admin endpoints (ROOT only)
+  ADMIN: {
+    CREATE_FEATURE: '/features',
+    GET_ALL_FEATURES: '/features',
+  },
+
   // Validation endpoints
   VALIDATION: {
     EMAIL: '/validate/email',

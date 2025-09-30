@@ -24,18 +24,20 @@ import { BrandFeaturesService } from './brand-features.service';
 import { BaseResponseDto } from '../common/dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BrandOwnerGuard } from '../common/guards/brand-owner.guard';
+import { RootUserGuard } from '../common/guards/root-user.guard';
 import { Public } from '../common/decorators';
 import {
   FeatureDto,
   BrandFeatureDto,
   AssignFeatureDto,
-  UnassignFeatureDto
+  UnassignFeatureDto,
+  CreateFeatureDto
 } from './dto/brand-feature.dto';
 
 @ApiTags('Brand Features Management')
 @Controller()
 export class BrandFeaturesController {
-  constructor(private readonly brandFeaturesService: BrandFeaturesService) {}
+  constructor(private readonly brandFeaturesService: BrandFeaturesService) { }
 
   // 1. Ver todos los features disponibles - PÚBLICO
   @Get('features')
@@ -53,7 +55,41 @@ export class BrandFeaturesController {
     return this.brandFeaturesService.getAllFeatures();
   }
 
-  // 2. Ver features asignados a un brand específico - PÚBLICO
+  // 2. Crear nueva funcionalidad - SOLO ROOT
+  @Post('features')
+  @UseGuards(JwtAuthGuard, RootUserGuard)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Crear nueva funcionalidad',
+    description: 'Crea una nueva funcionalidad/servicio disponible en la plataforma. Solo usuarios ROOT pueden realizar esta acción.'
+  })
+  @ApiBody({ type: CreateFeatureDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Funcionalidad creada exitosamente',
+    type: BaseResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos inválidos'
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Solo usuarios ROOT pueden crear funcionalidades'
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe una funcionalidad con esa clave'
+  })
+  async createFeature(
+    @Body(ValidationPipe) createFeatureDto: CreateFeatureDto,
+    @Request() req: any
+  ): Promise<BaseResponseDto<FeatureDto>> {
+    return this.brandFeaturesService.createFeature(createFeatureDto);
+  }
+
+  // 3. Ver features asignados a un brand específico - PÚBLICO
   @Get('brand/:brandId/features')
   @Public()
   @ApiOperation({
@@ -72,7 +108,7 @@ export class BrandFeaturesController {
     return this.brandFeaturesService.getBrandFeatures(parseInt(brandId));
   }
 
-  // 3. Asignar feature a brand - SOLO DUEÑO
+  // 4. Asignar feature a brand - SOLO DUEÑO
   @Post('brand/:brandId/features')
   @UseGuards(JwtAuthGuard, BrandOwnerGuard)
   @HttpCode(HttpStatus.CREATED)
@@ -112,7 +148,7 @@ export class BrandFeaturesController {
     );
   }
 
-  // 4. Desasignar feature de brand - SOLO DUEÑO
+  // 5. Desasignar feature de brand - SOLO DUEÑO
   @Delete('brand/:brandId/features/:featureId')
   @UseGuards(JwtAuthGuard, BrandOwnerGuard)
   @HttpCode(HttpStatus.OK)
