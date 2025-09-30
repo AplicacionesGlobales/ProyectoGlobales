@@ -5,7 +5,7 @@ import PDFDocument = require('pdfkit');
 
 @Injectable()
 export class ReceiptGeneratorService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async generateReceipt(paymentId: number): Promise<{ buffer: Buffer; filename: string }> {
     const payment = await this.getPaymentDetails(paymentId);
@@ -49,8 +49,11 @@ export class ReceiptGeneratorService {
           include: {
             plan: {
               select: {
+                id: true,
                 name: true,
-                description: true
+                type: true,
+                description: true,
+                basePrice: true
               }
             }
           }
@@ -61,7 +64,10 @@ export class ReceiptGeneratorService {
 
   private async createPDF(payment: any): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 50 });
+      const doc = new PDFDocument({
+        margin: 45,
+        size: 'LETTER'
+      });
       const chunks: Buffer[] = [];
 
       doc.on('data', (chunk) => chunks.push(chunk));
@@ -69,164 +75,206 @@ export class ReceiptGeneratorService {
       doc.on('error', reject);
 
       // ========================================
-      // HEADER - White Label (Tu empresa)
+      // HEADER - White Label
       // ========================================
       doc.fontSize(24).font('Helvetica-Bold').text('WHITE LABEL', { align: 'center' });
-      doc.fontSize(10).font('Helvetica').text('Plataforma de Gestión Empresarial', { align: 'center' });
-      doc.moveDown(0.5);
-      doc.fontSize(9).text('www.whitelabel.com | soporte@whitelabel.com', { align: 'center' });
-      doc.moveDown(1.5);
+      doc.fontSize(10).font('Helvetica').text('Sistema de Gestión Empresarial', { align: 'center' });
+      doc.moveDown(0.2);
+      doc.fontSize(8).fillColor('#666666').text('www.whitelabel.com', { align: 'center' });
+      doc.fillColor('#000000');
+      doc.moveDown(1);
 
       // Línea divisoria
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-      doc.moveDown(1);
+      doc.lineWidth(2).moveTo(45, doc.y).lineTo(550, doc.y).stroke();
+      doc.lineWidth(1);
+      doc.moveDown(0.8);
 
       // ========================================
       // TÍTULO
       // ========================================
-      doc.fontSize(18).font('Helvetica-Bold').text('RECIBO DE PAGO', { align: 'center' });
+      doc.fontSize(18).font('Helvetica-Bold').text('COMPROBANTE DE PAGO', { align: 'center' });
+      doc.moveDown(0.3);
+      doc.fontSize(9).font('Helvetica').fillColor('#666666')
+        .text(`Recibo No. ${payment.tilopayReference || payment.id}`, { align: 'center' });
+      doc.fillColor('#000000');
       doc.moveDown(1);
 
       // ========================================
       // INFORMACIÓN DEL CLIENTE
       // ========================================
-      doc.fontSize(12).font('Helvetica-Bold').text('Cliente:', { continued: false });
-      doc.moveDown(0.3);
-      doc.fontSize(10).font('Helvetica');
-      doc.text(`Empresa: ${payment.brand.name}`);
-      if (payment.brand.address) {
-        doc.text(`Dirección: ${payment.brand.address}`);
-      }
+      const boxY = doc.y;
+      const boxHeight = payment.brand.phone ? 75 : 65;
+
+      doc.rect(45, boxY, 510, boxHeight).fillAndStroke('#f8f9fa', '#dee2e6');
+
+      doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
+        .text('FACTURADO A:', 55, boxY + 8);
+
+      doc.fontSize(9).font('Helvetica')
+        .text(`${payment.brand.name}`, 55, boxY + 24)
+        .text(`${payment.brand.owner.firstName} ${payment.brand.owner.lastName}`, 55, boxY + 37)
+        .text(`${payment.brand.owner.email}`, 55, boxY + 50);
+
       if (payment.brand.phone) {
-        doc.text(`Teléfono: ${payment.brand.phone}`);
+        doc.text(`Tel: ${payment.brand.phone}`, 55, boxY + 63);
       }
-      doc.text(`Email: ${payment.brand.owner.email}`);
-      doc.text(`Contacto: ${payment.brand.owner.firstName} ${payment.brand.owner.lastName}`);
-      doc.moveDown(1);
 
-      // Línea divisoria
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-      doc.moveDown(1);
+      doc.y = boxY + boxHeight + 15;
 
       // ========================================
-      // DETALLES DEL PAGO
+      // TABLA DE DETALLES
       // ========================================
-      doc.fontSize(12).font('Helvetica-Bold').text('Detalles de la Transacción', { underline: true });
-      doc.moveDown(0.5);
-      
-      doc.fontSize(10).font('Helvetica');
-      
-      // Tabla de detalles
-      const leftColumn = 80;
-      const rightColumn = 300;
+      const tableTop = doc.y;
+      const col1X = 55;
+      const col2X = 340;
+
+      doc.fontSize(10).font('Helvetica-Bold')
+        .text('DETALLES DE LA TRANSACCIÓN', col1X, tableTop);
+
+      doc.moveDown(0.4);
+      doc.moveTo(45, doc.y).lineTo(550, doc.y).stroke();
+      doc.moveDown(0.3);
+
       let currentY = doc.y;
 
-      // Recibo #
-      doc.text('Recibo #:', leftColumn, currentY, { continued: false });
-      doc.text(payment.tilopayReference || payment.id, rightColumn, currentY);
-      currentY += 20;
+      const addRow = (label: string, value: string, bold = false) => {
+        doc.fontSize(9).font('Helvetica').text(label, col1X, currentY);
+        doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').text(value, col2X, currentY);
+        currentY += 16;
+      };
 
-      // Fecha
-      doc.text('Fecha de Pago:', leftColumn, currentY);
-      doc.text(
-        payment.processedAt 
+      // Fecha y hora
+      addRow(
+        'Fecha de Pago:',
+        payment.processedAt
           ? new Date(payment.processedAt).toLocaleDateString('es-CR', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })
-          : 'N/A',
-        rightColumn,
-        currentY
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+          : new Date(payment.createdAt).toLocaleDateString('es-CR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })
       );
-      currentY += 20;
 
-      // Estado
-      doc.text('Estado:', leftColumn, currentY);
-      doc.text(this.getStatusText(payment.status), rightColumn, currentY);
-      currentY += 20;
+      addRow('Método de Pago:', 'Tarjeta de crédito/débito');
 
-      // ID Transacción
-      doc.text('ID Transacción:', leftColumn, currentY);
-      doc.text(payment.tilopayTransactionId || 'N/A', rightColumn, currentY);
-      currentY += 20;
-
-      // Método de pago
-      doc.text('Método de Pago:', leftColumn, currentY);
-      doc.text('Tarjeta de crédito/débito', rightColumn, currentY);
-      currentY += 30;
-
-      doc.y = currentY;
-
-      // ========================================
-      // INFORMACIÓN DEL PLAN (si existe)
-      // ========================================
-      if (payment.brandPlan && payment.brandPlan.plan) {
-        doc.fontSize(12).font('Helvetica-Bold').text('Plan Contratado', { underline: true });
-        doc.moveDown(0.5);
-        
-        doc.fontSize(10).font('Helvetica');
-        currentY = doc.y;
-
-        doc.text('Plan:', leftColumn, currentY);
-        doc.text(payment.brandPlan.plan.name, rightColumn, currentY);
-        currentY += 20;
-
-        if (payment.brandPlan.plan.description) {
-          doc.text('Descripción:', leftColumn, currentY);
-          doc.text(payment.brandPlan.plan.description, rightColumn, currentY, { width: 250 });
-          currentY += 30;
-        }
-
-        doc.text('Período:', leftColumn, currentY);
-        doc.text(this.getBillingPeriodText(payment.brandPlan.billingPeriod), rightColumn, currentY);
-        currentY += 30;
-
-        doc.y = currentY;
+      if (payment.tilopayTransactionId) {
+        addRow('ID Transacción:', payment.tilopayTransactionId);
       }
 
-      // Línea divisoria
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-      doc.moveDown(1);
+      if (payment.metadata?.authCode) {
+        addRow('Código de Autorización:', payment.metadata.authCode);
+      }
+
+      currentY += 6;
+      doc.moveTo(45, currentY).lineTo(550, currentY).stroke();
+      currentY += 10;
 
       // ========================================
+      // DETALLE DEL SERVICIO
+      // ========================================
+      doc.y = currentY;
+      doc.fontSize(10).font('Helvetica-Bold').text('SERVICIO CONTRATADO', col1X);
+      doc.moveDown(0.4);
+
+      currentY = doc.y;
+
+      if (payment.brandPlan && payment.brandPlan.plan) {
+        addRow('Plan:', payment.brandPlan.plan.name, true);
+
+        const planTypeText = {
+          'app': 'Aplicación Móvil',
+          'web': 'Sitio Web',
+          'complete': 'Paquete Completo'
+        }[payment.brandPlan.plan.type] || payment.brandPlan.plan.type;
+
+        addRow('Tipo:', planTypeText);
+
+        const periodText = payment.brandPlan.billingPeriod === 'annual'
+          ? 'Anual (12 meses)'
+          : 'Mensual (1 mes)';
+        addRow('Período:', periodText);
+
+        if (payment.brandPlan.startDate && payment.brandPlan.endDate) {
+          const startDate = new Date(payment.brandPlan.startDate).toLocaleDateString('es-CR');
+          const endDate = new Date(payment.brandPlan.endDate).toLocaleDateString('es-CR');
+          addRow('Vigencia:', `${startDate} - ${endDate}`);
+        }
+      } else {
+        addRow('Descripción:', payment.description || 'Servicio de suscripción');
+      }
+
+      currentY += 6;
+
+      // ========================================
+      // RESUMEN DE COSTOS
+      // ========================================
+      doc.y = currentY;
+      doc.moveTo(45, doc.y).lineTo(550, doc.y).stroke();
+      doc.moveDown(0.6);
+
+      currentY = doc.y;
+
+      if (payment.brandPlan?.plan?.basePrice) {
+        const basePrice = Number(payment.brandPlan.plan.basePrice);
+        doc.fontSize(9).font('Helvetica').text('Subtotal:', col1X, currentY);
+        doc.text(`${payment.currency} $${basePrice.toFixed(2)}`, col2X, currentY);
+        currentY += 16;
+
+        const totalAmount = Number(payment.amount);
+        const additionalServices = totalAmount - basePrice;
+
+        if (additionalServices > 0) {
+          doc.text('Servicios Adicionales:', col1X, currentY);
+          doc.text(`${payment.currency} $${additionalServices.toFixed(2)}`, col2X, currentY);
+          currentY += 16;
+        }
+
+        currentY += 4;
+        doc.moveTo(col2X, currentY).lineTo(550, currentY).stroke();
+        currentY += 8;
+      }
+
       // TOTAL
-      // ========================================
-      doc.fontSize(14).font('Helvetica-Bold');
-      const totalY = doc.y;
-      doc.text('MONTO TOTAL:', leftColumn, totalY);
-      doc.fontSize(18);
-      doc.text(`${payment.currency} $${payment.amount}`, rightColumn, totalY);
-      doc.moveDown(2);
+      doc.fontSize(13).font('Helvetica-Bold')
+        .text('TOTAL PAGADO:', col1X, currentY);
+      doc.fontSize(15)
+        .text(`${payment.currency} $${Number(payment.amount).toFixed(2)}`, col2X, currentY);
 
       // ========================================
-      // FOOTER
+      // FOOTER - Ajustado para que no se pase
       // ========================================
-      doc.fontSize(9).font('Helvetica');
-      doc.text('Gracias por confiar en White Label', { align: 'center' });
-      doc.moveDown(0.5);
-      doc.fontSize(8).fillColor('#666666');
-      doc.text('Este es un recibo generado automáticamente', { align: 'center' });
-      doc.text('Para cualquier consulta, contacte a soporte@whitelabel.com', { align: 'center' });
+      const pageHeight = 792;
+      const footerStartY = pageHeight - 85; // Aumentado de 75 a 85
+
+      doc.fontSize(7).fillColor('#666666').font('Helvetica');
+      doc.text(
+        'Este documento certifica el pago recibido por los servicios contratados.',
+        45,
+        footerStartY,
+        { align: 'center', width: 510 }
+      );
+
+      doc.text(
+        'Soporte: soporte@whitelabel.com | Tel: +506 2222-3333',
+        45,
+        footerStartY + 12,
+        { align: 'center', width: 510 }
+      );
+
+      doc.fontSize(6).text(
+        `Generado el ${new Date().toLocaleDateString('es-CR')} ${new Date().toLocaleTimeString('es-CR')}`,
+        45,
+        footerStartY + 24,
+        { align: 'center', width: 510 }
+      );
 
       doc.end();
     });
-  }
-
-  private getStatusText(status: string): string {
-    const statusMap: Record<string, string> = {
-      'completed': 'Completado',
-      'pending': 'Pendiente',
-      'failed': 'Fallido',
-      'cancelled': 'Cancelado',
-      'processing': 'Procesando'
-    };
-    return statusMap[status] || status;
-  }
-
-  private getBillingPeriodText(period: string): string {
-    return period === 'annual' ? 'Anual' : 'Mensual';
   }
 }
