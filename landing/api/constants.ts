@@ -146,6 +146,7 @@ export const API_ENDPOINTS = {
 
   SUBSCRIPTION: {
     FEATURES: '/api/subscription/features',
+    ACTIVATE_FEATURE: '/api/subscription/features/activate',
     AVAILABLE_PLANS: '/api/subscription/plans',
     UPGRADE: '/api/subscription/upgrade',
     CANCEL: '/api/subscription/cancel',
