@@ -99,4 +99,19 @@ export class LandingDataController {
   ): Promise<BaseResponseDto> {
     return this.landingDataService.getBusinessTypeWithFeatures(businessType);
   }
+
+  @Get('dashboard/metrics/:brandId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get comprehensive business metrics for a specific brand dashboard',
+    description: 'Retrieve advanced business metrics for a specific brand including appointments, revenue, clients, and behavior analytics'
+  })
+  @ApiParam({ name: 'brandId', description: 'ID of the brand to get metrics for', example: 1 })
+  @ApiResponse({
+    status: 200,
+    description: 'Brand metrics retrieved successfully'
+  })
+  async getBrandDashboardMetrics(@Param('brandId') brandId: string): Promise<BaseResponseDto> {
+    return this.landingDataService.getBrandDashboardMetrics(parseInt(brandId));
+  }
 }
