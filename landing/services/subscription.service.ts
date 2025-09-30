@@ -79,6 +79,38 @@ export interface CancelSubscriptionRequest {
   feedback?: string;
 }
 
+export interface ActivateFeatureRequest {
+  featureId: number;
+  paymentMethod?: string;
+  billingPeriod?: 'monthly' | 'annual';
+}
+
+export interface ActivateFeatureResponse {
+  featureActivated: {
+    id: number;
+    key: string;
+    title: string;
+    description: string;
+    category: string;
+    price: number;
+    activatedAt: string;
+  };
+  updatedSubscription: {
+    totalMonthlyPrice: number;
+    subtotalFeatures: number;
+    basePlanPrice: number;
+    totalFeatures: number;
+  };
+  payment: {
+    status: string;
+    tilopayReference: string;
+    amount: number;
+    currency: string;
+    processedAt: string;
+  };
+  message: string;
+}
+
 class SubscriptionService {
   private getAuthToken(): string | null {
     if (typeof window !== 'undefined') {
@@ -106,9 +138,9 @@ class SubscriptionService {
         errors: [
           {
             code: 'SUBSCRIPTION_FEATURES_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo las funcionalidades de la suscripción'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error obteniendo las funcionalidades de la suscripción'
           }
         ]
       };
@@ -129,9 +161,9 @@ class SubscriptionService {
         errors: [
           {
             code: 'AVAILABLE_PLANS_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo los planes disponibles'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error obteniendo los planes disponibles'
           }
         ]
       };
@@ -153,9 +185,9 @@ class SubscriptionService {
         errors: [
           {
             code: 'UPGRADE_PLAN_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error actualizando el plan de suscripción'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error actualizando el plan de suscripción'
           }
         ]
       };
@@ -177,9 +209,9 @@ class SubscriptionService {
         errors: [
           {
             code: 'CANCEL_SUBSCRIPTION_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error cancelando la suscripción'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error cancelando la suscripción'
           }
         ]
       };
@@ -191,7 +223,7 @@ class SubscriptionService {
     try {
       const response = await apiClient.get<any>(
         API_ENDPOINTS.SUBSCRIPTION.PAYMENT_HISTORY,
-        { 
+        {
           headers: this.getAuthHeaders()
         }
       );
@@ -202,9 +234,9 @@ class SubscriptionService {
         errors: [
           {
             code: 'PAYMENT_HISTORY_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error obteniendo el historial de pagos'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error obteniendo el historial de pagos'
           }
         ]
       };
@@ -226,9 +258,9 @@ class SubscriptionService {
         errors: [
           {
             code: 'UPDATE_PAYMENT_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error actualizando el método de pago'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error actualizando el método de pago'
           }
         ]
       };
@@ -250,9 +282,33 @@ class SubscriptionService {
         errors: [
           {
             code: 'REACTIVATE_SUBSCRIPTION_ERROR',
-            description: error?.response?.data?.errors?.[0]?.description || 
-                        error?.message || 
-                        'Error reactivando la suscripción'
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error reactivando la suscripción'
+          }
+        ]
+      };
+    }
+  }
+
+  // Activar nueva funcionalidad con validación de pago
+  async activateFeature(data: ActivateFeatureRequest): Promise<ApiResponse<ActivateFeatureResponse>> {
+    try {
+      const response = await apiClient.post<ActivateFeatureResponse>(
+        API_ENDPOINTS.SUBSCRIPTION.ACTIVATE_FEATURE,
+        data,
+        { headers: this.getAuthHeaders() }
+      );
+      return response;
+    } catch (error: any) {
+      return {
+        success: false,
+        errors: [
+          {
+            code: 'ACTIVATE_FEATURE_ERROR',
+            description: error?.response?.data?.errors?.[0]?.description ||
+              error?.message ||
+              'Error activando la funcionalidad'
           }
         ]
       };

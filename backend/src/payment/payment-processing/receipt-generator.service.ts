@@ -1,7 +1,7 @@
 // backend/src/payment/payment-processing/receipt-generator.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import PDFDocument = require('pdfkit');
+import * as PDFDocument from 'pdfkit';
 
 @Injectable()
 export class ReceiptGeneratorService {
