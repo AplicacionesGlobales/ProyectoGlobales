@@ -1,22 +1,24 @@
 // src/brand-features/brand-features.service.ts
-import { 
-  Injectable, 
-  NotFoundException, 
-  ForbiddenException, 
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
   BadRequestException,
-  ConflictException 
+  ConflictException
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
 import {
   FeatureDto,
   BrandFeatureDto,
-  FeatureCategory
+  FeatureCategory,
+  CreateFeatureDto
 } from './dto/brand-feature.dto';
+import { FeatureCategory as PrismaFeatureCategory } from '../../generated/prisma';
 
 @Injectable()
 export class BrandFeaturesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // Validar si es dueño del brand
   private async validateBrandOwner(brandId: number, userId: number): Promise<void> {
@@ -117,7 +119,7 @@ export class BrandFeaturesService {
         }
       });
 
-      const brandFeaturesDto = brandFeatures.map(brandFeature => 
+      const brandFeaturesDto = brandFeatures.map(brandFeature =>
         this.mapBrandFeatureToDto(brandFeature)
       );
 
@@ -225,6 +227,52 @@ export class BrandFeaturesService {
     } catch (error) {
       console.error('Error unassigning feature from brand:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Crear nueva funcionalidad (solo para usuarios ROOT)
+   */
+  async createFeature(createFeatureDto: CreateFeatureDto): Promise<BaseResponseDto<FeatureDto>> {
+    try {
+      // Verificar que el key no exista
+      const existingFeature = await this.prisma.feature.findUnique({
+        where: { key: createFeatureDto.key }
+      });
+
+      if (existingFeature) {
+        throw new ConflictException(`Ya existe una funcionalidad con la clave '${createFeatureDto.key}'`);
+      }
+
+      // Crear la nueva feature
+      const newFeature = await this.prisma.feature.create({
+        data: {
+          key: createFeatureDto.key,
+          title: createFeatureDto.title,
+          subtitle: createFeatureDto.subtitle,
+          description: createFeatureDto.description,
+          price: createFeatureDto.price,
+          category: createFeatureDto.category as any,
+          businessTypes: createFeatureDto.businessTypes,
+          isRecommended: createFeatureDto.isRecommended || false,
+          isPopular: createFeatureDto.isPopular || false,
+          order: createFeatureDto.order || 0,
+          isActive: true
+        }
+      });
+
+      const featureDto = this.mapFeatureToDto(newFeature);
+
+      return BaseResponseDto.success(featureDto);
+
+    } catch (error) {
+      console.error('Error creating feature:', error);
+
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+
+      throw new BadRequestException('Error al crear la funcionalidad');
     }
   }
 }
