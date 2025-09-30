@@ -35,7 +35,7 @@ export class LandingDataService {
 
   async getLandingConfig(): Promise<BaseResponseDto<LandingConfigDto>> {
     try {
-      // Optimized: Get all data in parallel
+      // Optimized: Get all data in parallel //
       const [businessTypes, features, plans] = await Promise.all([
         this.prisma.businessType.findMany({
           where: { isActive: true },
