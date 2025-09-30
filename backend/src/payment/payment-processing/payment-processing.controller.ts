@@ -29,7 +29,7 @@ export class PaymentProcessingController {
   ) {}
 
   @Post('verify/:orderNumber')
-  @Public()
+  @Public() // ✅ Público
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verificar y guardar pago desde Tilopay' })
   @ApiParam({ name: 'orderNumber', description: 'Número de orden del pago', type: String })
@@ -55,6 +55,7 @@ export class PaymentProcessingController {
   }
 
   @Get(':id/status')
+  @Public() // ✅ AGREGAR ESTO
   @ApiOperation({ summary: 'Obtener estado de un pago por ID' })
   @ApiParam({ name: 'id', description: 'ID del pago', type: Number })
   @ApiResponse({ status: 200, description: 'Estado del pago obtenido exitosamente' })
@@ -75,7 +76,7 @@ export class PaymentProcessingController {
   }
 
   @Get('order/:orderNumber')
-  @Public()
+  @Public() // ✅ Ya lo tienes
   @ApiOperation({ summary: 'Obtener pago por número de orden' })
   @ApiParam({ name: 'orderNumber', description: 'Número de orden del pago', type: String })
   @ApiResponse({ status: 200, description: 'Pago obtenido exitosamente' })
@@ -96,6 +97,7 @@ export class PaymentProcessingController {
   }
 
   @Post('receipts/generate')
+  @Public() // ✅ AGREGAR ESTO (o déjalo protegido si prefieres)
   @HttpCode(HttpStatus.OK)
   @Header('Content-Type', 'application/pdf')
   @ApiOperation({ summary: 'Generar recibo PDF para un pago' })
