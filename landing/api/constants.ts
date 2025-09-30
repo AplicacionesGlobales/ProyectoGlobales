@@ -47,6 +47,9 @@ export const API_ENDPOINTS = {
     DELETE_USER: (brandId: number, userId: number) => `/brand/${brandId}/users/${userId}`,
 
     // Features
+    GET_FEATURES: (brandId: number) => `/brand/${brandId}/features`,
+    ASSIGN_FEATURE: (brandId: number) => `/brand/${brandId}/features`,
+    UNASSIGN_FEATURE: (brandId: number, featureId: number) => `/brand/${brandId}/features/${featureId}`,
     UPDATE_FEATURES: (brandId: number) => `/brand/${brandId}/features`,
 
     // Plan

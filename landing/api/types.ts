@@ -42,6 +42,17 @@ export interface Feature {
   businessTypes: string[];
 }
 
+// BrandFeature from backend
+export interface BrandFeature {
+  id: number;
+  brandId: number;
+  featureId: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  feature: Feature;
+}
+
 // Plan from backend
 export interface Plan {
   id: number;

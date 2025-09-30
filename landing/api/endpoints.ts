@@ -398,6 +398,65 @@ export const landingService = {
   }
 };
 
+export const brandFeaturesService = {
+  /**
+   * Get brand features
+   */
+  async getBrandFeatures(brandId: number): Promise<ApiResponse<any[]>> {
+    try {
+      return await apiClient.get<any[]>(API_ENDPOINTS.BRAND.GET_FEATURES(brandId));
+    } catch (error) {
+      console.error('Failed to get brand features:', error);
+      return {
+        success: false,
+        errors: [{
+          code: 500,
+          description: 'Failed to load brand features'
+        }]
+      };
+    }
+  },
+
+  /**
+   * Assign feature to brand
+   */
+  async assignFeature(brandId: number, featureId: number): Promise<ApiResponse<any>> {
+    try {
+      return await apiClient.post<any>(
+        API_ENDPOINTS.BRAND.ASSIGN_FEATURE(brandId),
+        { featureId }
+      );
+    } catch (error) {
+      console.error('Failed to assign feature:', error);
+      return {
+        success: false,
+        errors: [{
+          code: 500,
+          description: 'Failed to assign feature'
+        }]
+      };
+    }
+  },
+
+  /**
+   * Unassign feature from brand
+   */
+  async unassignFeature(brandId: number, featureId: number): Promise<ApiResponse<any>> {
+    try {
+      return await apiClient.delete<any>(API_ENDPOINTS.BRAND.UNASSIGN_FEATURE(brandId, featureId));
+    } catch (error) {
+      console.error('Failed to unassign feature:', error);
+      return {
+        success: false,
+        errors: [{
+          code: 500,
+          description: 'Failed to unassign feature'
+        }]
+      };
+    }
+  }
+};
+
 export const authService = {
   async registerBrand(data: CreateBrandRequest): Promise<ApiResponse<BrandRegistrationResponse>> {
     return apiClient.registerBrand(data);
