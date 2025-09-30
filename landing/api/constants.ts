@@ -20,7 +20,7 @@ export const API_ENDPOINTS = {
     BUSINESS_TYPE_CONFIG: (businessType: string) => `/landing-data/business-type/${businessType}/config`,
     FEATURES_FOR_BUSINESS: (businessType: string) => `/landing-data/features/business-type/${businessType}`,
   },
-  
+
 
   // Auth endpoints
   AUTH: {
@@ -39,25 +39,25 @@ export const API_ENDPOINTS = {
     BASE: '/brand',
     GET_INFO: (brandId: number) => `/brand/${brandId}`,
     UPDATE: (brandId: number) => `/brand/${brandId}`,
-    
+
     // Users
     GET_USERS: (brandId: number) => `/brand/${brandId}/users`,
     CREATE_USER: (brandId: number) => `/brand/${brandId}/users`,
     UPDATE_USER: (brandId: number, userId: number) => `/brand/${brandId}/users/${userId}`,
     DELETE_USER: (brandId: number, userId: number) => `/brand/${brandId}/users/${userId}`,
-    
+
     // Features
     UPDATE_FEATURES: (brandId: number) => `/brand/${brandId}/features`,
-    
+
     // Plan
     GET_PLAN: (brandId: number) => `/brand/${brandId}/plan`,
     UPDATE_PLAN: (brandId: number) => `/brand/${brandId}/plan`,
-    
+
     // Statistics and reports
     GET_STATS: (brandId: number) => `/brand/${brandId}/stats`,
     GET_PAYMENTS: (brandId: number) => `/brand/${brandId}/payments`,
     GET_ACTIVITY: (brandId: number) => `/brand/${brandId}/activity`,
-    
+
     // Brand register process
     REGISTER: '/brand-register',
     UPDATE_REGISTER: (registerId: number) => `/brand-register/${registerId}`,
@@ -68,11 +68,10 @@ export const API_ENDPOINTS = {
   // Payment endpoints
   PAYMENT: {
     CREATE: '/payment/create',
-    CALLBACK: '/payment/callback',
-    BRANDS: '/payment/brands',
-    GET_BY_ORDER: (orderNumber: string) => `/payment/order/${orderNumber}`,
-    GET_BY_ID: (paymentId: number) => `/payment/${paymentId}`,
-    GET_METHODS: '/payment/methods',
+    VERIFY: (orderNumber: string) => `/payments/verify/${orderNumber}`,
+    GET_BY_ORDER: (orderNumber: string) => `/payments/order/${orderNumber}`,
+    GET_BY_ID: (paymentId: number) => `/payments/${paymentId}/status`,
+    GENERATE_RECEIPT: '/payments/receipts/generate',
   },
 
   // Appointment endpoints
@@ -112,7 +111,7 @@ export const API_ENDPOINTS = {
     GET_CONFIG: (brandId: number) => `/brand/${brandId}/schedule/config`,
     UPDATE_CONFIG: (brandId: number) => `/brand/${brandId}/schedule/config`,
     GET_AVAILABILITY: (brandId: number, date?: string) => {
-      return date 
+      return date
         ? `/brand/${brandId}/schedule/availability?date=${date}`
         : `/brand/${brandId}/schedule/availability`;
     },
@@ -189,7 +188,7 @@ export const API_ENDPOINTS = {
   SERVICES_TYPES: {
     GET: (brandId: number) => `/brand/${brandId}/service-types`,
   },
-  
+
   // Health check
   HEALTH: '/health',
 } as const;
@@ -232,7 +231,7 @@ export const isProduction = process.env.NODE_ENV === 'production';
 // Error codes that should trigger logout
 export const LOGOUT_ERROR_CODES = [
   'UNAUTHORIZED',
-  'TOKEN_EXPIRED', 
+  'TOKEN_EXPIRED',
   'TOKEN_INVALID',
   'SESSION_EXPIRED'
 ] as const;

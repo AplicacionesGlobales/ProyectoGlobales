@@ -16,7 +16,6 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Response } from 'express';
 import { PaymentProcessingService } from './payment-processing.service';
 import { ReceiptGeneratorService } from './receipt-generator.service';
-import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { GenerateReceiptDto } from './dto/generate-receipt.dto';
 import { BaseResponseDto } from '../../common/dto';
 import { Public } from '../../common/decorators';
@@ -29,30 +28,34 @@ export class PaymentProcessingController {
     private readonly receiptGeneratorService: ReceiptGeneratorService
   ) {}
 
-  @Post('webhook')
+  @Post('verify/:orderNumber')
   @Public()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Webhook para recibir notificaciones de Tilopay' })
-  @ApiResponse({ status: 200, description: 'Webhook procesado correctamente' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  @ApiResponse({ status: 404, description: 'Pago no encontrado' })
-  async handleWebhook(
-    @Body(ValidationPipe) webhookData: PaymentWebhookDto
+  @ApiOperation({ summary: 'Verificar y guardar pago desde Tilopay' })
+  @ApiParam({ name: 'orderNumber', description: 'Número de orden del pago', type: String })
+  @ApiResponse({ status: 200, description: 'Pago verificado y guardado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Pago no encontrado en Tilopay' })
+  async verifyPayment(
+    @Param('orderNumber') orderNumber: string,
+    @Body() body?: { returnData?: string }
   ): Promise<BaseResponseDto<any>> {
     try {
-      const result = await this.paymentProcessingService.processWebhook(webhookData);
+      const result = await this.paymentProcessingService.verifyAndSavePayment(
+        orderNumber,
+        body?.returnData
+      );
       return BaseResponseDto.success(result);
     } catch (error) {
-      console.error('Error processing webhook:', error);
+      console.error('💥 Error verificando pago:', error);
       return BaseResponseDto.error([{
         code: 5001,
-        description: error.message || 'Error procesando webhook'
+        description: error.message || 'Error verificando pago'
       }]);
     }
   }
 
   @Get(':id/status')
-  @ApiOperation({ summary: 'Obtener estado de un pago específico' })
+  @ApiOperation({ summary: 'Obtener estado de un pago por ID' })
   @ApiParam({ name: 'id', description: 'ID del pago', type: Number })
   @ApiResponse({ status: 200, description: 'Estado del pago obtenido exitosamente' })
   @ApiResponse({ status: 404, description: 'Pago no encontrado' })
@@ -63,7 +66,7 @@ export class PaymentProcessingController {
       const paymentStatus = await this.paymentProcessingService.getPaymentStatus(id);
       return BaseResponseDto.success(paymentStatus);
     } catch (error) {
-      console.error('Error getting payment status:', error);
+      console.error('💥 Error getting payment status:', error);
       return BaseResponseDto.error([{
         code: 5002,
         description: error.message || 'Error obteniendo estado del pago'
@@ -71,23 +74,23 @@ export class PaymentProcessingController {
     }
   }
 
-  @Get('order/:orderNumber/status')
+  @Get('order/:orderNumber')
   @Public()
-  @ApiOperation({ summary: 'Obtener estado de un pago por número de orden' })
+  @ApiOperation({ summary: 'Obtener pago por número de orden' })
   @ApiParam({ name: 'orderNumber', description: 'Número de orden del pago', type: String })
-  @ApiResponse({ status: 200, description: 'Estado del pago obtenido exitosamente' })
+  @ApiResponse({ status: 200, description: 'Pago obtenido exitosamente' })
   @ApiResponse({ status: 404, description: 'Pago no encontrado' })
-  async getPaymentStatusByOrder(
+  async getPaymentByOrder(
     @Param('orderNumber') orderNumber: string
   ): Promise<BaseResponseDto<any>> {
     try {
-      const paymentStatus = await this.paymentProcessingService.getPaymentStatusByOrderNumber(orderNumber);
-      return BaseResponseDto.success(paymentStatus);
+      const payment = await this.paymentProcessingService.getPaymentByOrderNumber(orderNumber);
+      return BaseResponseDto.success(payment);
     } catch (error) {
-      console.error('Error getting payment status by order:', error);
+      console.error('💥 Error getting payment by order:', error);
       return BaseResponseDto.error([{
         code: 5002,
-        description: error.message || 'Error obteniendo estado del pago'
+        description: error.message || 'Error obteniendo pago'
       }]);
     }
   }
@@ -111,7 +114,7 @@ export class PaymentProcessingController {
       res.setHeader('Content-Type', 'application/pdf');
       res.send(buffer);
     } catch (error) {
-      console.error('Error generating receipt:', error);
+      console.error('💥 Error generating receipt:', error);
       res.status(404).json(BaseResponseDto.error([{
         code: 5003,
         description: error.message || 'Error generando recibo'
