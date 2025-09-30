@@ -87,7 +87,7 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
 
   const checkPaymentStatus = async (orderNumber: string) => {
     try {
-      const response = await paymentService.getPaymentStatus(orderNumber);
+      const response = await paymentService.getPaymentByOrder(orderNumber);
       
       if (response.success && response.data?.status === 'completed') {
         setPaymentStatus('completed');
@@ -95,7 +95,7 @@ export default function PaymentStep({ data, onComplete, onPrev }: PaymentStepPro
           ...data,
           payment: {
             status: 'completed',
-            reference: response.data.tilopayReference || response.data.orderNumber,
+            reference: response.data.tilopayReference || orderNumber,
             amount: plan.price
           }
         });
