@@ -67,28 +67,7 @@ export class TilopayService {
       }]);
     }
   }
-
-  async handlePaymentCallback(query: PaymentCallbackQuery, res: Response): Promise<void> {
-    try {
-      console.log('📞 Processing payment callback:', query);
-      
-      const callbackUrl = new URL(`${this.frontendUrl}/payment/callback`);
-      
-      if (query.code === '1') {
-        await this.handleSuccessfulPayment(query, callbackUrl);
-      } else {
-        await this.handleFailedPayment(query, callbackUrl);
-      }
-      
-      console.log('🔄 Redirecting to:', callbackUrl.toString());
-      res.redirect(callbackUrl.toString());
-      
-    } catch (error) {
-      console.error('💥 Error processing payment callback:', error);
-      this.redirectToErrorPage(res, 'Error procesando el callback de pago');
-    }
-  }
-
+  
   private buildPaymentData(createPaymentDto: CreatePaymentDto, totalAmount: number): TilopayPaymentRequest {
     return {
       redirect: `${this.frontendUrl}/payment/callback`,

@@ -5,8 +5,6 @@ import { TilopayService } from './tilopay.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { BaseResponseDto } from '../../common/dto';
 import { Public } from '../../common/decorators';
-import { PaymentCallbackQuery } from './tilopay.types';
-import { Response } from 'express';
 
 @ApiTags('Pagos')
 @Controller('payment')
@@ -25,13 +23,4 @@ export class PaymentController {
     return this.tilopayService.createPayment(createPaymentDto);
   }
 
-  @Get('callback')
-  @ApiOperation({ summary: 'Callback de pago de Tilopay' })
-  @ApiResponse({ status: 200, description: 'Callback procesado correctamente' })
-  async paymentCallback(
-    @Query() query: PaymentCallbackQuery,
-    @Res() res: Response
-  ): Promise<void> {
-    await this.tilopayService.handlePaymentCallback(query, res);
-  }
 }
