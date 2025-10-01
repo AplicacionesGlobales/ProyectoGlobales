@@ -153,20 +153,40 @@ export class BrandFeaturesService {
         throw new BadRequestException('El feature no está disponible');
       }
 
-      // Verificar si ya está asignado
+      // Verificar si ya existe alguna asignación (activa o inactiva)
       const existingAssignment = await this.prisma.brandFeature.findFirst({
         where: {
           brandId,
-          featureId,
-          isActive: true
+          featureId
         }
       });
 
       if (existingAssignment) {
-        throw new ConflictException('El feature ya está asignado a este brand');
+        // Si ya existe pero está inactiva, reactivarla
+        if (!existingAssignment.isActive) {
+          const brandFeature = await this.prisma.brandFeature.update({
+            where: {
+              id: existingAssignment.id
+            },
+            data: {
+              isActive: true,
+              updatedAt: new Date()
+            },
+            include: {
+              feature: true
+            }
+          });
+
+          return BaseResponseDto.success(
+            this.mapBrandFeatureToDto(brandFeature)
+          );
+        } else {
+          // Si ya está activa, lanzar error
+          throw new ConflictException('El feature ya está asignado y activo en este brand');
+        }
       }
 
-      // Crear la asignación
+      // Si no existe ninguna asignación, crear una nueva
       const brandFeature = await this.prisma.brandFeature.create({
         data: {
           brandId,
