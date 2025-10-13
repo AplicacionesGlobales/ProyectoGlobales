@@ -257,9 +257,16 @@ export const SubscriptionTab = ({
         <div className="pt-4">
           <SubscriptionManager
             subscriptionData={subscriptionData}
+            brandId={brandId}
             onChangePlan={async (planId) => {
               // Pasar al handler superior si existe
               if (onUpgradePlan) await onUpgradePlan()
+            }}
+            onPlanChanged={() => {
+              // Recargar datos después del cambio
+              if (brandId) {
+                loadPayments()
+              }
               setShowManager(false)
             }}
           />
