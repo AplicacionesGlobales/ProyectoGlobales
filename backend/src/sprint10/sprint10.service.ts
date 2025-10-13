@@ -434,6 +434,77 @@ export class Sprint10Service {
   }
 
   /**
+   * Cambiar plan de suscripción (Pablo)
+   */
+  async changePlan(brandId: number, newPlanId: number): Promise<BaseResponseDto<any>> {
+    try {
+      // Validar que el brand existe
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId }
+      });
+
+      if (!brand) {
+        throw new NotFoundException(`Brand with ID ${brandId} not found`);
+      }
+
+      // Validar que el nuevo plan existe
+      const newPlan = await this.prisma.plan.findUnique({
+        where: { id: newPlanId }
+      });
+
+      if (!newPlan) {
+        throw new NotFoundException(`Plan with ID ${newPlanId} not found`);
+      }
+
+      // Desactivar todos los planes actuales del brand
+      await this.prisma.brandPlan.updateMany({
+        where: {
+          brandId: brandId,
+          isActive: true
+        },
+        data: {
+          isActive: false
+        }
+      });
+
+      // Crear nuevo brand plan
+      const currentDate = new Date();
+      const nextExpirationDate = this.getNextMonthDate(currentDate);
+
+      const newBrandPlan = await this.prisma.brandPlan.create({
+        data: {
+          brandId: brandId,
+          planId: newPlanId,
+          price: newPlan.basePrice,
+          startDate: currentDate,
+          endDate: nextExpirationDate,
+          isActive: true
+        }
+      });
+
+      const response = {
+        brandPlanId: newBrandPlan.id,
+        plan: {
+          id: newPlan.id,
+          name: newPlan.name,
+          type: newPlan.type,
+          price: newPlan.basePrice.toString()
+        },
+        startDate: currentDate.toISOString(),
+        endDate: nextExpirationDate.toISOString(),
+        message: `Plan cambiado exitosamente a ${newPlan.name}`
+      };
+
+      return BaseResponseDto.success(response);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new Error(`Error cambiando plan: ${error.message}`);
+    }
+  }
+
+  /**
    * Método de debug para ver datos de un brand (Pablo)
    */
   async debugBrandData(brandId: number) {

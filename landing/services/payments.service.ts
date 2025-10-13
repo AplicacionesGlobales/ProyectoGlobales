@@ -59,5 +59,36 @@ export const paymentsService = {
     } catch (error) {
       console.error('Error downloading receipt:', error)
     }
+  },
+
+  /**
+   * Cambiar plan de suscripción
+   */
+  async changePlan(brandId: number, newPlanId: number): Promise<{ success: boolean; data?: any; errors?: any[] }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/billing/change-plan`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          brandId,
+          newPlanId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      return result
+    } catch (error: any) {
+      console.error('Error changing plan:', error)
+      return {
+        success: false,
+        errors: [{ description: 'Error cambiando plan de suscripción' }]
+      }
+    }
   }
 }

@@ -165,4 +165,32 @@ export class Sprint10Controller {
       data: brand
     };
   }
+
+  /**
+   * Endpoint para cambiar plan de suscripción (Pablo)
+   */
+  @Public()
+  @Post('billing/change-plan')
+  @ApiOperation({
+    summary: 'Cambiar plan de suscripción (Pablo)',
+    description: 'Cambiar el plan actual de un brand por uno nuevo'
+  })
+  @ApiBody({
+    type: 'object',
+    schema: {
+      properties: {
+        brandId: { type: 'number', example: 1 },
+        newPlanId: { type: 'number', example: 2 }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Plan cambiado exitosamente'
+  })
+  async changePlan(
+    @Body(ValidationPipe) body: { brandId: number; newPlanId: number }
+  ): Promise<BaseResponseDto<any>> {
+    return this.sprint10Service.changePlan(body.brandId, body.newPlanId);
+  }
 }
