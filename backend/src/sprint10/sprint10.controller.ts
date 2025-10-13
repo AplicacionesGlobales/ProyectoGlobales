@@ -118,7 +118,7 @@ export class Sprint10Controller {
   @Public()
   @Post('billing/manual-renewal')
   @ApiOperation({
-    summary: 'Procesar renovación manual (Pablo)',
+    summary: 'Procesar renovación manual (Yuli)',
     description: 'Crear servicio completo de facturación con cálculos, prorateos y renovaciones - Gestión manual de renovaciones'
   })
   @ApiBody({ type: ManualRenewalRequestDto })
