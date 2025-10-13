@@ -12,10 +12,15 @@ import {
   ArrowUpRight
 } from "lucide-react"
 import { SubscriptionFeatures } from "@/services/subscription.service"
+import { useState, useEffect } from "react"
+import { SubscriptionManager } from "@/components/panel/config/subscription-manager"
+import { BillingHistory } from "@/components/panel/config/billing-history"
+import { paymentsService, PaymentRecord } from "@/services/payments.service"
 
 interface SubscriptionTabProps {
   subscriptionData: SubscriptionFeatures | null
   loading?: boolean
+  brandId?: number
   onUpgradePlan?: () => void
   onUpdatePaymentMethod?: () => void
 }
@@ -23,9 +28,40 @@ interface SubscriptionTabProps {
 export const SubscriptionTab = ({ 
   subscriptionData,
   loading,
+  brandId,
   onUpgradePlan,
   onUpdatePaymentMethod
 }: SubscriptionTabProps) => {
+  const [showManager, setShowManager] = useState(false)
+  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([])
+  const [loadingPayments, setLoadingPayments] = useState(false)
+
+  // Cargar historial de pagos cuando se monta el componente
+  useEffect(() => {
+    if (brandId) {
+      loadPayments()
+    }
+  }, [brandId])
+
+  const loadPayments = async () => {
+    if (!brandId) return
+    
+    setLoadingPayments(true)
+    try {
+      const response = await paymentsService.getPaymentsByBrand(brandId)
+      if (response.success && response.data) {
+        setPaymentRecords(response.data)
+      }
+    } catch (error) {
+      console.error('Error loading payments:', error)
+    } finally {
+      setLoadingPayments(false)
+    }
+  }
+
+  const handleDownloadReceipt = (paymentId: number) => {
+    paymentsService.downloadReceipt(paymentId)
+  }
   
   if (loading) {
     return (
@@ -188,6 +224,12 @@ export const SubscriptionTab = ({
         </CardContent>
       </Card>
 
+      {/* Historial de Facturación */}
+      <BillingHistory 
+        records={paymentRecords} 
+        onDownload={handleDownloadReceipt}
+      />
+
       {/* Acciones */}
       <Card>
         <CardContent className="pt-6">
@@ -203,8 +245,7 @@ export const SubscriptionTab = ({
             </Button>
             <Button 
               className="flex-1"
-              onClick={onUpgradePlan}
-              disabled={!onUpgradePlan}
+              onClick={() => setShowManager(s => !s)}
             >
               <ArrowUpRight className="h-4 w-4 mr-2" />
               Cambiar Plan
@@ -212,6 +253,18 @@ export const SubscriptionTab = ({
           </div>
         </CardContent>
       </Card>
+      {showManager && (
+        <div className="pt-4">
+          <SubscriptionManager
+            subscriptionData={subscriptionData}
+            onChangePlan={async (planId) => {
+              // Pasar al handler superior si existe
+              if (onUpgradePlan) await onUpgradePlan()
+              setShowManager(false)
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }

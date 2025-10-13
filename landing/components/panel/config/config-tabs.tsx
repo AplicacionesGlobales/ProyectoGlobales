@@ -117,6 +117,7 @@ export const ConfiguracionesTabs = ({
         <SubscriptionTab
           subscriptionData={subscriptionData}
           loading={loadingSubscription}
+          brandId={brandId}
           onUpgradePlan={onUpgradePlan}
           onUpdatePaymentMethod={onUpdatePaymentMethod}
         />

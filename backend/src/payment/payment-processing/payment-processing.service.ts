@@ -413,4 +413,56 @@ export class PaymentProcessingService {
 
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }
+
+  /**
+   * Obtener historial de pagos de un brand
+   */
+  async getPaymentsByBrand(brandId: number) {
+    try {
+      // Verificar que el brand existe
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId }
+      });
+
+      if (!brand) {
+        throw new NotFoundException(`Brand with ID ${brandId} not found`);
+      }
+
+      // Obtener pagos del brand
+      const payments = await this.prisma.payment.findMany({
+        where: { brandId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          amount: true,
+          currency: true,
+          status: true,
+          paymentMethod: true,
+          tilopayReference: true,
+          createdAt: true,
+          processedAt: true,
+          description: true,
+          paymentType: true
+        }
+      });
+
+      return payments.map(payment => ({
+        id: payment.id,
+        date: payment.createdAt.toISOString(),
+        amount: parseFloat(payment.amount.toString()),
+        status: payment.status,
+        currency: payment.currency,
+        paymentMethod: payment.paymentMethod,
+        reference: payment.tilopayReference,
+        description: payment.description,
+        type: payment.paymentType,
+        processedAt: payment.processedAt?.toISOString()
+      }));
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new Error(`Error obteniendo historial de pagos: ${error.message}`);
+    }
+  }
 }

@@ -96,6 +96,27 @@ export class PaymentProcessingController {
     }
   }
 
+  @Get('brand/:brandId')
+  @Public() // ✅ Público para historial de pagos
+  @ApiOperation({ summary: 'Obtener historial de pagos de un brand' })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', type: Number })
+  @ApiResponse({ status: 200, description: 'Historial de pagos obtenido exitosamente' })
+  @ApiResponse({ status: 404, description: 'Brand no encontrado' })
+  async getPaymentsByBrand(
+    @Param('brandId', ParseIntPipe) brandId: number
+  ): Promise<BaseResponseDto<any>> {
+    try {
+      const payments = await this.paymentProcessingService.getPaymentsByBrand(brandId);
+      return BaseResponseDto.success(payments);
+    } catch (error) {
+      console.error('💥 Error getting payments by brand:', error);
+      return BaseResponseDto.error([{
+        code: 5003,
+        description: error.message || 'Error obteniendo historial de pagos'
+      }]);
+    }
+  }
+
   @Post('receipts/generate')
   @Public() // ✅ AGREGAR ESTO (o déjalo protegido si prefieres)
   @HttpCode(HttpStatus.OK)
