@@ -19,6 +19,7 @@ import { PublicAvailabilityModule } from './public-availability/public-availabil
 import { ServiceTypeModule } from './service-type/service-type.module';
 import { BrandFeaturesModule } from './brand-features/brand-features.module';
 import { SubscriptionModule } from './subscription/subscription.module';
+import { Sprint10Module } from './sprint10/sprint10.module';
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { SubscriptionModule } from './subscription/subscription.module';
     PublicAvailabilityModule,
     ServiceTypeModule,
     BrandFeaturesModule,
-    SubscriptionModule
+    SubscriptionModule,
+    Sprint10Module
   ],
   controllers: [],
   providers: [
