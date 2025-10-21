@@ -19,7 +19,8 @@ import {
   BillingCalculationRequestDto,
   BillingCalculationResponseDto,
   ManualRenewalRequestDto,
-  ManualRenewalResponseDto
+  ManualRenewalResponseDto,
+  SalesReportRequestDto
 } from './dto';
 
 @ApiTags('Sprint 10')
@@ -192,5 +193,111 @@ export class Sprint10Controller {
     @Body(ValidationPipe) body: { brandId: number; newPlanId: number }
   ): Promise<BaseResponseDto<any>> {
     return this.sprint10Service.changePlan(body.brandId, body.newPlanId);
+  }
+
+  /**
+   * Endpoint para generar reporte de ventas en Excel (Kristel)
+   */
+  @Public()
+  @Post('reports/sales')
+  @ApiOperation({
+    summary: 'Generar reporte de citas y ventas en Excel (Kristel)',
+    description: `Genera un reporte detallado en formato Excel con información de:
+    
+**DATOS PRINCIPALES (Citas):**
+- ID de la cita, fecha, cliente (nombre, email, teléfono)
+- Servicio contratado y duración
+- Estado de la cita (Completada, Confirmada, En Progreso, Pendiente, Cancelada, No Asistió)
+- Precio del servicio
+
+**DATOS SECUNDARIOS (Pagos):**
+- Información de pagos relacionados
+- Estado del pago y referencia TiloPay
+
+**PERÍODOS DISPONIBLES:**
+- **weekly**: Reporte de los últimos 7 días
+- **monthly**: Reporte de los últimos 30 días
+- **all**: Reporte histórico completo
+
+**RESÚMENES INCLUIDOS:**
+- Total de citas por estado
+- Tasa de completitud
+- Ingresos por citas completadas
+- Ingresos por suscripciones
+- Ingresos totales`
+  })
+  @ApiBody({ 
+    type: SalesReportRequestDto,
+    description: 'Datos para generar el reporte',
+    examples: {
+      semanal: {
+        summary: 'Reporte Semanal',
+        description: 'Genera reporte de la última semana',
+        value: {
+          id_brand: 1,
+          period: 'weekly'
+        }
+      },
+      mensual: {
+        summary: 'Reporte Mensual',
+        description: 'Genera reporte del último mes',
+        value: {
+          id_brand: 1,
+          period: 'monthly'
+        }
+      },
+      historico: {
+        summary: 'Reporte Histórico',
+        description: 'Genera reporte de todo el histórico',
+        value: {
+          id_brand: 1,
+          period: 'all'
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reporte generado exitosamente. Se descarga un archivo Excel (.xlsx)',
+    headers: {
+      'Content-Type': {
+        description: 'Tipo de contenido',
+        schema: { type: 'string', example: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+      },
+      'Content-Disposition': {
+        description: 'Disposición del contenido',
+        schema: { type: 'string', example: 'attachment; filename="reporte-ventas-1-monthly.xlsx"' }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Brand no encontrado'
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos de entrada inválidos. Verifique que el período sea: weekly, monthly o all'
+  })
+  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  async generateSalesReport(
+    @Body(ValidationPipe) request: SalesReportRequestDto,
+    @Res() res: Response
+  ): Promise<void> {
+    try {
+      const excelBuffer = await this.sprint10Service.generateSalesReport(request);
+      
+      res.set({
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="reporte-ventas-${request.id_brand}-${request.period}.xlsx"`,
+        'Content-Length': excelBuffer.length.toString()
+      });
+      
+      res.send(excelBuffer);
+    } catch (error) {
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Error interno del servidor'
+      });
+    }
   }
 }

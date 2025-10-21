@@ -38,7 +38,7 @@ export class Sprint11Controller {
   @Post('appointments/:id/location')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Crear ubicación para una cita',
+    summary: 'Crear ubicación para una cita (Pablo)',
     description:
       'Crea una ubicación geográfica asociada a una cita específica. Solo puede ser creada por el cliente de la cita o usuarios del brand.',
   })
@@ -131,7 +131,7 @@ export class Sprint11Controller {
   @ApiOperation({
     summary: 'Obtener ubicación por ID de cita',
     description:
-      'Obtiene la ubicación geográfica asociada a una cita específica mediante su appointment ID.',
+      'Obtiene la ubicación geográfica asociada a una cita específica mediante su appointment ID. (Pablo)',
   })
   @ApiParam({
     name: 'id',
@@ -187,7 +187,7 @@ export class Sprint11Controller {
   @ApiOperation({
     summary: 'Obtener ubicación por ID de ubicación',
     description:
-      'Obtiene una ubicación específica mediante su ID único de la tabla appointment_locations.',
+      'Obtiene una ubicación específica mediante su ID único de la tabla appointment_locations. (Pablo)',
   })
   @ApiParam({
     name: 'id',
