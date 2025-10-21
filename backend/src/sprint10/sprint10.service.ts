@@ -823,11 +823,14 @@ export class Sprint10Service {
           break;
       }
 
-      row.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: statusColor }
-      };
+      // Aplicar color solo a las celdas con datos (columnas A-L)
+      for (let col = 1; col <= 12; col++) {
+        row.getCell(col).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: statusColor }
+        };
+      }
 
       // Contar por estado
       if (statusCount[appointment.status] !== undefined) {
@@ -857,14 +860,19 @@ export class Sprint10Service {
     worksheet.addRow(['Clientes No Presentados:', statusCount.NO_SHOW]);
     
     const revenueRow = worksheet.addRow(['INGRESOS POR CITAS COMPLETADAS:', totalRevenue]);
-    revenueRow.font = { bold: true, size: 12 };
+    revenueRow.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
     revenueRow.getCell(2).numFmt = '₡#,##0.00';
-    revenueRow.fill = {
+    // Aplicar color solo a las primeras 2 columnas
+    revenueRow.getCell(1).fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FF70AD47' }
     };
-    revenueRow.font = { ...revenueRow.font, color: { argb: 'FFFFFFFF' } };
+    revenueRow.getCell(2).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF70AD47' }
+    };
 
     // Tasa de conversión
     const conversionRate = appointments.length > 0 
@@ -894,26 +902,36 @@ export class Sprint10Service {
     worksheet.addRow(['Pagos Completados:', completedPayments.length]);
     
     const paymentRevenueRow = worksheet.addRow(['INGRESOS POR SUSCRIPCIONES:', totalPayments]);
-    paymentRevenueRow.font = { bold: true, size: 12 };
+    paymentRevenueRow.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
     paymentRevenueRow.getCell(2).numFmt = '₡#,##0.00';
-    paymentRevenueRow.fill = {
+    // Aplicar color solo a las primeras 2 columnas
+    paymentRevenueRow.getCell(1).fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FF5B9BD5' }
     };
-    paymentRevenueRow.font = { ...paymentRevenueRow.font, color: { argb: 'FFFFFFFF' } };
+    paymentRevenueRow.getCell(2).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF5B9BD5' }
+    };
 
     // Total General
     worksheet.addRow([]);
     const grandTotalRow = worksheet.addRow(['INGRESOS TOTALES:', totalRevenue + totalPayments]);
-    grandTotalRow.font = { bold: true, size: 14 };
+    grandTotalRow.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
     grandTotalRow.getCell(2).numFmt = '₡#,##0.00';
-    grandTotalRow.fill = {
+    // Aplicar color solo a las primeras 2 columnas
+    grandTotalRow.getCell(1).fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FFFF6B35' }
     };
-    grandTotalRow.font = { ...grandTotalRow.font, color: { argb: 'FFFFFFFF' } };
+    grandTotalRow.getCell(2).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFF6B35' }
+    };
 
     // ========================================
     // AJUSTAR ANCHOS DE COLUMNA
