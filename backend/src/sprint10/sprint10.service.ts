@@ -646,6 +646,255 @@ export class Sprint10Service {
   }
 
   /**
+   * Generar reporte de ventas en formato JSON para un brand específico (Kristel)
+   * A#: Crear endpoint POST /api/reports/sales para generar reportes
+   */
+  async generateSalesReportJson(request: SalesReportRequestDto): Promise<BaseResponseDto<any>> {
+    const { id_brand, period } = request;
+
+    // Verificar que el brand existe
+    const brand = await this.prisma.brand.findUnique({
+      where: { id: id_brand },
+      select: {
+        id: true,
+        name: true,
+        description: true
+      }
+    });
+
+    if (!brand) {
+      throw new NotFoundException(`Brand with ID ${id_brand} not found`);
+    }
+
+    // Calcular fechas según el período
+    const now = new Date();
+    let startDate: Date | undefined;
+
+    switch (period) {
+      case ReportPeriod.WEEKLY:
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case ReportPeriod.MONTHLY:
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 30);
+        break;
+      case ReportPeriod.ALL:
+        startDate = undefined;
+        break;
+    }
+
+    // Obtener las citas del brand en el período especificado
+    const appointments = await this.prisma.appointment.findMany({
+      where: {
+        brandId: id_brand,
+        ...(startDate && { createdAt: { gte: startDate } })
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true
+          }
+        },
+        serviceType: {
+          select: {
+            name: true,
+            price: true,
+            duration: true
+          }
+        },
+        createdBy: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Obtener los pagos del brand en el período especificado
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        brandId: id_brand,
+        ...(startDate && { createdAt: { gte: startDate } })
+      },
+      include: {
+        brandPlan: {
+          include: {
+            plan: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Procesar datos para el reporte JSON
+    return this.createJsonSalesReport(brand, appointments, payments, period);
+  }
+
+  /**
+   * Crear el reporte en formato JSON con las métricas
+   */
+  private createJsonSalesReport(
+    brand: any,
+    appointments: any[],
+    payments: any[],
+    period: ReportPeriod
+  ): BaseResponseDto<any> {
+    // Etiquetas de estado
+    const statusLabels = {
+      PENDING: 'Pendiente',
+      CONFIRMED: 'Confirmada',
+      IN_PROGRESS: 'En Progreso',
+      COMPLETED: 'Completada',
+      CANCELLED: 'Cancelada',
+      NO_SHOW: 'No Asistió'
+    };
+
+    // Contar por estado y calcular ingresos de citas
+    const statusCount = {
+      PENDING: 0,
+      CONFIRMED: 0,
+      IN_PROGRESS: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+      NO_SHOW: 0
+    };
+
+    let totalAppointmentRevenue = 0;
+
+    // Crear un mapa de pagos por tipo y entityId
+    const paymentMap = new Map();
+    payments.forEach(payment => {
+      if (payment.paymentType === 'APPOINTMENT' && payment.entityId) {
+        paymentMap.set(payment.entityId, payment);
+      }
+    });
+
+    // Procesar las citas
+    const appointmentsData = appointments.map(appointment => {
+      const servicePrice = appointment.price || appointment.serviceType?.price || 0;
+      const relatedPayment = paymentMap.get(appointment.id);
+
+      // Contar por estado
+      if (statusCount[appointment.status] !== undefined) {
+        statusCount[appointment.status]++;
+      }
+
+      // Calcular ingresos de citas completadas
+      if (appointment.status === 'COMPLETED') {
+        totalAppointmentRevenue += parseFloat(servicePrice.toString());
+      }
+
+      return {
+        id: appointment.id,
+        fecha: appointment.startTime,
+        cliente: {
+          id: appointment.client?.id || null,
+          nombre: appointment.client 
+            ? `${appointment.client.firstName} ${appointment.client.lastName || ''}`.trim()
+            : 'Cliente No Registrado',
+          email: appointment.client?.email || 'N/A',
+          telefono: appointment.client?.phone || 'N/A'
+        },
+        servicio: {
+          nombre: appointment.serviceType?.name || 'Sin Servicio',
+          duracion: appointment.duration,
+          precio: parseFloat(servicePrice.toString())
+        },
+        estado: {
+          codigo: appointment.status,
+          etiqueta: statusLabels[appointment.status] || appointment.status
+        },
+        pago: relatedPayment ? {
+          monto: parseFloat(relatedPayment.amount.toString()),
+          moneda: relatedPayment.currency,
+          estado: relatedPayment.status,
+          referencia: relatedPayment.tilopayReference || null
+        } : null,
+        notas: appointment.notes || null,
+        creadoPor: appointment.createdBy 
+          ? `${appointment.createdBy.firstName} ${appointment.createdBy.lastName || ''}`.trim()
+          : null,
+        fechaCreacion: appointment.createdAt
+      };
+    });
+
+    // Procesar pagos de suscripción
+    const subscriptionPayments = payments.filter(p => p.paymentType === 'SUBSCRIPTION');
+    const completedPayments = subscriptionPayments.filter(p => p.status === 'completed');
+    const totalSubscriptionRevenue = completedPayments.reduce(
+      (sum, p) => sum + parseFloat(p.amount.toString()), 
+      0
+    );
+
+    // Calcular tasa de completitud
+    const conversionRate = appointments.length > 0 
+      ? parseFloat(((statusCount.COMPLETED / appointments.length) * 100).toFixed(2))
+      : 0;
+
+    // Período en texto
+    const periodText = period === ReportPeriod.WEEKLY 
+      ? 'Última Semana' 
+      : period === ReportPeriod.MONTHLY 
+        ? 'Último Mes' 
+        : 'Todo el Histórico';
+
+    // Construir respuesta
+    const reportData = {
+      marca: {
+        id: brand.id,
+        nombre: brand.name,
+        descripcion: brand.description
+      },
+      periodo: {
+        tipo: period,
+        etiqueta: periodText
+      },
+      fechaGeneracion: new Date().toISOString(),
+      citas: {
+        datos: appointmentsData,
+        resumen: {
+          total: appointments.length,
+          porEstado: {
+            completadas: statusCount.COMPLETED,
+            confirmadas: statusCount.CONFIRMED,
+            enProgreso: statusCount.IN_PROGRESS,
+            pendientes: statusCount.PENDING,
+            canceladas: statusCount.CANCELLED,
+            noAsistieron: statusCount.NO_SHOW
+          },
+          tasaCompletitud: conversionRate,
+          ingresos: totalAppointmentRevenue
+        }
+      },
+      pagos: {
+        suscripciones: {
+          total: subscriptionPayments.length,
+          completados: completedPayments.length,
+          ingresos: totalSubscriptionRevenue
+        }
+      },
+      totales: {
+        ingresosTotal: totalAppointmentRevenue + totalSubscriptionRevenue,
+        ingresosCitas: totalAppointmentRevenue,
+        ingresosSuscripciones: totalSubscriptionRevenue
+      }
+    };
+
+    return BaseResponseDto.success(reportData);
+  }
+
+  /**
    * Crear el archivo Excel con el reporte de ventas
    */
   private async createExcelSalesReport(

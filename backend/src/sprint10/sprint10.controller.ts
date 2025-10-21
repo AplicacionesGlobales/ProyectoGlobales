@@ -5,12 +5,13 @@ import {
   Post,
   Body,
   Param,
+  Query,
   ParseIntPipe,
   ValidationPipe,
   Res,
   Header
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { Public } from '../common/decorators';
 import { Sprint10Service } from './sprint10.service';
@@ -196,13 +197,106 @@ export class Sprint10Controller {
   }
 
   /**
-   * Endpoint para generar reporte de ventas en Excel (Kristel)
+   * Endpoint para descargar reporte de ventas en Excel (Kristel)
+   * C#: Crear endpoint GET /api/reports/:id/download para descargar
+   */
+  @Public()
+  @Get('reports/:id_brand/download')
+  @ApiOperation({
+    summary: 'Descargar reporte de citas y ventas en Excel (Kristel)',
+    description: `Genera un reporte detallado en formato Excel con información de:
+    
+**DATOS PRINCIPALES (Citas):**
+- ID de la cita, fecha, cliente (nombre, email, teléfono)
+- Servicio contratado y duración
+- Estado de la cita (Completada, Confirmada, En Progreso, Pendiente, Cancelada, No Asistió)
+- Precio del servicio
+
+**DATOS SECUNDARIOS (Pagos):**
+- Información de pagos relacionados
+- Estado del pago y referencia TiloPay
+
+**PERÍODOS DISPONIBLES:**
+- **weekly**: Reporte de los últimos 7 días
+- **monthly**: Reporte de los últimos 30 días
+- **all**: Reporte histórico completo
+
+**RESÚMENES INCLUIDOS:**
+- Total de citas por estado
+- Tasa de completitud
+- Ingresos por citas completadas
+- Ingresos por suscripciones
+- Ingresos totales`
+  })
+  @ApiParam({
+    name: 'id_brand',
+    description: 'ID de la marca para generar el reporte',
+    type: 'number',
+    example: 1
+  })
+  @ApiQuery({
+    name: 'period',
+    description: 'Período del reporte: weekly (última semana), monthly (último mes) o all (todo el histórico)',
+    enum: ['weekly', 'monthly', 'all'],
+    required: true,
+    example: 'monthly'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reporte generado exitosamente. Se descarga un archivo Excel (.xlsx)',
+    headers: {
+      'Content-Type': {
+        description: 'Tipo de contenido',
+        schema: { type: 'string', example: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+      },
+      'Content-Disposition': {
+        description: 'Disposición del contenido',
+        schema: { type: 'string', example: 'attachment; filename="reporte-ventas-1-monthly.xlsx"' }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Brand no encontrado'
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos de entrada inválidos. Verifique que el período sea: weekly, monthly o all'
+  })
+  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  async downloadSalesReport(
+    @Param('id_brand', ParseIntPipe) id_brand: number,
+    @Query('period') period: string,
+    @Res() res: Response
+  ): Promise<void> {
+    try {
+      const request: SalesReportRequestDto = { id_brand, period: period as any };
+      const excelBuffer = await this.sprint10Service.generateSalesReport(request);
+      
+      res.set({
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="reporte-ventas-${id_brand}-${period}.xlsx"`,
+        'Content-Length': excelBuffer.length.toString()
+      });
+      
+      res.send(excelBuffer);
+    } catch (error) {
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Error interno del servidor'
+      });
+    }
+  }
+
+  /**
+   * Endpoint para generar reporte de ventas en formato JSON (Kristel)
+   * A#: Crear endpoint POST /api/reports/sales para generar reportes
    */
   @Public()
   @Post('reports/sales')
   @ApiOperation({
-    summary: 'Generar reporte de citas y ventas en Excel (Kristel)',
-    description: `Genera un reporte detallado en formato Excel con información de:
+    summary: 'Generar reporte de citas y ventas en JSON (Kristel)',
+    description: `Genera un reporte detallado en formato JSON con información de:
     
 **DATOS PRINCIPALES (Citas):**
 - ID de la cita, fecha, cliente (nombre, email, teléfono)
@@ -258,17 +352,7 @@ export class Sprint10Controller {
   })
   @ApiResponse({
     status: 200,
-    description: 'Reporte generado exitosamente. Se descarga un archivo Excel (.xlsx)',
-    headers: {
-      'Content-Type': {
-        description: 'Tipo de contenido',
-        schema: { type: 'string', example: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
-      },
-      'Content-Disposition': {
-        description: 'Disposición del contenido',
-        schema: { type: 'string', example: 'attachment; filename="reporte-ventas-1-monthly.xlsx"' }
-      }
-    }
+    description: 'Reporte generado exitosamente en formato JSON'
   })
   @ApiResponse({
     status: 404,
@@ -278,26 +362,9 @@ export class Sprint10Controller {
     status: 400,
     description: 'Datos de entrada inválidos. Verifique que el período sea: weekly, monthly o all'
   })
-  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-  async generateSalesReport(
-    @Body(ValidationPipe) request: SalesReportRequestDto,
-    @Res() res: Response
-  ): Promise<void> {
-    try {
-      const excelBuffer = await this.sprint10Service.generateSalesReport(request);
-      
-      res.set({
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="reporte-ventas-${request.id_brand}-${request.period}.xlsx"`,
-        'Content-Length': excelBuffer.length.toString()
-      });
-      
-      res.send(excelBuffer);
-    } catch (error) {
-      res.status(error.status || 500).json({
-        success: false,
-        message: error.message || 'Error interno del servidor'
-      });
-    }
+  async generateSalesReportJson(
+    @Body(ValidationPipe) request: SalesReportRequestDto
+  ): Promise<BaseResponseDto<any>> {
+    return this.sprint10Service.generateSalesReportJson(request);
   }
 }
