@@ -1,13 +1,13 @@
 // components/panel/config/config-tabs.tsx
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { User, Building, Bell, Clock, Palette, CreditCard } from "lucide-react"
-import { BusinessInfoTab } from "@/components/panel/config/business-info-tab"
-import { UserInfoTab } from "@/components/panel/config/user-info-tab"
+import { User, Bell, Clock, Palette, CreditCard, BarChart3 } from "lucide-react"
+import { ProfileTab } from "@/components/panel/config/profile-tab"
 import { ScheduleTab } from "@/components/panel/config/schedule-tab"
 import { NotificationsTab } from "@/components/panel/config/notifications-tab"
 import { AppearanceTab } from "@/components/panel/config/appearance-tab"
 import { SubscriptionTab } from "@/components/panel/config/subscription-tab"
+import { ReportsTab } from "@/components/panel/config/reports-tab"
 import { BusinessForm, UserForm, NotificationSettings, AppearanceSettings } from "@/types/config"
 import { SubscriptionFeatures } from "@/services/subscription.service"
 
@@ -50,23 +50,23 @@ export const ConfiguracionesTabs = ({
   onUpgradePlan,
   onUpdatePaymentMethod
 }: ConfiguracionesTabsProps) => {
-  const [activeTab, setActiveTab] = useState("business")
+  const [activeTab, setActiveTab] = useState("profile")
 
   const tabs = [
     {
-      value: "business",
-      label: "Negocio",
-      icon: Building
-    },
-    {
-      value: "user",
-      label: "Personal",
+      value: "profile",
+      label: "Perfil",
       icon: User
     },
     {
       value: "subscription",
       label: "Suscripción",
       icon: CreditCard
+    },
+    {
+      value: "reports",
+      label: "Reportes",
+      icon: BarChart3
     },
     {
       value: "schedule",
@@ -97,19 +97,14 @@ export const ConfiguracionesTabs = ({
         ))}
       </TabsList>
 
-      <TabsContent value="business" className="space-y-6">
-        <BusinessInfoTab
+      <TabsContent value="profile" className="space-y-6">
+        <ProfileTab
           businessForm={businessForm}
-          saving={saving}
-          onFormChange={onBusinessFormChange}
-          onSave={onSaveBusinessInfo}
-        />
-      </TabsContent>
-
-      <TabsContent value="user" className="space-y-6">
-        <UserInfoTab
           userForm={userForm}
-          onFormChange={onUserFormChange}
+          saving={saving}
+          onBusinessFormChange={onBusinessFormChange}
+          onUserFormChange={onUserFormChange}
+          onSaveBusinessInfo={onSaveBusinessInfo}
         />
       </TabsContent>
 
@@ -121,6 +116,10 @@ export const ConfiguracionesTabs = ({
           onUpgradePlan={onUpgradePlan}
           onUpdatePaymentMethod={onUpdatePaymentMethod}
         />
+      </TabsContent>
+
+      <TabsContent value="reports" className="space-y-6">
+        <ReportsTab brandId={brandId} />
       </TabsContent>
 
       <TabsContent value="schedule" className="space-y-6">
