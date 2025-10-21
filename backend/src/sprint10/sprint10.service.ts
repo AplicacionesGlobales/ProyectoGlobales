@@ -7,10 +7,13 @@ import {
   BillingCalculationResponseDto,
   ManualRenewalRequestDto,
   ManualRenewalResponseDto,
-  ProrationCalculationDto
+  ProrationCalculationDto,
+  SalesReportRequestDto,
+  ReportPeriod
 } from './dto';
 import * as PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
+import * as ExcelJS from 'exceljs';
 
 @Injectable()
 export class Sprint10Service {
@@ -543,5 +546,409 @@ export class Sprint10Service {
       recentPayments: brand.payments,
       availablePlans: allPlans
     };
+  }
+
+  /**
+   * Generar reporte de ventas en Excel para un brand específico (Kristel)
+   */
+  async generateSalesReport(request: SalesReportRequestDto): Promise<Buffer> {
+    const { id_brand, period } = request;
+
+    // Verificar que el brand existe
+    const brand = await this.prisma.brand.findUnique({
+      where: { id: id_brand },
+      select: {
+        id: true,
+        name: true,
+        description: true
+      }
+    });
+
+    if (!brand) {
+      throw new NotFoundException(`Brand with ID ${id_brand} not found`);
+    }
+
+    // Calcular fechas según el período
+    const now = new Date();
+    let startDate: Date | undefined;
+
+    switch (period) {
+      case ReportPeriod.WEEKLY:
+        // Últimos 7 días
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case ReportPeriod.MONTHLY:
+        // Último mes (30 días)
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 30);
+        break;
+      case ReportPeriod.ALL:
+        // Todo el histórico (no filtramos por fecha)
+        startDate = undefined;
+        break;
+    }
+
+    // Obtener las citas del brand en el período especificado
+    const appointments = await this.prisma.appointment.findMany({
+      where: {
+        brandId: id_brand,
+        ...(startDate && { createdAt: { gte: startDate } })
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true
+          }
+        },
+        serviceType: {
+          select: {
+            name: true,
+            price: true
+          }
+        },
+        createdBy: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Obtener los pagos del brand en el período especificado (datos secundarios)
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        brandId: id_brand,
+        ...(startDate && { createdAt: { gte: startDate } })
+      },
+      include: {
+        brandPlan: {
+          include: {
+            plan: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Generar el archivo Excel
+    return this.createExcelSalesReport(brand, appointments, payments, period);
+  }
+
+  /**
+   * Crear el archivo Excel con el reporte de ventas
+   */
+  private async createExcelSalesReport(
+    brand: any,
+    appointments: any[],
+    payments: any[],
+    period: ReportPeriod
+  ): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Reporte de Citas y Ventas');
+
+    // Configurar información del workbook
+    workbook.creator = 'White Label System';
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    // ========================================
+    // ENCABEZADO
+    // ========================================
+    worksheet.mergeCells('A1:L1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = 'REPORTE DE CITAS Y VENTAS';
+    titleCell.font = { size: 16, bold: true };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' }
+    };
+    titleCell.font = { ...titleCell.font, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).height = 30;
+
+    // Información del Brand
+    worksheet.mergeCells('A2:L2');
+    const brandCell = worksheet.getCell('A2');
+    brandCell.value = `Marca: ${brand.name}`;
+    brandCell.font = { size: 12, bold: true };
+    brandCell.alignment = { vertical: 'middle', horizontal: 'left' };
+
+    // Período del reporte
+    worksheet.mergeCells('A3:L3');
+    const periodCell = worksheet.getCell('A3');
+    const periodText = period === ReportPeriod.WEEKLY 
+      ? 'Última Semana' 
+      : period === ReportPeriod.MONTHLY 
+        ? 'Último Mes' 
+        : 'Todo el Histórico';
+    periodCell.value = `Período: ${periodText}`;
+    periodCell.font = { size: 11 };
+    periodCell.alignment = { vertical: 'middle', horizontal: 'left' };
+
+    // Fecha de generación
+    worksheet.mergeCells('A4:L4');
+    const dateCell = worksheet.getCell('A4');
+    dateCell.value = `Fecha de Generación: ${new Date().toLocaleString('es-ES')}`;
+    dateCell.font = { size: 10, italic: true };
+    dateCell.alignment = { vertical: 'middle', horizontal: 'left' };
+
+    worksheet.addRow([]);
+
+    // ========================================
+    // CABECERAS DE TABLA - CITAS (Principal)
+    // ========================================
+    const headerRow = worksheet.addRow([
+      'ID Cita',
+      'Fecha Cita',
+      'Cliente',
+      'Email',
+      'Teléfono',
+      'Servicio',
+      'Duración (min)',
+      'Estado',
+      'Precio Servicio',
+      'Monto Pago',
+      'Estado Pago',
+      'Ref. TiloPay'
+    ]);
+
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF2E75B6' }
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 25;
+
+    // ========================================
+    // DATOS DE CITAS
+    // ========================================
+    const statusCount = {
+      PENDING: 0,
+      CONFIRMED: 0,
+      IN_PROGRESS: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+      NO_SHOW: 0
+    };
+
+    const statusLabels = {
+      PENDING: 'Pendiente',
+      CONFIRMED: 'Confirmada',
+      IN_PROGRESS: 'En Progreso',
+      COMPLETED: 'Completada',
+      CANCELLED: 'Cancelada',
+      NO_SHOW: 'No Asistió'
+    };
+
+    let totalRevenue = 0;
+    let completedAppointments = 0;
+
+    // Crear un mapa de pagos por tipo y entityId para relacionarlos con citas
+    const paymentMap = new Map();
+    payments.forEach(payment => {
+      if (payment.paymentType === 'APPOINTMENT' && payment.entityId) {
+        paymentMap.set(payment.entityId, payment);
+      }
+    });
+
+    appointments.forEach((appointment) => {
+      const clientName = appointment.client 
+        ? `${appointment.client.firstName} ${appointment.client.lastName || ''}`.trim()
+        : 'Cliente No Registrado';
+      
+      const clientEmail = appointment.client?.email || 'N/A';
+      const clientPhone = appointment.client?.phone || 'N/A';
+      const serviceName = appointment.serviceType?.name || 'Sin Servicio';
+      const servicePrice = appointment.price || appointment.serviceType?.price || 0;
+      const statusLabel = statusLabels[appointment.status] || appointment.status;
+
+      // Buscar pago relacionado
+      const relatedPayment = paymentMap.get(appointment.id);
+
+      const row = worksheet.addRow([
+        appointment.id,
+        new Date(appointment.startTime).toLocaleString('es-ES'),
+        clientName,
+        clientEmail,
+        clientPhone,
+        serviceName,
+        appointment.duration,
+        statusLabel,
+        parseFloat(servicePrice.toString()),
+        relatedPayment ? parseFloat(relatedPayment.amount.toString()) : 0,
+        relatedPayment ? relatedPayment.status : 'N/A',
+        relatedPayment?.tilopayReference || 'N/A'
+      ]);
+
+      // Formato de moneda para las columnas de precio
+      row.getCell(9).numFmt = '₡#,##0.00';
+      row.getCell(10).numFmt = '₡#,##0.00';
+
+      // Color según el estado de la cita
+      let statusColor = 'FFFFFFFF'; // Blanco por defecto
+      switch (appointment.status) {
+        case 'COMPLETED':
+          statusColor = 'FFD4EDDA'; // Verde claro
+          completedAppointments++;
+          totalRevenue += parseFloat(servicePrice.toString());
+          break;
+        case 'CONFIRMED':
+          statusColor = 'FFD1ECF1'; // Azul claro
+          break;
+        case 'IN_PROGRESS':
+          statusColor = 'FFFFEAA7'; // Amarillo claro
+          break;
+        case 'CANCELLED':
+          statusColor = 'FFF8D7DA'; // Rojo claro
+          break;
+        case 'NO_SHOW':
+          statusColor = 'FFFFC9C9'; // Rojo más oscuro
+          break;
+        case 'PENDING':
+          statusColor = 'FFFEF5E7'; // Naranja claro
+          break;
+      }
+
+      row.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: statusColor }
+      };
+
+      // Contar por estado
+      if (statusCount[appointment.status] !== undefined) {
+        statusCount[appointment.status]++;
+      }
+    });
+
+    // ========================================
+    // RESUMEN DE CITAS
+    // ========================================
+    worksheet.addRow([]);
+    const summaryRow = worksheet.addRow(['RESUMEN DE CITAS']);
+    worksheet.mergeCells(`A${summaryRow.number}:L${summaryRow.number}`);
+    summaryRow.font = { size: 14, bold: true };
+    summaryRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE7E6E6' }
+    };
+
+    worksheet.addRow(['Total de Citas:', appointments.length]);
+    worksheet.addRow(['Citas Completadas:', statusCount.COMPLETED]);
+    worksheet.addRow(['Citas Confirmadas:', statusCount.CONFIRMED]);
+    worksheet.addRow(['Citas En Progreso:', statusCount.IN_PROGRESS]);
+    worksheet.addRow(['Citas Pendientes:', statusCount.PENDING]);
+    worksheet.addRow(['Citas Canceladas:', statusCount.CANCELLED]);
+    worksheet.addRow(['Clientes No Presentados:', statusCount.NO_SHOW]);
+    
+    const revenueRow = worksheet.addRow(['INGRESOS POR CITAS COMPLETADAS:', totalRevenue]);
+    revenueRow.font = { bold: true, size: 12 };
+    revenueRow.getCell(2).numFmt = '₡#,##0.00';
+    revenueRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF70AD47' }
+    };
+    revenueRow.font = { ...revenueRow.font, color: { argb: 'FFFFFFFF' } };
+
+    // Tasa de conversión
+    const conversionRate = appointments.length > 0 
+      ? ((statusCount.COMPLETED / appointments.length) * 100).toFixed(2)
+      : '0.00';
+    worksheet.addRow(['Tasa de Completitud:', `${conversionRate}%`]);
+
+    // ========================================
+    // RESUMEN DE PAGOS (SUSCRIPCIONES)
+    // ========================================
+    worksheet.addRow([]);
+    const paymentSummaryRow = worksheet.addRow(['RESUMEN DE PAGOS (SUSCRIPCIONES)']);
+    worksheet.mergeCells(`A${paymentSummaryRow.number}:L${paymentSummaryRow.number}`);
+    paymentSummaryRow.font = { size: 14, bold: true };
+    paymentSummaryRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE7E6E6' }
+    };
+
+    // Filtrar solo pagos de suscripción
+    const subscriptionPayments = payments.filter(p => p.paymentType === 'SUBSCRIPTION');
+    const completedPayments = subscriptionPayments.filter(p => p.status === 'completed');
+    const totalPayments = completedPayments.reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
+
+    worksheet.addRow(['Total Pagos de Suscripción:', subscriptionPayments.length]);
+    worksheet.addRow(['Pagos Completados:', completedPayments.length]);
+    
+    const paymentRevenueRow = worksheet.addRow(['INGRESOS POR SUSCRIPCIONES:', totalPayments]);
+    paymentRevenueRow.font = { bold: true, size: 12 };
+    paymentRevenueRow.getCell(2).numFmt = '₡#,##0.00';
+    paymentRevenueRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF5B9BD5' }
+    };
+    paymentRevenueRow.font = { ...paymentRevenueRow.font, color: { argb: 'FFFFFFFF' } };
+
+    // Total General
+    worksheet.addRow([]);
+    const grandTotalRow = worksheet.addRow(['INGRESOS TOTALES:', totalRevenue + totalPayments]);
+    grandTotalRow.font = { bold: true, size: 14 };
+    grandTotalRow.getCell(2).numFmt = '₡#,##0.00';
+    grandTotalRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFF6B35' }
+    };
+    grandTotalRow.font = { ...grandTotalRow.font, color: { argb: 'FFFFFFFF' } };
+
+    // ========================================
+    // AJUSTAR ANCHOS DE COLUMNA
+    // ========================================
+    worksheet.columns = [
+      { width: 10 },  // ID Cita
+      { width: 18 },  // Fecha Cita
+      { width: 25 },  // Cliente
+      { width: 28 },  // Email
+      { width: 15 },  // Teléfono
+      { width: 20 },  // Servicio
+      { width: 14 },  // Duración
+      { width: 14 },  // Estado
+      { width: 15 },  // Precio Servicio
+      { width: 15 },  // Monto Pago
+      { width: 14 },  // Estado Pago
+      { width: 20 }   // Referencia
+    ];
+
+    // Bordes para toda la tabla
+    const lastRowNum = worksheet.lastRow?.number || 0;
+    for (let i = 6; i <= lastRowNum; i++) {
+      const row = worksheet.getRow(i);
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    }
+
+    // Generar el buffer del Excel
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 }
