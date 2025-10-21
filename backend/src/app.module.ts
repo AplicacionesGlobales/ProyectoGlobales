@@ -20,6 +20,7 @@ import { ServiceTypeModule } from './service-type/service-type.module';
 import { BrandFeaturesModule } from './brand-features/brand-features.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { Sprint10Module } from './sprint10/sprint10.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -41,7 +42,8 @@ import { Sprint10Module } from './sprint10/sprint10.module';
     ServiceTypeModule,
     BrandFeaturesModule,
     SubscriptionModule,
-    Sprint10Module
+    Sprint10Module,
+    AnalyticsModule
   ],
   controllers: [],
   providers: [
