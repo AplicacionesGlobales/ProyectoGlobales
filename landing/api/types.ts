@@ -362,3 +362,68 @@ export interface BrandActivityMetrics {
   totalActivities: number;
   thisMonthActivities: number;
 }
+
+// Analytics interfaces
+export interface PeriodComparison {
+  current: number;
+  previous: number;
+  difference: number;
+  percentageChange: number;
+}
+
+export interface RevenueBreakdown {
+  appointments: number;
+  services: number;
+  products: number;
+  total: number;
+}
+
+export interface OperatingCosts {
+  subscription: number;
+}
+
+export interface FinancialMetrics {
+  revenue: RevenueBreakdown;
+  costs: OperatingCosts;
+  netRevenue: number;
+}
+
+export interface DailyRevenueMetrics {
+  today: number;
+  yesterday: number;
+  comparison: PeriodComparison;
+  date: string;
+}
+
+export interface WeeklyRevenueMetrics {
+  currentWeek: number;
+  previousWeek: number;
+  comparison: PeriodComparison;
+  weekStartDate: string;
+}
+
+export interface MonthlyRevenueMetrics {
+  currentMonth: number;
+  previousMonth: number;
+  comparison: PeriodComparison;
+  monthStartDate: string;
+}
+
+export interface AnnualRevenueMetrics {
+  currentYear: number;
+  previousYear: number;
+  comparison: PeriodComparison;
+  year: number;
+}
+
+export interface RevenueAnalyticsResponse {
+  brandId: number;
+  brandName: string;
+  generatedAt: string;
+  referenceDate: string;
+  daily: DailyRevenueMetrics;
+  weekly: WeeklyRevenueMetrics;
+  monthly: MonthlyRevenueMetrics;
+  annual: AnnualRevenueMetrics;
+  financialMetrics: FinancialMetrics;
+}

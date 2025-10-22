@@ -15,7 +15,8 @@ import {
   Plan,
   CalendarValidationResponse,
   AppointmentSettings,
-  BrandDashboardMetrics
+  BrandDashboardMetrics,
+  RevenueAnalyticsResponse
 } from './types';
 
 class ApiClient {
@@ -476,6 +477,13 @@ export const brandFeaturesService = {
         }]
       };
     }
+  }
+};
+
+export const analyticsService = {
+  async getRevenueAnalytics(brandId: number, referenceDate?: string): Promise<ApiResponse<RevenueAnalyticsResponse>> {
+    const params = referenceDate ? `?referenceDate=${referenceDate}` : '';
+    return apiClient.get<RevenueAnalyticsResponse>(API_ENDPOINTS.ANALYTICS.REVENUE(brandId) + params);
   }
 };
 
