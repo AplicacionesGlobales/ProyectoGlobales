@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import { landingService } from "@/api/endpoints"
 import { BrandDashboardMetrics } from "@/api/types"
+import { RevenueAnalyticsWidget } from "@/components/panel/dashboard/RevenueAnalyticsWidget"
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -673,6 +674,13 @@ export default function DashboardPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Widget de Analytics Avanzadas */}
+      {brandData && (
+        <div className="mt-8">
+          <RevenueAnalyticsWidget brandId={brandData.id} />
+        </div>
+      )}
     </div>
   )
 }

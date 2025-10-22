@@ -69,6 +69,11 @@ export const API_ENDPOINTS = {
     GET_REGISTER_BY_EMAIL: (email: string) => `/brand-register/email/${encodeURIComponent(email)}`,
   },
 
+  // Analytics endpoints
+  ANALYTICS: {
+    REVENUE: (brandId: number) => `/api/analytics/revenue/${brandId}`,
+  },
+
   // Payment endpoints
   PAYMENT: {
     CREATE: '/payment/create',
