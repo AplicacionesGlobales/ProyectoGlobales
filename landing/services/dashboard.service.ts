@@ -492,4 +492,11 @@ class DashboardService {
   }
 }
 
-export const dashboardService = new DashboardService();
+// Crear instancia del servicio y aplicar el fix
+const dashboardServiceInstance = new DashboardService();
+
+// Importar y aplicar el fix para los endpoints rotos
+import dashboardFixService from './dashboard-fix.service';
+const patchedDashboardService = dashboardFixService.patchDashboardService(dashboardServiceInstance);
+
+export const dashboardService = patchedDashboardService;

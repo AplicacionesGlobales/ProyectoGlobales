@@ -308,3 +308,57 @@ export interface AppointmentSettings {
   createdAt: string;
   updatedAt: string;
 }
+
+// Brand Dashboard Metrics types
+export interface BrandDashboardMetrics {
+  brandInfo: BrandInfo;
+  appointments: BrandAppointmentMetrics;
+  clients: BrandClientMetrics;
+  revenue: BrandRevenueMetrics;
+  activity: BrandActivityMetrics;
+}
+
+export interface BrandInfo {
+  id: number;
+  name: string;
+  businessType: string;
+  isActive: boolean;
+  createdAt: string;
+  daysSinceCreation: number;
+}
+
+export interface BrandAppointmentMetrics {
+  total: number;
+  thisMonth: number;
+  lastMonth: number;
+  growthRate: number;
+  byStatus: AppointmentStatusCount[];
+  avgDuration: number;
+  totalRevenue: number;
+}
+
+export interface AppointmentStatusCount {
+  status: string;
+  count: number;
+  percentage: number;
+}
+
+export interface BrandClientMetrics {
+  totalClients: number;
+  newClientsThisMonth: number;
+  newClientsLastMonth: number;
+  clientGrowthRate: number;
+}
+
+export interface BrandRevenueMetrics {
+  totalRevenue: number;
+  thisMonthRevenue: number;
+  lastMonthRevenue: number;
+  growthRate: number;
+  averagePerAppointment: number;
+}
+
+export interface BrandActivityMetrics {
+  totalActivities: number;
+  thisMonthActivities: number;
+}

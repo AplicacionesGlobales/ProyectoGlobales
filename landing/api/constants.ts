@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
     PLANS: '/landing-data/plans',
     BUSINESS_TYPE_CONFIG: (businessType: string) => `/landing-data/business-type/${businessType}/config`,
     FEATURES_FOR_BUSINESS: (businessType: string) => `/landing-data/features/business-type/${businessType}`,
+    DASHBOARD_METRICS: (brandId: number) => `/landing-data/dashboard/metrics/${brandId}`,
   },
 
 

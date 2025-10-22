@@ -14,7 +14,8 @@ import {
   Feature,
   Plan,
   CalendarValidationResponse,
-  AppointmentSettings
+  AppointmentSettings,
+  BrandDashboardMetrics
 } from './types';
 
 class ApiClient {
@@ -392,6 +393,27 @@ export const landingService = {
         errors: [{
           code: 500,
           description: 'Failed to load features for business type'
+        }]
+      };
+    }
+  },
+
+  /**
+   * Get brand dashboard metrics
+   */
+  async getBrandDashboardMetrics(brandId: number): Promise<ApiResponse<BrandDashboardMetrics>> {
+    try {
+      console.log('🔗 landingService.getBrandDashboardMetrics() called with brandId:', brandId);
+      const response = await apiClient.get<BrandDashboardMetrics>(API_ENDPOINTS.LANDING.DASHBOARD_METRICS(brandId));
+      console.log('✅ Brand metrics response received:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ landingService.getBrandDashboardMetrics() failed:', error);
+      return {
+        success: false,
+        errors: [{
+          code: 500,
+          description: 'Failed to load brand dashboard metrics'
         }]
       };
     }
