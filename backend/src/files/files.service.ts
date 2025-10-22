@@ -3,7 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import * as Minio from 'minio';
 import { randomUUID } from 'crypto';
-import { CreateFileDto, FileResponseDto, EntityType, FileType } from './dto/file.dto';
+import {
+  CreateFileDto,
+  FileResponseDto,
+  EntityType,
+  FileType,
+} from './dto/file.dto';
 import { BrandImageType } from './dto/brand-image.dto';
 
 export interface UploadResult {
@@ -21,17 +26,33 @@ export class MinioService implements OnModuleInit {
 
   constructor(
     private configService: ConfigService,
-    private prisma: PrismaService
+    private prisma: PrismaService,
   ) {
-    this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME', 'brand-assets');
-    this.publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL', 'https://jmvserver.mooo.com/minio/');
+    this.bucketName = this.configService.get<string>(
+      'MINIO_BUCKET_NAME',
+      'brand-assets',
+    );
+    this.publicUrl = this.configService.get<string>(
+      'MINIO_PUBLIC_URL',
+      'https://jmvserver.mooo.com/minio/',
+    );
 
     this.minioClient = new Minio.Client({
-      endPoint: this.configService.get<string>('MINIO_ENDPOINT', 'jmvserver.mooo.com'),
+      endPoint: this.configService.get<string>(
+        'MINIO_ENDPOINT',
+        'jmvserver.mooo.com',
+      ),
       port: parseInt(this.configService.get<string>('MINIO_PORT', '9000')),
-      useSSL: this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true',
-      accessKey: this.configService.get<string>('MINIO_ACCESS_KEY', 'chambeador'),
-      secretKey: this.configService.get<string>('MINIO_SECRET_KEY', 'M4racuya3nL3ch3!2005$'),
+      useSSL:
+        this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true',
+      accessKey: this.configService.get<string>(
+        'MINIO_ACCESS_KEY',
+        'chambeador',
+      ),
+      secretKey: this.configService.get<string>(
+        'MINIO_SECRET_KEY',
+        'M4racuya3nL3ch3!2005$',
+      ),
     });
   }
 
@@ -46,16 +67,22 @@ export class MinioService implements OnModuleInit {
   private async testMinioConnection(): Promise<void> {
     try {
       this.logger.log('Testing MinIO connection...');
-      this.logger.log(`MinIO Config - Endpoint: ${this.configService.get('MINIO_ENDPOINT')}, Port: ${this.configService.get('MINIO_PORT')}, SSL: ${this.configService.get('MINIO_USE_SSL')}`);
+      this.logger.log(
+        `MinIO Config - Endpoint: ${this.configService.get('MINIO_ENDPOINT')}, Port: ${this.configService.get('MINIO_PORT')}, SSL: ${this.configService.get('MINIO_USE_SSL')}`,
+      );
 
       const exists = await this.minioClient.bucketExists(this.bucketName);
-      this.logger.log(`✅ MinIO connection successful! Bucket '${this.bucketName}' exists: ${exists}`);
+      this.logger.log(
+        `✅ MinIO connection successful! Bucket '${this.bucketName}' exists: ${exists}`,
+      );
     } catch (error) {
       this.logger.error('❌ MinIO connection failed:');
       this.logger.error(`Error type: ${error.constructor.name}`);
       this.logger.error(`Error message: ${error.message}`);
       this.logger.error(`Error code: ${error.code}`);
-      this.logger.warn('⚠️  MinIO is not accessible. File uploads will save to database with placeholder URLs.');
+      this.logger.warn(
+        '⚠️  MinIO is not accessible. File uploads will save to database with placeholder URLs.',
+      );
     }
   }
 
@@ -87,7 +114,10 @@ export class MinioService implements OnModuleInit {
     };
 
     try {
-      await this.minioClient.setBucketPolicy(this.bucketName, JSON.stringify(policy));
+      await this.minioClient.setBucketPolicy(
+        this.bucketName,
+        JSON.stringify(policy),
+      );
       this.logger.log('Bucket policy set for public read access');
     } catch (error) {
       this.logger.error('Error setting bucket policy:', error);
@@ -97,7 +127,7 @@ export class MinioService implements OnModuleInit {
   async uploadFile(
     file: any,
     createFileDto: CreateFileDto,
-    uploadedBy?: number
+    uploadedBy?: number,
   ): Promise<UploadResult> {
     try {
       if (!file) {
@@ -121,11 +151,14 @@ export class MinioService implements OnModuleInit {
         'image/svg+xml': 'svg',
         'application/pdf': 'pdf',
         'application/msword': 'doc',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+          'docx',
       };
 
-      const extension = extensions[contentType] || originalName.split('.').pop() || 'bin';
-      const folder = createFileDto.folder || this.getDefaultFolder(createFileDto.fileType);
+      const extension =
+        extensions[contentType] || originalName.split('.').pop() || 'bin';
+      const folder =
+        createFileDto.folder || this.getDefaultFolder(createFileDto.fileType);
       const fileName = `${createFileDto.fileType}-${randomUUID()}.${extension}`;
       const key = `${createFileDto.entityType}s/${createFileDto.entityId}/${folder}/${fileName}`;
 
@@ -145,7 +178,7 @@ export class MinioService implements OnModuleInit {
         key,
         buffer,
         buffer.length,
-        metadata
+        metadata,
       );
 
       const url = `${this.publicUrl}/${this.bucketName}/${key}`;
@@ -200,7 +233,7 @@ export class MinioService implements OnModuleInit {
     file: any,
     brandId: number,
     imageType: BrandImageType,
-    userId: number
+    userId: number,
   ): Promise<UploadResult> {
     try {
       if (!file) {
@@ -218,7 +251,7 @@ export class MinioService implements OnModuleInit {
         },
         include: {
           brand: true,
-        }
+        },
       });
 
       if (!userBrand) {
@@ -269,8 +302,12 @@ export class MinioService implements OnModuleInit {
       let uploadSuccess = false;
       let minioError: any = null;
 
-      this.logger.log(`Attempting to upload to MinIO: bucket=${this.bucketName}, key=${key}`);
-      this.logger.log(`MinIO config: endpoint=${this.configService.get('MINIO_ENDPOINT')}, port=${this.configService.get('MINIO_PORT')}, useSSL=${this.configService.get('MINIO_USE_SSL')}`);
+      this.logger.log(
+        `Attempting to upload to MinIO: bucket=${this.bucketName}, key=${key}`,
+      );
+      this.logger.log(
+        `MinIO config: endpoint=${this.configService.get('MINIO_ENDPOINT')}, port=${this.configService.get('MINIO_PORT')}, useSSL=${this.configService.get('MINIO_USE_SSL')}`,
+      );
 
       try {
         await this.minioClient.putObject(
@@ -278,7 +315,7 @@ export class MinioService implements OnModuleInit {
           key,
           buffer,
           buffer.length,
-          metadata
+          metadata,
         );
         uploadSuccess = true;
         this.logger.log(`✅ Successfully uploaded ${key} to MinIO`);
@@ -292,7 +329,9 @@ export class MinioService implements OnModuleInit {
         this.logger.error(`Full error:`, error);
 
         // TEMPORARY: Continue with database record even if MinIO fails
-        this.logger.warn('⚠️  MinIO upload failed, but continuing with database record for development');
+        this.logger.warn(
+          '⚠️  MinIO upload failed, but continuing with database record for development',
+        );
       }
 
       // Use different URL based on upload success
@@ -300,7 +339,9 @@ export class MinioService implements OnModuleInit {
         ? `${this.publicUrl}/${this.bucketName}/${key}`
         : `https://via.placeholder.com/400x400/808080/FFFFFF?text=${imageType}`;
 
-      this.logger.log(`Generated URL: ${url} (MinIO success: ${uploadSuccess})`);
+      this.logger.log(
+        `Generated URL: ${url} (MinIO success: ${uploadSuccess})`,
+      );
 
       // Reemplazar imagen existente del mismo tipo si existe
       const existingFile = await this.prisma.file.findFirst({
@@ -323,10 +364,17 @@ export class MinioService implements OnModuleInit {
         // Only try to delete from MinIO if current upload was successful
         if (uploadSuccess) {
           try {
-            await this.minioClient.removeObject(this.bucketName, existingFile.key);
-            this.logger.log(`✅ Deleted old file from MinIO: ${existingFile.key}`);
+            await this.minioClient.removeObject(
+              this.bucketName,
+              existingFile.key,
+            );
+            this.logger.log(
+              `✅ Deleted old file from MinIO: ${existingFile.key}`,
+            );
           } catch (error) {
-            this.logger.warn(`⚠️  Could not delete old file from MinIO: ${existingFile.key} - ${error.message}`);
+            this.logger.warn(
+              `⚠️  Could not delete old file from MinIO: ${existingFile.key} - ${error.message}`,
+            );
           }
         }
       }
@@ -365,14 +413,16 @@ export class MinioService implements OnModuleInit {
         updatedAt: fileRecord.updatedAt.toISOString(),
       };
 
-      this.logger.log(`✅ Brand ${imageType} processed successfully: ${key} for brand ${brandId} by user ${userId} (MinIO: ${uploadSuccess ? 'SUCCESS' : 'FAILED'})`);
+      this.logger.log(
+        `✅ Brand ${imageType} processed successfully: ${key} for brand ${brandId} by user ${userId} (MinIO: ${uploadSuccess ? 'SUCCESS' : 'FAILED'})`,
+      );
 
       return {
         success: true,
         file: fileResponse,
         ...(minioError && {
-          warning: `File saved to database but MinIO upload failed: ${minioError.message}`
-        })
+          warning: `File saved to database but MinIO upload failed: ${minioError.message}`,
+        }),
       };
     } catch (error) {
       this.logger.error('Error uploading brand image:', error);
@@ -405,7 +455,7 @@ export class MinioService implements OnModuleInit {
         imagotipo: null as FileResponseDto | null,
       };
 
-      files.forEach(file => {
+      files.forEach((file) => {
         const fileResponse: FileResponseDto = {
           id: file.id,
           name: file.name,
@@ -438,7 +488,10 @@ export class MinioService implements OnModuleInit {
     }
   }
 
-  async deleteFile(fileId: number, requestingUserId?: number): Promise<boolean> {
+  async deleteFile(
+    fileId: number,
+    requestingUserId?: number,
+  ): Promise<boolean> {
     try {
       const fileRecord = await this.prisma.file.findUnique({
         where: { id: fileId },
@@ -473,7 +526,7 @@ export class MinioService implements OnModuleInit {
     entityId: number,
     fileType?: FileType,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<{ files: FileResponseDto[]; total: number }> {
     try {
       const where: any = {
@@ -496,7 +549,7 @@ export class MinioService implements OnModuleInit {
         this.prisma.file.count({ where }),
       ]);
 
-      const fileResponses: FileResponseDto[] = files.map(file => ({
+      const fileResponses: FileResponseDto[] = files.map((file) => ({
         id: file.id,
         name: file.name,
         url: file.url,
@@ -556,7 +609,7 @@ export class MinioService implements OnModuleInit {
     fileType: FileType,
     file: any,
     createFileDto: CreateFileDto,
-    uploadedBy?: number
+    uploadedBy?: number,
   ): Promise<UploadResult> {
     try {
       // Find existing file of the same type for this entity
@@ -570,7 +623,11 @@ export class MinioService implements OnModuleInit {
       });
 
       // Upload new file
-      const uploadResult = await this.uploadFile(file, createFileDto, uploadedBy);
+      const uploadResult = await this.uploadFile(
+        file,
+        createFileDto,
+        uploadedBy,
+      );
 
       if (uploadResult.success && existingFile) {
         // Deactivate old file
@@ -602,7 +659,10 @@ export class MinioService implements OnModuleInit {
     return folderMap[fileType] || 'general';
   }
 
-  async getPresignedUrl(fileId: number, expiry: number = 7 * 24 * 60 * 60): Promise<string> {
+  async getPresignedUrl(
+    fileId: number,
+    expiry: number = 7 * 24 * 60 * 60,
+  ): Promise<string> {
     try {
       const fileRecord = await this.prisma.file.findUnique({
         where: { id: fileId, isActive: true },
@@ -612,7 +672,11 @@ export class MinioService implements OnModuleInit {
         throw new Error('File not found');
       }
 
-      return await this.minioClient.presignedGetObject(this.bucketName, fileRecord.key, expiry);
+      return await this.minioClient.presignedGetObject(
+        this.bucketName,
+        fileRecord.key,
+        expiry,
+      );
     } catch (error) {
       this.logger.error('Error generating presigned URL:', error);
       throw error;

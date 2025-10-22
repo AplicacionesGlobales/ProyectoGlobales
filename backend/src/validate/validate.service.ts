@@ -2,18 +2,23 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
-import { EmailValidationResponseDto, UsernameValidationResponseDto,
-  PaymentValidationResponseDto, 
+import {
+  EmailValidationResponseDto,
+  UsernameValidationResponseDto,
+  PaymentValidationResponseDto,
   ValidateCalendarDto,
-  CalendarValidationResponseDto
- } from './dto';
+  CalendarValidationResponseDto,
+} from './dto';
 import { ERROR_CODES } from '../common/constants';
 
 @Injectable()
 export class ValidateService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
-  async validateEmail(email: string, brandId?: number): Promise<BaseResponseDto<EmailValidationResponseDto>> {
+  async validateEmail(
+    email: string,
+    brandId?: number,
+  ): Promise<BaseResponseDto<EmailValidationResponseDto>> {
     try {
       console.log('\n🔍 === VALIDACIÓN EMAIL ===');
       console.log('📧 Email solicitado:', email);
@@ -31,36 +36,40 @@ export class ValidateService {
             userBrands: {
               include: {
                 brand: {
-                  select: { id: true, name: true }
-                }
-              }
-            }
-          }
+                  select: { id: true, name: true },
+                },
+              },
+            },
+          },
         });
 
         if (existingUser && existingUser.userBrands.length > 0) {
           console.log('❌ EMAIL OCUPADO EN ALGUNA MARCA:', {
             userId: existingUser.id,
-            marcas: existingUser.userBrands.map(ub => ({
+            marcas: existingUser.userBrands.map((ub) => ({
               brandId: ub.brand.id,
-              brandName: ub.brand.name
-            }))
+              brandName: ub.brand.name,
+            })),
           });
           return BaseResponseDto.success({
             isAvailable: false,
-            email: normalizedEmail
+            email: normalizedEmail,
           });
         } else {
           console.log('✅ EMAIL DISPONIBLE GLOBALMENTE');
           return BaseResponseDto.success({
             isAvailable: true,
-            email: normalizedEmail
+            email: normalizedEmail,
           });
         }
       }
 
       // Para CLIENT con brandId específico: verificar si ya está registrado en esa marca
-      console.log('👤 Validación para marca específica (brandId:', brandId, ')');
+      console.log(
+        '👤 Validación para marca específica (brandId:',
+        brandId,
+        ')',
+      );
       const existingUser = await this.prisma.user.findFirst({
         where: { email: normalizedEmail },
         include: {
@@ -68,11 +77,11 @@ export class ValidateService {
             where: { brandId: brandId },
             include: {
               brand: {
-                select: { name: true }
-              }
-            }
-          }
-        }
+                select: { name: true },
+              },
+            },
+          },
+        },
       });
 
       // Si el usuario no existe, está disponible
@@ -80,14 +89,14 @@ export class ValidateService {
         console.log('✅ EMAIL DISPONIBLE (no existe usuario)');
         return BaseResponseDto.success({
           isAvailable: true,
-          email: normalizedEmail
+          email: normalizedEmail,
         });
       }
 
       console.log('👤 Usuario con este email existe:', {
         id: existingUser.id,
         username: existingUser.username,
-        userBrandsInThisBrand: existingUser.userBrands.length
+        userBrandsInThisBrand: existingUser.userBrands.length,
       });
 
       // Si el usuario existe pero no está en esta marca, está disponible para esta marca
@@ -96,26 +105,31 @@ export class ValidateService {
         console.log('❌ EMAIL YA REGISTRADO EN ESTA MARCA');
         return BaseResponseDto.success({
           isAvailable: false,
-          email: normalizedEmail
+          email: normalizedEmail,
         });
       } else {
-        console.log('✅ EMAIL DISPONIBLE EN ESTA MARCA (usuario existe en otras marcas)');
+        console.log(
+          '✅ EMAIL DISPONIBLE EN ESTA MARCA (usuario existe en otras marcas)',
+        );
         return BaseResponseDto.success({
           isAvailable: true,
-          email: normalizedEmail
+          email: normalizedEmail,
         });
       }
-
     } catch (error) {
       console.error('💥 Error validating email:', error);
-      return BaseResponseDto.error([{
-        code: ERROR_CODES.INTERNAL_ERROR,
-        description: 'Error validating email'
-      }]);
+      return BaseResponseDto.error([
+        {
+          code: ERROR_CODES.INTERNAL_ERROR,
+          description: 'Error validating email',
+        },
+      ]);
     }
   }
 
-  async validateUsername(username: string): Promise<BaseResponseDto<UsernameValidationResponseDto>> {
+  async validateUsername(
+    username: string,
+  ): Promise<BaseResponseDto<UsernameValidationResponseDto>> {
     try {
       console.log('\n🔍 === VALIDACIÓN USERNAME ===');
       console.log('👤 Username solicitado:', username);
@@ -125,7 +139,7 @@ export class ValidateService {
 
       // Username debe ser único globalmente
       const existingUser = await this.prisma.user.findFirst({
-        where: { username: normalizedUsername }
+        where: { username: normalizedUsername },
       });
 
       if (existingUser) {
@@ -133,31 +147,33 @@ export class ValidateService {
           id: existingUser.id,
           email: existingUser.email,
           username: existingUser.username,
-          createdAt: existingUser.createdAt
+          createdAt: existingUser.createdAt,
         });
         return BaseResponseDto.success({
           isAvailable: false,
-          username: normalizedUsername
+          username: normalizedUsername,
         });
       } else {
         console.log('✅ USERNAME DISPONIBLE');
         return BaseResponseDto.success({
           isAvailable: true,
-          username: normalizedUsername
+          username: normalizedUsername,
         });
       }
-
     } catch (error) {
       console.error('💥 Error validating username:', error);
-      return BaseResponseDto.error([{
-        code: ERROR_CODES.INTERNAL_ERROR,
-        description: 'Error validating username'
-      }]);
+      return BaseResponseDto.error([
+        {
+          code: ERROR_CODES.INTERNAL_ERROR,
+          description: 'Error validating username',
+        },
+      ]);
     }
   }
 
-
-  async validatePayment(brandId: number): Promise<BaseResponseDto<PaymentValidationResponseDto>> {
+  async validatePayment(
+    brandId: number,
+  ): Promise<BaseResponseDto<PaymentValidationResponseDto>> {
     try {
       console.log('\n🔍 === VALIDACIÓN PAGO ===');
       console.log('🏢 Brand ID:', brandId);
@@ -172,11 +188,11 @@ export class ValidateService {
                 select: {
                   firstName: true,
                   lastName: true,
-                  email: true
-                }
-              }
+                  email: true,
+                },
+              },
             },
-            take: 1 // Solo necesitamos el primer usuario (owner)
+            take: 1, // Solo necesitamos el primer usuario (owner)
           },
           brandPlans: {
             where: { isActive: true },
@@ -184,20 +200,22 @@ export class ValidateService {
               plan: true,
               payments: {
                 orderBy: { createdAt: 'desc' },
-                take: 1
-              }
+                take: 1,
+              },
             },
-            take: 1
-          }
-        }
+            take: 1,
+          },
+        },
       });
 
       if (!brand) {
         console.log('❌ Brand no encontrado');
-        return BaseResponseDto.error([{
-          code: ERROR_CODES.INTERNAL_ERROR,
-          description: 'Brand no encontrado'
-        }]);
+        return BaseResponseDto.error([
+          {
+            code: ERROR_CODES.INTERNAL_ERROR,
+            description: 'Brand no encontrado',
+          },
+        ]);
       }
 
       // Obtener información del owner
@@ -209,15 +227,19 @@ export class ValidateService {
         id: brand.id,
         name: brand.name,
         phone: brand.phone || undefined,
-        owner: owner ? {
-          firstName: owner.firstName || '',
-          lastName: owner.lastName || '',
-          email: owner.email
-        } : undefined,
-        plan: brandPlan ? {
-          type: brandPlan.plan.type,
-          billingCycle: brandPlan.billingPeriod
-        } : undefined
+        owner: owner
+          ? {
+              firstName: owner.firstName || '',
+              lastName: owner.lastName || '',
+              email: owner.email,
+            }
+          : undefined,
+        plan: brandPlan
+          ? {
+              type: brandPlan.plan.type,
+              billingCycle: brandPlan.billingPeriod,
+            }
+          : undefined,
       };
 
       if (!brandPlan) {
@@ -225,7 +247,7 @@ export class ValidateService {
         return BaseResponseDto.success({
           isPaymentComplete: false,
           paymentStatus: 'no_plan',
-          brandInfo
+          brandInfo,
         });
       }
 
@@ -235,27 +257,27 @@ export class ValidateService {
         return BaseResponseDto.success({
           isPaymentComplete: true,
           paymentStatus: 'free_plan',
-          brandInfo
+          brandInfo,
         });
       }
 
       // Verificar el último pago
       const lastPayment = brandPlan.payments[0];
-      
+
       if (!lastPayment) {
         console.log('⚠️ No hay pagos registrados');
         return BaseResponseDto.success({
           isPaymentComplete: false,
           paymentStatus: 'pending',
           dueDate: brandPlan.startDate.toISOString(),
-          brandInfo
+          brandInfo,
         });
       }
 
       console.log('💰 Último pago:', {
         status: lastPayment.status,
         amount: lastPayment.amount,
-        date: lastPayment.processedAt
+        date: lastPayment.processedAt,
       });
 
       if (lastPayment.status === 'completed') {
@@ -263,7 +285,7 @@ export class ValidateService {
         return BaseResponseDto.success({
           isPaymentComplete: true,
           paymentStatus: 'completed',
-          brandInfo
+          brandInfo,
         });
       }
 
@@ -272,21 +294,22 @@ export class ValidateService {
         isPaymentComplete: false,
         paymentStatus: lastPayment.status,
         dueDate: brandPlan.endDate?.toISOString() || undefined,
-        brandInfo
+        brandInfo,
       });
-
     } catch (error) {
       console.error('💥 Error validating payment:', error);
-      return BaseResponseDto.error([{
-        code: ERROR_CODES.INTERNAL_ERROR,
-        description: 'Error validating payment status'
-      }]);
+      return BaseResponseDto.error([
+        {
+          code: ERROR_CODES.INTERNAL_ERROR,
+          description: 'Error validating payment status',
+        },
+      ]);
     }
   }
 
   async validateCalendarAvailable(
-    brandId: number, 
-    query: ValidateCalendarDto
+    brandId: number,
+    query: ValidateCalendarDto,
   ): Promise<BaseResponseDto<CalendarValidationResponseDto>> {
     try {
       console.log('\n🗓️ === VALIDACIÓN CALENDARIO ===');
@@ -297,15 +320,17 @@ export class ValidateService {
       // 1. Verificar que el brand existe
       const brand = await this.prisma.brand.findUnique({
         where: { id: brandId },
-        select: { id: true, name: true, isActive: true }
+        select: { id: true, name: true, isActive: true },
       });
 
       if (!brand) {
         console.log('❌ Brand no encontrado');
-        return BaseResponseDto.error([{
-          code: ERROR_CODES.INTERNAL_ERROR,
-          description: 'Brand no encontrado'
-        }]);
+        return BaseResponseDto.error([
+          {
+            code: ERROR_CODES.INTERNAL_ERROR,
+            description: 'Brand no encontrado',
+          },
+        ]);
       }
 
       if (!brand.isActive) {
@@ -315,14 +340,15 @@ export class ValidateService {
           message: 'Negocio no disponible',
           date: query.date,
           time: query.time,
-          reason: 'Negocio temporalmente cerrado'
+          reason: 'Negocio temporalmente cerrado',
         });
       }
 
       // 2. Obtener configuración de AppointmentSettings
-      const appointmentSettings = await this.prisma.appointmentSettings.findUnique({
-        where: { brandId }
-      });
+      const appointmentSettings =
+        await this.prisma.appointmentSettings.findUnique({
+          where: { brandId },
+        });
 
       if (!appointmentSettings) {
         console.log('❌ No hay configuración de citas');
@@ -331,7 +357,7 @@ export class ValidateService {
           message: 'Configuración de citas no disponible',
           date: query.date,
           time: query.time,
-          reason: 'Sistema de citas no configurado'
+          reason: 'Sistema de citas no configurado',
         });
       }
 
@@ -347,12 +373,13 @@ export class ValidateService {
           message: 'Horario no disponible',
           date: query.date,
           time: query.time,
-          reason: 'No se pueden reservar horarios pasados'
+          reason: 'No se pueden reservar horarios pasados',
         });
       }
 
       // 4. Validar horario mínimo de anticipación
-      const hoursDifference = (requestedDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const hoursDifference =
+        (requestedDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
       if (hoursDifference < appointmentSettings.minAdvanceBookingHours) {
         console.log('❌ No cumple tiempo mínimo de anticipación');
         return BaseResponseDto.success({
@@ -360,7 +387,7 @@ export class ValidateService {
           message: 'Horario no disponible',
           date: query.date,
           time: query.time,
-          reason: `Se requieren al menos ${appointmentSettings.minAdvanceBookingHours} horas de anticipación`
+          reason: `Se requieren al menos ${appointmentSettings.minAdvanceBookingHours} horas de anticipación`,
         });
       }
 
@@ -373,7 +400,7 @@ export class ValidateService {
           message: 'Horario no disponible',
           date: query.date,
           time: query.time,
-          reason: `Solo se permiten reservas hasta ${appointmentSettings.maxAdvanceBookingDays} días de anticipación`
+          reason: `Solo se permiten reservas hasta ${appointmentSettings.maxAdvanceBookingDays} días de anticipación`,
         });
       }
 
@@ -386,7 +413,7 @@ export class ValidateService {
           message: 'Horario no disponible',
           date: query.date,
           time: query.time,
-          reason: 'No se permiten reservas para el mismo día'
+          reason: 'No se permiten reservas para el mismo día',
         });
       }
 
@@ -395,8 +422,8 @@ export class ValidateService {
       const businessHour = await this.prisma.businessHours.findFirst({
         where: {
           brandId,
-          dayOfWeek
-        }
+          dayOfWeek,
+        },
       });
 
       if (!businessHour || !businessHour.isOpen) {
@@ -406,23 +433,28 @@ export class ValidateService {
           message: 'Horario no disponible',
           date: query.date,
           time: query.time,
-          reason: 'Negocio cerrado ese día'
+          reason: 'Negocio cerrado ese día',
         });
       }
 
       // 8. Verificar si la hora está dentro del horario de negocio
       const requestedTime = query.time;
-      if (!businessHour.openTime || !businessHour.closeTime || 
-          requestedTime < businessHour.openTime || requestedTime >= businessHour.closeTime) {
+      if (
+        !businessHour.openTime ||
+        !businessHour.closeTime ||
+        requestedTime < businessHour.openTime ||
+        requestedTime >= businessHour.closeTime
+      ) {
         console.log('❌ Hora fuera del horario de negocio');
         return BaseResponseDto.success({
           isAvailable: false,
           message: 'Horario no disponible',
           date: query.date,
           time: query.time,
-          reason: businessHour.openTime && businessHour.closeTime 
-            ? `Horario de atención: ${businessHour.openTime} - ${businessHour.closeTime}`
-            : 'Horario de atención no definido'
+          reason:
+            businessHour.openTime && businessHour.closeTime
+              ? `Horario de atención: ${businessHour.openTime} - ${businessHour.closeTime}`
+              : 'Horario de atención no definido',
         });
       }
 
@@ -430,8 +462,8 @@ export class ValidateService {
       const specialHour = await this.prisma.specialHours.findFirst({
         where: {
           brandId,
-          date: new Date(query.date)
-        }
+          date: new Date(query.date),
+        },
       });
 
       if (specialHour) {
@@ -442,20 +474,23 @@ export class ValidateService {
             message: 'Horario no disponible',
             date: query.date,
             time: query.time,
-            reason: specialHour.reason || 'Día especial - cerrado'
+            reason: specialHour.reason || 'Día especial - cerrado',
           });
         }
 
         // Si hay horario especial abierto, verificar el horario
         if (specialHour.openTime && specialHour.closeTime) {
-          if (requestedTime < specialHour.openTime || requestedTime >= specialHour.closeTime) {
+          if (
+            requestedTime < specialHour.openTime ||
+            requestedTime >= specialHour.closeTime
+          ) {
             console.log('❌ Hora fuera del horario especial');
             return BaseResponseDto.success({
               isAvailable: false,
               message: 'Horario no disponible',
               date: query.date,
               time: query.time,
-              reason: `Horario especial: ${specialHour.openTime} - ${specialHour.closeTime}`
+              reason: `Horario especial: ${specialHour.openTime} - ${specialHour.closeTime}`,
             });
           }
         }
@@ -470,32 +505,32 @@ export class ValidateService {
         where: {
           brandId,
           status: {
-            in: ['PENDING', 'CONFIRMED']
+            in: ['PENDING', 'CONFIRMED'],
           },
           OR: [
             {
               // Cita que empieza durante el horario solicitado
               startTime: {
                 gte: startTime,
-                lt: endTime
-              }
+                lt: endTime,
+              },
             },
             {
               // Cita que termina durante el horario solicitado
               endTime: {
                 gt: startTime,
-                lte: endTime
-              }
+                lte: endTime,
+              },
             },
             {
               // Cita que abarca completamente el horario solicitado
               AND: [
                 { startTime: { lte: startTime } },
-                { endTime: { gte: endTime } }
-              ]
-            }
-          ]
-        }
+                { endTime: { gte: endTime } },
+              ],
+            },
+          ],
+        },
       });
 
       if (conflictingAppointment) {
@@ -505,7 +540,7 @@ export class ValidateService {
           message: 'Horario no disponible',
           date: query.date,
           time: query.time,
-          reason: 'Horario ya reservado'
+          reason: 'Horario ya reservado',
         });
       }
 
@@ -515,16 +550,16 @@ export class ValidateService {
         isAvailable: true,
         message: 'Horario disponible',
         date: query.date,
-        time: query.time
+        time: query.time,
       });
-
     } catch (error) {
       console.error('💥 Error validating calendar availability:', error);
-      return BaseResponseDto.error([{
-        code: ERROR_CODES.INTERNAL_ERROR,
-        description: 'Error validating calendar availability'
-      }]);
+      return BaseResponseDto.error([
+        {
+          code: ERROR_CODES.INTERNAL_ERROR,
+          description: 'Error validating calendar availability',
+        },
+      ]);
     }
   }
-
 }

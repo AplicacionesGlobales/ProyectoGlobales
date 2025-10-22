@@ -21,18 +21,28 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // Configurar prefijo global para todas las rutas
+  app.setGlobalPrefix('api');
+
   // Configurar validación global
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    forbidNonWhitelisted: false,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: false,
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('Agenda Pro API')
-    .setDescription('API para el sistema de gestión de citas y usuarios con roles')
+    .setDescription(
+      'API para el sistema de gestión de citas y usuarios con roles',
+    )
     .setVersion('1.0')
-    .addTag('Autenticación', 'Endpoints para registro y autenticación de usuarios')
+    .addTag(
+      'Autenticación',
+      'Endpoints para registro y autenticación de usuarios',
+    )
     .addTag('Salud', 'Endpoints para verificar el estado del sistema')
     .addBearerAuth()
     .build();

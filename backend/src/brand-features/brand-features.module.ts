@@ -8,6 +8,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [BrandFeaturesController],
   providers: [BrandFeaturesService],
-  exports: [BrandFeaturesService]
+  exports: [BrandFeaturesService],
 })
 export class BrandFeaturesModule {}

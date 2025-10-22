@@ -1,6 +1,12 @@
 // src/auth/dto/update-profile.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEmail, Matches, Length } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsEmail,
+  Matches,
+  Length,
+} from 'class-validator';
 
 export class UpdateProfileDto {
   @ApiProperty({ description: 'Nombre del usuario', required: false })
@@ -23,12 +29,12 @@ export class UpdateProfileDto {
   })
   phone?: string;
 
-  @ApiProperty({ 
-    description: 'Nombre de usuario único', 
-    example: 'nuevousuario123', 
+  @ApiProperty({
+    description: 'Nombre de usuario único',
+    example: 'nuevousuario123',
     required: false,
-    minLength: 3, 
-    maxLength: 20 
+    minLength: 3,
+    maxLength: 20,
   })
   @IsOptional()
   @IsString({ message: 'El username debe ser una cadena de texto' })

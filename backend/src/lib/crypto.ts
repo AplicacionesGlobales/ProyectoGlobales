@@ -48,22 +48,26 @@ export function createJWTToken(payload: ResetTokenPayload): string {
   });
 }
 
-export function createAccessToken(payload: Omit<AccessTokenPayload, 'type' | 'iat' | 'exp'>): string {
+export function createAccessToken(
+  payload: Omit<AccessTokenPayload, 'type' | 'iat' | 'exp'>,
+): string {
   const tokenPayload: AccessTokenPayload = {
     ...payload,
-    type: 'access_token'
+    type: 'access_token',
   };
 
   return jwt.sign(tokenPayload, process.env.JWT_SECRET!, {
-    expiresIn: '8h' // Access tokens duran 8 horas
+    expiresIn: '8h', // Access tokens duran 8 horas
   });
 }
 
-export function createRefreshToken(payload: Omit<RefreshTokenPayload, 'type' | 'tokenId' | 'iat'>): string {
+export function createRefreshToken(
+  payload: Omit<RefreshTokenPayload, 'type' | 'tokenId' | 'iat'>,
+): string {
   const tokenPayload: RefreshTokenPayload = {
     ...payload,
     type: 'refresh_token',
-    tokenId: generateTokenId()
+    tokenId: generateTokenId(),
   };
 
   // Refresh tokens SIN expiresIn - indefinidos
@@ -72,7 +76,10 @@ export function createRefreshToken(payload: Omit<RefreshTokenPayload, 'type' | '
 
 export function verifyJWTToken(token: string): ResetTokenPayload | null {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET_RESET!) as ResetTokenPayload;
+    return jwt.verify(
+      token,
+      process.env.JWT_SECRET_RESET!,
+    ) as ResetTokenPayload;
   } catch (error) {
     console.error('Error verificando JWT token:', error);
     return null;
@@ -81,7 +88,10 @@ export function verifyJWTToken(token: string): ResetTokenPayload | null {
 
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as AccessTokenPayload;
+    const payload = jwt.verify(
+      token,
+      process.env.JWT_SECRET!,
+    ) as AccessTokenPayload;
     return payload.type === 'access_token' ? payload : null;
   } catch (error) {
     console.error('Error verificando access token:', error);
@@ -91,7 +101,10 @@ export function verifyAccessToken(token: string): AccessTokenPayload | null {
 
 export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as RefreshTokenPayload;
+    const payload = jwt.verify(
+      token,
+      process.env.JWT_SECRET!,
+    ) as RefreshTokenPayload;
     return payload.type === 'refresh_token' ? payload : null;
   } catch (error) {
     console.error('Error verificando refresh token:', error);
@@ -104,6 +117,9 @@ export async function hashPassword(password: string): Promise<string> {
   return await bcrypt.hash(password, saltRounds);
 }
 
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
+export async function comparePassword(
+  password: string,
+  hash: string,
+): Promise<boolean> {
   return await bcrypt.compare(password, hash);
 }

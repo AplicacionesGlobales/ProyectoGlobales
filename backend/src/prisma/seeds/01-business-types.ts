@@ -7,41 +7,46 @@ const businessTypes = [
     key: 'fotografo',
     title: 'Fotógrafo',
     subtitle: 'Fotografia Profesional',
-    description: 'Servicios de fotografía profesional, sesiones, eventos y retratos',
+    description:
+      'Servicios de fotografía profesional, sesiones, eventos y retratos',
     icon: 'Camera',
-    order: 1
+    order: 1,
   },
   {
     key: 'camarografo',
     title: 'Camarógrafo',
     subtitle: 'Video Profesional',
-    description: 'Servicios de videografía profesional, eventos, comerciales y documentales',
+    description:
+      'Servicios de videografía profesional, eventos, comerciales y documentales',
     icon: 'Video',
-    order: 2
+    order: 2,
   },
   {
     key: 'medico',
     title: 'Médico/Dentista',
     subtitle: 'Servicios Médicos',
-    description: 'Consultorio médico y dental, citas, historiales y tratamientos',
+    description:
+      'Consultorio médico y dental, citas, historiales y tratamientos',
     icon: 'Stethoscope',
-    order: 3
+    order: 3,
   },
   {
     key: 'estilista',
     title: 'Estilista/Barbero',
     subtitle: 'Servicios de Belleza',
-    description: 'Salón de belleza, peluquería, barbería y servicios de estilismo',
+    description:
+      'Salón de belleza, peluquería, barbería y servicios de estilismo',
     icon: 'Scissors',
-    order: 4
+    order: 4,
   },
   {
     key: 'consultor',
     title: 'Consultor',
     subtitle: 'Consultoría Profesional',
-    description: 'Servicios de consultoría y asesoramiento profesional en diversas áreas',
+    description:
+      'Servicios de consultoría y asesoramiento profesional en diversas áreas',
     icon: 'Briefcase',
-    order: 5
+    order: 5,
   },
   {
     key: 'masajista',
@@ -49,15 +54,16 @@ const businessTypes = [
     subtitle: 'Bienestar y Relajación',
     description: 'Servicios de masajes, spa, relajación y bienestar',
     icon: 'Hand',
-    order: 6
+    order: 6,
   },
   {
     key: 'entrenador',
     title: 'Entrenador Personal',
     subtitle: 'Fitness y Entrenamiento',
-    description: 'Entrenamiento físico personalizado, coaching deportivo y fitness',
+    description:
+      'Entrenamiento físico personalizado, coaching deportivo y fitness',
     icon: 'Dumbbell',
-    order: 7
+    order: 7,
   },
   {
     key: 'otro',
@@ -65,8 +71,8 @@ const businessTypes = [
     subtitle: 'Servicios Personalizados',
     description: 'Configura tu app para cualquier otro tipo de servicio',
     icon: 'Settings',
-    order: 8
-  }
+    order: 8,
+  },
 ];
 
 export async function seedBusinessTypes() {
@@ -86,8 +92,8 @@ export async function seedBusinessTypes() {
           description: businessType.description,
           icon: businessType.icon,
           order: businessType.order,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
     }
 

@@ -9,9 +9,16 @@ import {
   ParseIntPipe,
   ValidationPipe,
   Res,
-  Header
+  Header,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Response } from 'express';
 import { Public } from '../common/decorators';
 import { Sprint10Service } from './sprint10.service';
@@ -21,11 +28,11 @@ import {
   BillingCalculationResponseDto,
   ManualRenewalRequestDto,
   ManualRenewalResponseDto,
-  SalesReportRequestDto
+  SalesReportRequestDto,
 } from './dto';
 
 @ApiTags('Sprint 10')
-@Controller('api')
+@Controller('')
 export class Sprint10Controller {
   constructor(private readonly sprint10Service: Sprint10Service) {}
 
@@ -36,13 +43,14 @@ export class Sprint10Controller {
   @Get('receipts/:id')
   @ApiOperation({
     summary: 'Descargar recibo en PDF (Pablo)',
-    description: 'Desarrollar endpoint que permita descargar recibo generado en formato PDF'
+    description:
+      'Desarrollar endpoint que permita descargar recibo generado en formato PDF',
   })
   @ApiParam({
     name: 'id',
     description: 'ID del payment para generar el recibo',
     type: 'number',
-    example: 1
+    example: 1,
   })
   @ApiResponse({
     status: 200,
@@ -50,37 +58,41 @@ export class Sprint10Controller {
     headers: {
       'Content-Type': {
         description: 'Tipo de contenido',
-        schema: { type: 'string', example: 'application/pdf' }
+        schema: { type: 'string', example: 'application/pdf' },
       },
       'Content-Disposition': {
         description: 'Disposición del contenido',
-        schema: { type: 'string', example: 'attachment; filename="recibo-1.pdf"' }
-      }
-    }
+        schema: {
+          type: 'string',
+          example: 'attachment; filename="recibo-1.pdf"',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 404,
-    description: 'Payment no encontrado'
+    description: 'Payment no encontrado',
   })
   @Header('Content-Type', 'application/pdf')
   async downloadReceipt(
     @Param('id', ParseIntPipe) paymentId: number,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<void> {
     try {
-      const pdfBuffer = await this.sprint10Service.generateReceiptPDF(paymentId);
-      
+      const pdfBuffer =
+        await this.sprint10Service.generateReceiptPDF(paymentId);
+
       res.set({
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="recibo-${paymentId}.pdf"`,
-        'Content-Length': pdfBuffer.length.toString()
+        'Content-Length': pdfBuffer.length.toString(),
       });
-      
+
       res.send(pdfBuffer);
     } catch (error) {
       res.status(error.status || 500).json({
         success: false,
-        message: error.message || 'Error interno del servidor'
+        message: error.message || 'Error interno del servidor',
       });
     }
   }
@@ -92,24 +104,25 @@ export class Sprint10Controller {
   @Post('billing/calculate')
   @ApiOperation({
     summary: 'Calcular prorateo de facturación (Pablo)',
-    description: 'Crear servicio completo de facturación con cálculos, prorateos y renovaciones - Cálculo de prorateo por tiempo'
+    description:
+      'Crear servicio completo de facturación con cálculos, prorateos y renovaciones - Cálculo de prorateo por tiempo',
   })
   @ApiBody({ type: BillingCalculationRequestDto })
   @ApiResponse({
     status: 200,
     description: 'Cálculo completado exitosamente',
-    type: BaseResponseDto<BillingCalculationResponseDto>
+    type: BaseResponseDto<BillingCalculationResponseDto>,
   })
   @ApiResponse({
     status: 404,
-    description: 'Brand o Plan no encontrado'
+    description: 'Brand o Plan no encontrado',
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos de entrada inválidos'
+    description: 'Datos de entrada inválidos',
   })
   async calculateBilling(
-    @Body(ValidationPipe) request: BillingCalculationRequestDto
+    @Body(ValidationPipe) request: BillingCalculationRequestDto,
   ): Promise<BaseResponseDto<BillingCalculationResponseDto>> {
     return this.sprint10Service.calculateProration(request);
   }
@@ -121,24 +134,25 @@ export class Sprint10Controller {
   @Post('billing/manual-renewal')
   @ApiOperation({
     summary: 'Procesar renovación manual (Yuli)',
-    description: 'Crear servicio completo de facturación con cálculos, prorateos y renovaciones - Gestión manual de renovaciones'
+    description:
+      'Crear servicio completo de facturación con cálculos, prorateos y renovaciones - Gestión manual de renovaciones',
   })
   @ApiBody({ type: ManualRenewalRequestDto })
   @ApiResponse({
     status: 200,
     description: 'Renovación procesada exitosamente',
-    type: BaseResponseDto<ManualRenewalResponseDto>
+    type: BaseResponseDto<ManualRenewalResponseDto>,
   })
   @ApiResponse({
     status: 404,
-    description: 'Brand o Plan no encontrado'
+    description: 'Brand o Plan no encontrado',
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos de entrada inválidos'
+    description: 'Datos de entrada inválidos',
   })
   async processManualRenewal(
-    @Body(ValidationPipe) request: ManualRenewalRequestDto
+    @Body(ValidationPipe) request: ManualRenewalRequestDto,
   ): Promise<BaseResponseDto<ManualRenewalResponseDto>> {
     return this.sprint10Service.processManualRenewal(request);
   }
@@ -150,21 +164,20 @@ export class Sprint10Controller {
   @Get('debug/brand/:brandId')
   @ApiOperation({
     summary: 'Debug: Ver datos del brand (Pablo)',
-    description: 'Endpoint de debug para ver planes y datos asociados a un brand'
+    description:
+      'Endpoint de debug para ver planes y datos asociados a un brand',
   })
   @ApiParam({
     name: 'brandId',
     description: 'ID del brand a consultar',
     type: 'number',
-    example: 1
+    example: 1,
   })
-  async debugBrandData(
-    @Param('brandId', ParseIntPipe) brandId: number
-  ) {
+  async debugBrandData(@Param('brandId', ParseIntPipe) brandId: number) {
     const brand = await this.sprint10Service.debugBrandData(brandId);
     return {
       success: true,
-      data: brand
+      data: brand,
     };
   }
 
@@ -175,23 +188,23 @@ export class Sprint10Controller {
   @Post('billing/change-plan')
   @ApiOperation({
     summary: 'Cambiar plan de suscripción (Pablo)',
-    description: 'Cambiar el plan actual de un brand por uno nuevo'
+    description: 'Cambiar el plan actual de un brand por uno nuevo',
   })
   @ApiBody({
     type: 'object',
     schema: {
       properties: {
         brandId: { type: 'number', example: 1 },
-        newPlanId: { type: 'number', example: 2 }
-      }
-    }
+        newPlanId: { type: 'number', example: 2 },
+      },
+    },
   })
   @ApiResponse({
     status: 200,
-    description: 'Plan cambiado exitosamente'
+    description: 'Plan cambiado exitosamente',
   })
   async changePlan(
-    @Body(ValidationPipe) body: { brandId: number; newPlanId: number }
+    @Body(ValidationPipe) body: { brandId: number; newPlanId: number },
   ): Promise<BaseResponseDto<any>> {
     return this.sprint10Service.changePlan(body.brandId, body.newPlanId);
   }
@@ -226,64 +239,82 @@ export class Sprint10Controller {
 - Tasa de completitud
 - Ingresos por citas completadas
 - Ingresos por suscripciones
-- Ingresos totales`
+- Ingresos totales`,
   })
   @ApiParam({
     name: 'id_brand',
     description: 'ID de la marca para generar el reporte',
     type: 'number',
-    example: 1
+    example: 1,
   })
   @ApiQuery({
     name: 'period',
-    description: 'Período del reporte: weekly (última semana), monthly (último mes) o all (todo el histórico)',
+    description:
+      'Período del reporte: weekly (última semana), monthly (último mes) o all (todo el histórico)',
     enum: ['weekly', 'monthly', 'all'],
     required: true,
-    example: 'monthly'
+    example: 'monthly',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reporte generado exitosamente. Se descarga un archivo Excel (.xlsx)',
+    description:
+      'Reporte generado exitosamente. Se descarga un archivo Excel (.xlsx)',
     headers: {
       'Content-Type': {
         description: 'Tipo de contenido',
-        schema: { type: 'string', example: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+        schema: {
+          type: 'string',
+          example:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
       },
       'Content-Disposition': {
         description: 'Disposición del contenido',
-        schema: { type: 'string', example: 'attachment; filename="reporte-ventas-1-monthly.xlsx"' }
-      }
-    }
+        schema: {
+          type: 'string',
+          example: 'attachment; filename="reporte-ventas-1-monthly.xlsx"',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 404,
-    description: 'Brand no encontrado'
+    description: 'Brand no encontrado',
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos de entrada inválidos. Verifique que el período sea: weekly, monthly o all'
+    description:
+      'Datos de entrada inválidos. Verifique que el período sea: weekly, monthly o all',
   })
-  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
   async downloadSalesReport(
     @Param('id_brand', ParseIntPipe) id_brand: number,
     @Query('period') period: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<void> {
     try {
-      const request: SalesReportRequestDto = { id_brand, period: period as any };
-      const excelBuffer = await this.sprint10Service.generateSalesReport(request);
-      
+      const request: SalesReportRequestDto = {
+        id_brand,
+        period: period as any,
+      };
+      const excelBuffer =
+        await this.sprint10Service.generateSalesReport(request);
+
       res.set({
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Type':
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="reporte-ventas-${id_brand}-${period}.xlsx"`,
-        'Content-Length': excelBuffer.length.toString()
+        'Content-Length': excelBuffer.length.toString(),
       });
-      
+
       res.send(excelBuffer);
     } catch (error) {
       res.status(error.status || 500).json({
         success: false,
-        message: error.message || 'Error interno del servidor'
+        message: error.message || 'Error interno del servidor',
       });
     }
   }
@@ -318,9 +349,9 @@ export class Sprint10Controller {
 - Tasa de completitud
 - Ingresos por citas completadas
 - Ingresos por suscripciones
-- Ingresos totales`
+- Ingresos totales`,
   })
-  @ApiBody({ 
+  @ApiBody({
     type: SalesReportRequestDto,
     description: 'Datos para generar el reporte',
     examples: {
@@ -329,41 +360,42 @@ export class Sprint10Controller {
         description: 'Genera reporte de la última semana',
         value: {
           id_brand: 1,
-          period: 'weekly'
-        }
+          period: 'weekly',
+        },
       },
       mensual: {
         summary: 'Reporte Mensual',
         description: 'Genera reporte del último mes',
         value: {
           id_brand: 1,
-          period: 'monthly'
-        }
+          period: 'monthly',
+        },
       },
       historico: {
         summary: 'Reporte Histórico',
         description: 'Genera reporte de todo el histórico',
         value: {
           id_brand: 1,
-          period: 'all'
-        }
-      }
-    }
+          period: 'all',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 200,
-    description: 'Reporte generado exitosamente en formato JSON'
+    description: 'Reporte generado exitosamente en formato JSON',
   })
   @ApiResponse({
     status: 404,
-    description: 'Brand no encontrado'
+    description: 'Brand no encontrado',
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos de entrada inválidos. Verifique que el período sea: weekly, monthly o all'
+    description:
+      'Datos de entrada inválidos. Verifique que el período sea: weekly, monthly o all',
   })
   async generateSalesReportJson(
-    @Body(ValidationPipe) request: SalesReportRequestDto
+    @Body(ValidationPipe) request: SalesReportRequestDto,
   ): Promise<BaseResponseDto<any>> {
     return this.sprint10Service.generateSalesReportJson(request);
   }

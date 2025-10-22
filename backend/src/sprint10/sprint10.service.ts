@@ -1,5 +1,9 @@
 // src/sprint10/sprint10.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
 import {
@@ -9,7 +13,7 @@ import {
   ManualRenewalResponseDto,
   ProrationCalculationDto,
   SalesReportRequestDto,
-  ReportPeriod
+  ReportPeriod,
 } from './dto';
 import * as PDFDocument from 'pdfkit';
 import { Readable } from 'stream';
@@ -32,20 +36,20 @@ export class Sprint10Service {
             id: true,
             name: true,
             description: true,
-            phone: true
-          }
+            phone: true,
+          },
         },
         brandPlan: {
           include: {
             plan: {
               select: {
                 name: true,
-                basePrice: true
-              }
-            }
-          }
-        }
-      }
+                basePrice: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!payment) {
@@ -62,7 +66,7 @@ export class Sprint10Service {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({
         margin: 45,
-        size: 'LETTER'
+        size: 'LETTER',
       });
       const chunks: Buffer[] = [];
 
@@ -73,10 +77,19 @@ export class Sprint10Service {
       // ========================================
       // HEADER - White Label
       // ========================================
-      doc.fontSize(24).font('Helvetica-Bold').text('WHITE LABEL', { align: 'center' });
-      doc.fontSize(10).font('Helvetica').text('Sistema de Gestión Empresarial', { align: 'center' });
+      doc
+        .fontSize(24)
+        .font('Helvetica-Bold')
+        .text('WHITE LABEL', { align: 'center' });
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .text('Sistema de Gestión Empresarial', { align: 'center' });
       doc.moveDown(0.2);
-      doc.fontSize(8).fillColor('#666666').text('www.whitelabel.com', { align: 'center' });
+      doc
+        .fontSize(8)
+        .fillColor('#666666')
+        .text('www.whitelabel.com', { align: 'center' });
       doc.fillColor('#000000');
       doc.moveDown(1);
 
@@ -88,10 +101,18 @@ export class Sprint10Service {
       // ========================================
       // TÍTULO
       // ========================================
-      doc.fontSize(18).font('Helvetica-Bold').text('COMPROBANTE DE PAGO', { align: 'center' });
+      doc
+        .fontSize(18)
+        .font('Helvetica-Bold')
+        .text('COMPROBANTE DE PAGO', { align: 'center' });
       doc.moveDown(0.3);
-      doc.fontSize(9).font('Helvetica').fillColor('#666666')
-        .text(`Recibo No. ${payment.tilopayReference || payment.id}`, { align: 'center' });
+      doc
+        .fontSize(9)
+        .font('Helvetica')
+        .fillColor('#666666')
+        .text(`Recibo No. ${payment.tilopayReference || payment.id}`, {
+          align: 'center',
+        });
       doc.fillColor('#000000');
       doc.moveDown(1);
 
@@ -103,12 +124,17 @@ export class Sprint10Service {
 
       doc.rect(45, boxY, 510, boxHeight).fillAndStroke('#f8f9fa', '#dee2e6');
 
-      doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
+      doc
+        .fillColor('#000000')
+        .fontSize(10)
+        .font('Helvetica-Bold')
         .text('FACTURADO A:', 55, boxY + 8);
 
-      doc.fontSize(9).font('Helvetica')
+      doc
+        .fontSize(9)
+        .font('Helvetica')
         .text(`${payment.brand.name}`, 55, boxY + 24);
-      
+
       if (payment.brand.description) {
         doc.text(`${payment.brand.description}`, 55, boxY + 37);
       }
@@ -126,7 +152,9 @@ export class Sprint10Service {
       const col1X = 55;
       const col2X = 340;
 
-      doc.fontSize(10).font('Helvetica-Bold')
+      doc
+        .fontSize(10)
+        .font('Helvetica-Bold')
         .text('DETALLES DE LA TRANSACCIÓN', col1X, tableTop);
 
       doc.moveDown(0.4);
@@ -137,7 +165,9 @@ export class Sprint10Service {
 
       const addRow = (label: string, value: string, bold = false) => {
         doc.fontSize(9).font('Helvetica').text(label, col1X, currentY);
-        doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').text(value, col2X, currentY);
+        doc
+          .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+          .text(value, col2X, currentY);
         currentY += 16;
       };
 
@@ -146,20 +176,23 @@ export class Sprint10Service {
         'Fecha de Pago:',
         payment.processedAt
           ? new Date(payment.processedAt).toLocaleDateString('es-CR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
           : new Date(payment.createdAt).toLocaleDateString('es-CR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
       );
 
-      addRow('Método de Pago:', payment.paymentMethod || 'Tarjeta de crédito/débito');
+      addRow(
+        'Método de Pago:',
+        payment.paymentMethod || 'Tarjeta de crédito/débito',
+      );
 
       if (payment.tilopayTransactionId) {
         addRow('ID Transacción:', payment.tilopayTransactionId);
@@ -179,7 +212,10 @@ export class Sprint10Service {
       // DETALLE DEL SERVICIO
       // ========================================
       doc.y = currentY;
-      doc.fontSize(10).font('Helvetica-Bold').text('SERVICIO CONTRATADO', col1X);
+      doc
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text('SERVICIO CONTRATADO', col1X);
       doc.moveDown(0.4);
 
       currentY = doc.y;
@@ -187,22 +223,30 @@ export class Sprint10Service {
       if (payment.brandPlan && payment.brandPlan.plan) {
         addRow('Plan:', payment.brandPlan.plan.name, true);
 
-        const planTypeText = {
-          'app': 'Aplicación Móvil',
-          'web': 'Sitio Web',
-          'complete': 'Paquete Completo'
-        }[payment.brandPlan.plan.type] || payment.brandPlan.plan.type;
+        const planTypeText =
+          {
+            app: 'Aplicación Móvil',
+            web: 'Sitio Web',
+            complete: 'Paquete Completo',
+          }[payment.brandPlan.plan.type] || payment.brandPlan.plan.type;
 
         addRow('Tipo:', planTypeText);
         addRow('Período:', 'Mensual (1 mes)');
 
         if (payment.brandPlan.startDate && payment.brandPlan.endDate) {
-          const startDate = new Date(payment.brandPlan.startDate).toLocaleDateString('es-CR');
-          const endDate = new Date(payment.brandPlan.endDate).toLocaleDateString('es-CR');
+          const startDate = new Date(
+            payment.brandPlan.startDate,
+          ).toLocaleDateString('es-CR');
+          const endDate = new Date(
+            payment.brandPlan.endDate,
+          ).toLocaleDateString('es-CR');
           addRow('Vigencia:', `${startDate} - ${endDate}`);
         }
       } else {
-        addRow('Descripción:', payment.description || 'Servicio de suscripción');
+        addRow(
+          'Descripción:',
+          payment.description || 'Servicio de suscripción',
+        );
         addRow('Tipo de Pago:', payment.paymentType);
       }
 
@@ -218,10 +262,17 @@ export class Sprint10Service {
       currentY = doc.y;
 
       // TOTAL
-      doc.fontSize(13).font('Helvetica-Bold')
+      doc
+        .fontSize(13)
+        .font('Helvetica-Bold')
         .text('TOTAL PAGADO:', col1X, currentY);
-      doc.fontSize(15)
-        .text(`${payment.currency} $${Number(payment.amount).toFixed(2)}`, col2X, currentY);
+      doc
+        .fontSize(15)
+        .text(
+          `${payment.currency} $${Number(payment.amount).toFixed(2)}`,
+          col2X,
+          currentY,
+        );
 
       // ========================================
       // FOOTER
@@ -234,22 +285,24 @@ export class Sprint10Service {
         'Este documento certifica el pago recibido por los servicios contratados.',
         45,
         footerStartY,
-        { align: 'center', width: 510 }
+        { align: 'center', width: 510 },
       );
 
       doc.text(
         'Soporte: soporte@whitelabel.com | Tel: +506 2222-3333',
         45,
         footerStartY + 12,
-        { align: 'center', width: 510 }
+        { align: 'center', width: 510 },
       );
 
-      doc.fontSize(6).text(
-        `Generado el ${new Date().toLocaleDateString('es-CR')} ${new Date().toLocaleTimeString('es-CR')} (Pablo)`,
-        45,
-        footerStartY + 24,
-        { align: 'center', width: 510 }
-      );
+      doc
+        .fontSize(6)
+        .text(
+          `Generado el ${new Date().toLocaleDateString('es-CR')} ${new Date().toLocaleTimeString('es-CR')} (Pablo)`,
+          45,
+          footerStartY + 24,
+          { align: 'center', width: 510 },
+        );
 
       doc.end();
     });
@@ -259,21 +312,23 @@ export class Sprint10Service {
    * Calcular prorateo por tiempo para facturación mensual (Pablo)
    */
   async calculateProration(
-    request: BillingCalculationRequestDto
+    request: BillingCalculationRequestDto,
   ): Promise<BaseResponseDto<BillingCalculationResponseDto>> {
     try {
       // Validar que el brand existe
       const brand = await this.prisma.brand.findUnique({
-        where: { id: request.brandId }
+        where: { id: request.brandId },
       });
 
       if (!brand) {
-        throw new NotFoundException(`Brand with ID ${request.brandId} not found`);
+        throw new NotFoundException(
+          `Brand with ID ${request.brandId} not found`,
+        );
       }
 
       // Obtener información del plan
       const plan = await this.prisma.plan.findUnique({
-        where: { id: request.planId }
+        where: { id: request.planId },
       });
 
       if (!plan) {
@@ -282,12 +337,14 @@ export class Sprint10Service {
 
       // Calcular prorateo
       const startDate = new Date(request.startDate);
-      const endDate = request.endDate ? new Date(request.endDate) : this.getNextMonthDate(startDate);
-      
+      const endDate = request.endDate
+        ? new Date(request.endDate)
+        : this.getNextMonthDate(startDate);
+
       const prorationCalculation = this.calculateMonthlyProration(
         startDate,
         endDate,
-        parseFloat(plan.basePrice.toString())
+        parseFloat(plan.basePrice.toString()),
       );
 
       // Calcular próxima fecha de renovación (siempre mensual)
@@ -299,10 +356,10 @@ export class Sprint10Service {
           id: plan.id,
           name: plan.name,
           price: plan.basePrice.toString(),
-          billingPeriod: 'monthly' // Por defecto mensual como especificaste
+          billingPeriod: 'monthly', // Por defecto mensual como especificaste
         },
         prorationCalculation,
-        nextRenewalDate: nextRenewalDate.toISOString()
+        nextRenewalDate: nextRenewalDate.toISOString(),
       };
 
       return BaseResponseDto.success(response);
@@ -315,16 +372,18 @@ export class Sprint10Service {
    * Procesar renovación manual de suscripción (Pablo)
    */
   async processManualRenewal(
-    request: ManualRenewalRequestDto
+    request: ManualRenewalRequestDto,
   ): Promise<BaseResponseDto<ManualRenewalResponseDto>> {
     try {
       // Validar que el brand existe
       const brand = await this.prisma.brand.findUnique({
-        where: { id: request.brandId }
+        where: { id: request.brandId },
       });
 
       if (!brand) {
-        throw new NotFoundException(`Brand with ID ${request.brandId} not found`);
+        throw new NotFoundException(
+          `Brand with ID ${request.brandId} not found`,
+        );
       }
 
       // Obtener el plan actual (si existe)
@@ -332,27 +391,31 @@ export class Sprint10Service {
         where: {
           brandId: request.brandId,
           planId: request.currentPlanId,
-          isActive: true
+          isActive: true,
         },
         include: {
-          plan: true
-        }
+          plan: true,
+        },
       });
 
       // Si no existe un plan activo, aún podemos proceder con la renovación
       // creando un nuevo brandPlan
       if (!currentBrandPlan) {
-        console.log(`No active brand plan found for brandId: ${request.brandId}, planId: ${request.currentPlanId}. Creating new one.`);
+        console.log(
+          `No active brand plan found for brandId: ${request.brandId}, planId: ${request.currentPlanId}. Creating new one.`,
+        );
       }
 
       // Determinar el plan para la renovación
       const targetPlanId = request.newPlanId || request.currentPlanId;
       const targetPlan = await this.prisma.plan.findUnique({
-        where: { id: targetPlanId }
+        where: { id: targetPlanId },
       });
 
       if (!targetPlan) {
-        throw new NotFoundException(`Target plan with ID ${targetPlanId} not found`);
+        throw new NotFoundException(
+          `Target plan with ID ${targetPlanId} not found`,
+        );
       }
 
       const renewalDate = new Date();
@@ -366,15 +429,15 @@ export class Sprint10Service {
           price: targetPlan.basePrice,
           startDate: renewalDate,
           endDate: nextExpirationDate,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
 
       // Desactivar el plan anterior si existe y es diferente
       if (currentBrandPlan && currentBrandPlan.id !== newBrandPlan.id) {
         await this.prisma.brandPlan.update({
           where: { id: currentBrandPlan.id },
-          data: { isActive: false }
+          data: { isActive: false },
         });
       }
 
@@ -386,9 +449,9 @@ export class Sprint10Service {
           id: targetPlan.id,
           name: targetPlan.name,
           price: targetPlan.basePrice.toString(),
-          billingPeriod: 'monthly' // Por defecto mensual como especificaste
+          billingPeriod: 'monthly', // Por defecto mensual como especificaste
         },
-        nextExpirationDate: nextExpirationDate.toISOString()
+        nextExpirationDate: nextExpirationDate.toISOString(),
       };
 
       return BaseResponseDto.success(response);
@@ -403,7 +466,7 @@ export class Sprint10Service {
   private calculateMonthlyProration(
     startDate: Date,
     endDate: Date,
-    originalAmount: number
+    originalAmount: number,
   ): ProrationCalculationDto {
     // Calcular días utilizados
     const timeDiff = endDate.getTime() - startDate.getTime();
@@ -423,7 +486,7 @@ export class Sprint10Service {
       daysUsed,
       totalDays,
       originalAmount: originalAmount.toFixed(2),
-      proratedAmount: proratedAmount.toFixed(2)
+      proratedAmount: proratedAmount.toFixed(2),
     };
   }
 
@@ -439,11 +502,14 @@ export class Sprint10Service {
   /**
    * Cambiar plan de suscripción (Pablo)
    */
-  async changePlan(brandId: number, newPlanId: number): Promise<BaseResponseDto<any>> {
+  async changePlan(
+    brandId: number,
+    newPlanId: number,
+  ): Promise<BaseResponseDto<any>> {
     try {
       // Validar que el brand existe
       const brand = await this.prisma.brand.findUnique({
-        where: { id: brandId }
+        where: { id: brandId },
       });
 
       if (!brand) {
@@ -452,7 +518,7 @@ export class Sprint10Service {
 
       // Validar que el nuevo plan existe
       const newPlan = await this.prisma.plan.findUnique({
-        where: { id: newPlanId }
+        where: { id: newPlanId },
       });
 
       if (!newPlan) {
@@ -463,11 +529,11 @@ export class Sprint10Service {
       await this.prisma.brandPlan.updateMany({
         where: {
           brandId: brandId,
-          isActive: true
+          isActive: true,
         },
         data: {
-          isActive: false
-        }
+          isActive: false,
+        },
       });
 
       // Crear nuevo brand plan
@@ -481,8 +547,8 @@ export class Sprint10Service {
           price: newPlan.basePrice,
           startDate: currentDate,
           endDate: nextExpirationDate,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
 
       const response = {
@@ -491,11 +557,11 @@ export class Sprint10Service {
           id: newPlan.id,
           name: newPlan.name,
           type: newPlan.type,
-          price: newPlan.basePrice.toString()
+          price: newPlan.basePrice.toString(),
         },
         startDate: currentDate.toISOString(),
         endDate: nextExpirationDate.toISOString(),
-        message: `Plan cambiado exitosamente a ${newPlan.name}`
+        message: `Plan cambiado exitosamente a ${newPlan.name}`,
       };
 
       return BaseResponseDto.success(response);
@@ -516,14 +582,14 @@ export class Sprint10Service {
       include: {
         brandPlans: {
           include: {
-            plan: true
-          }
+            plan: true,
+          },
         },
         payments: {
           take: 5,
-          orderBy: { createdAt: 'desc' }
-        }
-      }
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
 
     if (!brand) {
@@ -532,19 +598,19 @@ export class Sprint10Service {
 
     // También obtener todos los planes disponibles
     const allPlans = await this.prisma.plan.findMany({
-      where: { isActive: true }
+      where: { isActive: true },
     });
 
     return {
       brand: {
         id: brand.id,
         name: brand.name,
-        description: brand.description
+        description: brand.description,
       },
-      activeBrandPlans: brand.brandPlans.filter(bp => bp.isActive),
+      activeBrandPlans: brand.brandPlans.filter((bp) => bp.isActive),
       allBrandPlans: brand.brandPlans,
       recentPayments: brand.payments,
-      availablePlans: allPlans
+      availablePlans: allPlans,
     };
   }
 
@@ -560,8 +626,8 @@ export class Sprint10Service {
       select: {
         id: true,
         name: true,
-        description: true
-      }
+        description: true,
+      },
     });
 
     if (!brand) {
@@ -593,7 +659,7 @@ export class Sprint10Service {
     const appointments = await this.prisma.appointment.findMany({
       where: {
         brandId: id_brand,
-        ...(startDate && { createdAt: { gte: startDate } })
+        ...(startDate && { createdAt: { gte: startDate } }),
       },
       include: {
         client: {
@@ -602,43 +668,43 @@ export class Sprint10Service {
             firstName: true,
             lastName: true,
             email: true,
-            phone: true
-          }
+            phone: true,
+          },
         },
         serviceType: {
           select: {
             name: true,
-            price: true
-          }
+            price: true,
+          },
         },
         createdBy: {
           select: {
             firstName: true,
-            lastName: true
-          }
-        }
+            lastName: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     });
 
     // Obtener los pagos del brand en el período especificado (datos secundarios)
     const payments = await this.prisma.payment.findMany({
       where: {
         brandId: id_brand,
-        ...(startDate && { createdAt: { gte: startDate } })
+        ...(startDate && { createdAt: { gte: startDate } }),
       },
       include: {
         brandPlan: {
           include: {
-            plan: true
-          }
-        }
+            plan: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     });
 
     // Generar el archivo Excel
@@ -649,7 +715,9 @@ export class Sprint10Service {
    * Generar reporte de ventas en formato JSON para un brand específico (Kristel)
    * A#: Crear endpoint POST /api/reports/sales para generar reportes
    */
-  async generateSalesReportJson(request: SalesReportRequestDto): Promise<BaseResponseDto<any>> {
+  async generateSalesReportJson(
+    request: SalesReportRequestDto,
+  ): Promise<BaseResponseDto<any>> {
     const { id_brand, period } = request;
 
     // Verificar que el brand existe
@@ -658,8 +726,8 @@ export class Sprint10Service {
       select: {
         id: true,
         name: true,
-        description: true
-      }
+        description: true,
+      },
     });
 
     if (!brand) {
@@ -688,7 +756,7 @@ export class Sprint10Service {
     const appointments = await this.prisma.appointment.findMany({
       where: {
         brandId: id_brand,
-        ...(startDate && { createdAt: { gte: startDate } })
+        ...(startDate && { createdAt: { gte: startDate } }),
       },
       include: {
         client: {
@@ -697,44 +765,44 @@ export class Sprint10Service {
             firstName: true,
             lastName: true,
             email: true,
-            phone: true
-          }
+            phone: true,
+          },
         },
         serviceType: {
           select: {
             name: true,
             price: true,
-            duration: true
-          }
+            duration: true,
+          },
         },
         createdBy: {
           select: {
             firstName: true,
-            lastName: true
-          }
-        }
+            lastName: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     });
 
     // Obtener los pagos del brand en el período especificado
     const payments = await this.prisma.payment.findMany({
       where: {
         brandId: id_brand,
-        ...(startDate && { createdAt: { gte: startDate } })
+        ...(startDate && { createdAt: { gte: startDate } }),
       },
       include: {
         brandPlan: {
           include: {
-            plan: true
-          }
-        }
+            plan: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     });
 
     // Procesar datos para el reporte JSON
@@ -748,7 +816,7 @@ export class Sprint10Service {
     brand: any,
     appointments: any[],
     payments: any[],
-    period: ReportPeriod
+    period: ReportPeriod,
   ): BaseResponseDto<any> {
     // Etiquetas de estado
     const statusLabels = {
@@ -757,7 +825,7 @@ export class Sprint10Service {
       IN_PROGRESS: 'En Progreso',
       COMPLETED: 'Completada',
       CANCELLED: 'Cancelada',
-      NO_SHOW: 'No Asistió'
+      NO_SHOW: 'No Asistió',
     };
 
     // Contar por estado y calcular ingresos de citas
@@ -767,22 +835,23 @@ export class Sprint10Service {
       IN_PROGRESS: 0,
       COMPLETED: 0,
       CANCELLED: 0,
-      NO_SHOW: 0
+      NO_SHOW: 0,
     };
 
     let totalAppointmentRevenue = 0;
 
     // Crear un mapa de pagos por tipo y entityId
     const paymentMap = new Map();
-    payments.forEach(payment => {
+    payments.forEach((payment) => {
       if (payment.paymentType === 'APPOINTMENT' && payment.entityId) {
         paymentMap.set(payment.entityId, payment);
       }
     });
 
     // Procesar las citas
-    const appointmentsData = appointments.map(appointment => {
-      const servicePrice = appointment.price || appointment.serviceType?.price || 0;
+    const appointmentsData = appointments.map((appointment) => {
+      const servicePrice =
+        appointment.price || appointment.serviceType?.price || 0;
       const relatedPayment = paymentMap.get(appointment.id);
 
       // Contar por estado
@@ -800,65 +869,75 @@ export class Sprint10Service {
         fecha: appointment.startTime,
         cliente: {
           id: appointment.client?.id || null,
-          nombre: appointment.client 
+          nombre: appointment.client
             ? `${appointment.client.firstName} ${appointment.client.lastName || ''}`.trim()
             : 'Cliente No Registrado',
           email: appointment.client?.email || 'N/A',
-          telefono: appointment.client?.phone || 'N/A'
+          telefono: appointment.client?.phone || 'N/A',
         },
         servicio: {
           nombre: appointment.serviceType?.name || 'Sin Servicio',
           duracion: appointment.duration,
-          precio: parseFloat(servicePrice.toString())
+          precio: parseFloat(servicePrice.toString()),
         },
         estado: {
           codigo: appointment.status,
-          etiqueta: statusLabels[appointment.status] || appointment.status
+          etiqueta: statusLabels[appointment.status] || appointment.status,
         },
-        pago: relatedPayment ? {
-          monto: parseFloat(relatedPayment.amount.toString()),
-          moneda: relatedPayment.currency,
-          estado: relatedPayment.status,
-          referencia: relatedPayment.tilopayReference || null
-        } : null,
+        pago: relatedPayment
+          ? {
+              monto: parseFloat(relatedPayment.amount.toString()),
+              moneda: relatedPayment.currency,
+              estado: relatedPayment.status,
+              referencia: relatedPayment.tilopayReference || null,
+            }
+          : null,
         notas: appointment.notes || null,
-        creadoPor: appointment.createdBy 
+        creadoPor: appointment.createdBy
           ? `${appointment.createdBy.firstName} ${appointment.createdBy.lastName || ''}`.trim()
           : null,
-        fechaCreacion: appointment.createdAt
+        fechaCreacion: appointment.createdAt,
       };
     });
 
     // Procesar pagos de suscripción
-    const subscriptionPayments = payments.filter(p => p.paymentType === 'SUBSCRIPTION');
-    const completedPayments = subscriptionPayments.filter(p => p.status === 'completed');
+    const subscriptionPayments = payments.filter(
+      (p) => p.paymentType === 'SUBSCRIPTION',
+    );
+    const completedPayments = subscriptionPayments.filter(
+      (p) => p.status === 'completed',
+    );
     const totalSubscriptionRevenue = completedPayments.reduce(
-      (sum, p) => sum + parseFloat(p.amount.toString()), 
-      0
+      (sum, p) => sum + parseFloat(p.amount.toString()),
+      0,
     );
 
     // Calcular tasa de completitud
-    const conversionRate = appointments.length > 0 
-      ? parseFloat(((statusCount.COMPLETED / appointments.length) * 100).toFixed(2))
-      : 0;
+    const conversionRate =
+      appointments.length > 0
+        ? parseFloat(
+            ((statusCount.COMPLETED / appointments.length) * 100).toFixed(2),
+          )
+        : 0;
 
     // Período en texto
-    const periodText = period === ReportPeriod.WEEKLY 
-      ? 'Última Semana' 
-      : period === ReportPeriod.MONTHLY 
-        ? 'Último Mes' 
-        : 'Todo el Histórico';
+    const periodText =
+      period === ReportPeriod.WEEKLY
+        ? 'Última Semana'
+        : period === ReportPeriod.MONTHLY
+          ? 'Último Mes'
+          : 'Todo el Histórico';
 
     // Construir respuesta
     const reportData = {
       marca: {
         id: brand.id,
         nombre: brand.name,
-        descripcion: brand.description
+        descripcion: brand.description,
       },
       periodo: {
         tipo: period,
-        etiqueta: periodText
+        etiqueta: periodText,
       },
       fechaGeneracion: new Date().toISOString(),
       citas: {
@@ -871,24 +950,24 @@ export class Sprint10Service {
             enProgreso: statusCount.IN_PROGRESS,
             pendientes: statusCount.PENDING,
             canceladas: statusCount.CANCELLED,
-            noAsistieron: statusCount.NO_SHOW
+            noAsistieron: statusCount.NO_SHOW,
           },
           tasaCompletitud: conversionRate,
-          ingresos: totalAppointmentRevenue
-        }
+          ingresos: totalAppointmentRevenue,
+        },
       },
       pagos: {
         suscripciones: {
           total: subscriptionPayments.length,
           completados: completedPayments.length,
-          ingresos: totalSubscriptionRevenue
-        }
+          ingresos: totalSubscriptionRevenue,
+        },
       },
       totales: {
         ingresosTotal: totalAppointmentRevenue + totalSubscriptionRevenue,
         ingresosCitas: totalAppointmentRevenue,
-        ingresosSuscripciones: totalSubscriptionRevenue
-      }
+        ingresosSuscripciones: totalSubscriptionRevenue,
+      },
     };
 
     return BaseResponseDto.success(reportData);
@@ -901,7 +980,7 @@ export class Sprint10Service {
     brand: any,
     appointments: any[],
     payments: any[],
-    period: ReportPeriod
+    period: ReportPeriod,
   ): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Reporte de Citas y Ventas');
@@ -922,7 +1001,7 @@ export class Sprint10Service {
     titleCell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF4472C4' }
+      fgColor: { argb: 'FF4472C4' },
     };
     titleCell.font = { ...titleCell.font, color: { argb: 'FFFFFFFF' } };
     worksheet.getRow(1).height = 30;
@@ -937,11 +1016,12 @@ export class Sprint10Service {
     // Período del reporte
     worksheet.mergeCells('A3:L3');
     const periodCell = worksheet.getCell('A3');
-    const periodText = period === ReportPeriod.WEEKLY 
-      ? 'Última Semana' 
-      : period === ReportPeriod.MONTHLY 
-        ? 'Último Mes' 
-        : 'Todo el Histórico';
+    const periodText =
+      period === ReportPeriod.WEEKLY
+        ? 'Última Semana'
+        : period === ReportPeriod.MONTHLY
+          ? 'Último Mes'
+          : 'Todo el Histórico';
     periodCell.value = `Período: ${periodText}`;
     periodCell.font = { size: 11 };
     periodCell.alignment = { vertical: 'middle', horizontal: 'left' };
@@ -970,14 +1050,14 @@ export class Sprint10Service {
       'Precio Servicio',
       'Monto Pago',
       'Estado Pago',
-      'Ref. TiloPay'
+      'Ref. TiloPay',
     ]);
 
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF2E75B6' }
+      fgColor: { argb: 'FF2E75B6' },
     };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
     headerRow.height = 25;
@@ -991,7 +1071,7 @@ export class Sprint10Service {
       IN_PROGRESS: 0,
       COMPLETED: 0,
       CANCELLED: 0,
-      NO_SHOW: 0
+      NO_SHOW: 0,
     };
 
     const statusLabels = {
@@ -1000,7 +1080,7 @@ export class Sprint10Service {
       IN_PROGRESS: 'En Progreso',
       COMPLETED: 'Completada',
       CANCELLED: 'Cancelada',
-      NO_SHOW: 'No Asistió'
+      NO_SHOW: 'No Asistió',
     };
 
     let totalRevenue = 0;
@@ -1008,22 +1088,24 @@ export class Sprint10Service {
 
     // Crear un mapa de pagos por tipo y entityId para relacionarlos con citas
     const paymentMap = new Map();
-    payments.forEach(payment => {
+    payments.forEach((payment) => {
       if (payment.paymentType === 'APPOINTMENT' && payment.entityId) {
         paymentMap.set(payment.entityId, payment);
       }
     });
 
     appointments.forEach((appointment) => {
-      const clientName = appointment.client 
+      const clientName = appointment.client
         ? `${appointment.client.firstName} ${appointment.client.lastName || ''}`.trim()
         : 'Cliente No Registrado';
-      
+
       const clientEmail = appointment.client?.email || 'N/A';
       const clientPhone = appointment.client?.phone || 'N/A';
       const serviceName = appointment.serviceType?.name || 'Sin Servicio';
-      const servicePrice = appointment.price || appointment.serviceType?.price || 0;
-      const statusLabel = statusLabels[appointment.status] || appointment.status;
+      const servicePrice =
+        appointment.price || appointment.serviceType?.price || 0;
+      const statusLabel =
+        statusLabels[appointment.status] || appointment.status;
 
       // Buscar pago relacionado
       const relatedPayment = paymentMap.get(appointment.id);
@@ -1040,7 +1122,7 @@ export class Sprint10Service {
         parseFloat(servicePrice.toString()),
         relatedPayment ? parseFloat(relatedPayment.amount.toString()) : 0,
         relatedPayment ? relatedPayment.status : 'N/A',
-        relatedPayment?.tilopayReference || 'N/A'
+        relatedPayment?.tilopayReference || 'N/A',
       ]);
 
       // Formato de moneda para las columnas de precio
@@ -1077,7 +1159,7 @@ export class Sprint10Service {
         row.getCell(col).fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: statusColor }
+          fgColor: { argb: statusColor },
         };
       }
 
@@ -1097,7 +1179,7 @@ export class Sprint10Service {
     summaryRow.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFE7E6E6' }
+      fgColor: { argb: 'FFE7E6E6' },
     };
 
     worksheet.addRow(['Total de Citas:', appointments.length]);
@@ -1107,97 +1189,125 @@ export class Sprint10Service {
     worksheet.addRow(['Citas Pendientes:', statusCount.PENDING]);
     worksheet.addRow(['Citas Canceladas:', statusCount.CANCELLED]);
     worksheet.addRow(['Clientes No Presentados:', statusCount.NO_SHOW]);
-    
-    const revenueRow = worksheet.addRow(['INGRESOS POR CITAS COMPLETADAS:', totalRevenue]);
+
+    const revenueRow = worksheet.addRow([
+      'INGRESOS POR CITAS COMPLETADAS:',
+      totalRevenue,
+    ]);
     revenueRow.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
     revenueRow.getCell(2).numFmt = '₡#,##0.00';
     // Aplicar color solo a las primeras 2 columnas
     revenueRow.getCell(1).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF70AD47' }
+      fgColor: { argb: 'FF70AD47' },
     };
     revenueRow.getCell(2).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF70AD47' }
+      fgColor: { argb: 'FF70AD47' },
     };
 
     // Tasa de conversión
-    const conversionRate = appointments.length > 0 
-      ? ((statusCount.COMPLETED / appointments.length) * 100).toFixed(2)
-      : '0.00';
+    const conversionRate =
+      appointments.length > 0
+        ? ((statusCount.COMPLETED / appointments.length) * 100).toFixed(2)
+        : '0.00';
     worksheet.addRow(['Tasa de Completitud:', `${conversionRate}%`]);
 
     // ========================================
     // RESUMEN DE PAGOS (SUSCRIPCIONES)
     // ========================================
     worksheet.addRow([]);
-    const paymentSummaryRow = worksheet.addRow(['RESUMEN DE PAGOS (SUSCRIPCIONES)']);
-    worksheet.mergeCells(`A${paymentSummaryRow.number}:L${paymentSummaryRow.number}`);
+    const paymentSummaryRow = worksheet.addRow([
+      'RESUMEN DE PAGOS (SUSCRIPCIONES)',
+    ]);
+    worksheet.mergeCells(
+      `A${paymentSummaryRow.number}:L${paymentSummaryRow.number}`,
+    );
     paymentSummaryRow.font = { size: 14, bold: true };
     paymentSummaryRow.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFE7E6E6' }
+      fgColor: { argb: 'FFE7E6E6' },
     };
 
     // Filtrar solo pagos de suscripción
-    const subscriptionPayments = payments.filter(p => p.paymentType === 'SUBSCRIPTION');
-    const completedPayments = subscriptionPayments.filter(p => p.status === 'completed');
-    const totalPayments = completedPayments.reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
+    const subscriptionPayments = payments.filter(
+      (p) => p.paymentType === 'SUBSCRIPTION',
+    );
+    const completedPayments = subscriptionPayments.filter(
+      (p) => p.status === 'completed',
+    );
+    const totalPayments = completedPayments.reduce(
+      (sum, p) => sum + parseFloat(p.amount.toString()),
+      0,
+    );
 
-    worksheet.addRow(['Total Pagos de Suscripción:', subscriptionPayments.length]);
+    worksheet.addRow([
+      'Total Pagos de Suscripción:',
+      subscriptionPayments.length,
+    ]);
     worksheet.addRow(['Pagos Completados:', completedPayments.length]);
-    
-    const paymentRevenueRow = worksheet.addRow(['INGRESOS POR SUSCRIPCIONES:', totalPayments]);
-    paymentRevenueRow.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+
+    const paymentRevenueRow = worksheet.addRow([
+      'INGRESOS POR SUSCRIPCIONES:',
+      totalPayments,
+    ]);
+    paymentRevenueRow.font = {
+      bold: true,
+      size: 12,
+      color: { argb: 'FFFFFFFF' },
+    };
     paymentRevenueRow.getCell(2).numFmt = '₡#,##0.00';
     // Aplicar color solo a las primeras 2 columnas
     paymentRevenueRow.getCell(1).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF5B9BD5' }
+      fgColor: { argb: 'FF5B9BD5' },
     };
     paymentRevenueRow.getCell(2).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF5B9BD5' }
+      fgColor: { argb: 'FF5B9BD5' },
     };
 
     // Total General
     worksheet.addRow([]);
-    const grandTotalRow = worksheet.addRow(['INGRESOS TOTALES:', totalRevenue + totalPayments]);
+    const grandTotalRow = worksheet.addRow([
+      'INGRESOS TOTALES:',
+      totalRevenue + totalPayments,
+    ]);
     grandTotalRow.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
     grandTotalRow.getCell(2).numFmt = '₡#,##0.00';
     // Aplicar color solo a las primeras 2 columnas
     grandTotalRow.getCell(1).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFFF6B35' }
+      fgColor: { argb: 'FFFF6B35' },
     };
     grandTotalRow.getCell(2).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFFF6B35' }
+      fgColor: { argb: 'FFFF6B35' },
     };
 
     // ========================================
     // AJUSTAR ANCHOS DE COLUMNA
     // ========================================
     worksheet.columns = [
-      { width: 10 },  // ID Cita
-      { width: 18 },  // Fecha Cita
-      { width: 25 },  // Cliente
-      { width: 28 },  // Email
-      { width: 15 },  // Teléfono
-      { width: 20 },  // Servicio
-      { width: 14 },  // Duración
-      { width: 14 },  // Estado
-      { width: 15 },  // Precio Servicio
-      { width: 15 },  // Monto Pago
-      { width: 14 },  // Estado Pago
-      { width: 20 }   // Referencia
+      { width: 10 }, // ID Cita
+      { width: 18 }, // Fecha Cita
+      { width: 25 }, // Cliente
+      { width: 28 }, // Email
+      { width: 15 }, // Teléfono
+      { width: 20 }, // Servicio
+      { width: 14 }, // Duración
+      { width: 14 }, // Estado
+      { width: 15 }, // Precio Servicio
+      { width: 15 }, // Monto Pago
+      { width: 14 }, // Estado Pago
+      { width: 20 }, // Referencia
     ];
 
     // Bordes para toda la tabla
@@ -1209,7 +1319,7 @@ export class Sprint10Service {
           top: { style: 'thin' },
           left: { style: 'thin' },
           bottom: { style: 'thin' },
-          right: { style: 'thin' }
+          right: { style: 'thin' },
         };
       });
     }

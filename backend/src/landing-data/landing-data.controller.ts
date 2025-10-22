@@ -8,17 +8,17 @@ import { Public } from '../common/decorators';
 @Controller('landing-data')
 @Public() // Todo el controller es público para el landing
 export class LandingDataController {
-  constructor(private readonly landingDataService: LandingDataService) { }
+  constructor(private readonly landingDataService: LandingDataService) {}
 
   @Get('config')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get complete landing configuration',
-    description: 'Retrieve all business types, features and plans'
+    description: 'Retrieve all business types, features and plans',
   })
   @ApiResponse({
     status: 200,
-    description: 'Landing configuration retrieved successfully'
+    description: 'Landing configuration retrieved successfully',
   })
   async getLandingConfig(): Promise<BaseResponseDto> {
     return this.landingDataService.getLandingConfig();
@@ -28,11 +28,11 @@ export class LandingDataController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get all business types',
-    description: 'Retrieve all active business types'
+    description: 'Retrieve all active business types',
   })
   @ApiResponse({
     status: 200,
-    description: 'Business types retrieved successfully'
+    description: 'Business types retrieved successfully',
   })
   async getBusinessTypes(): Promise<BaseResponseDto> {
     return this.landingDataService.getBusinessTypes();
@@ -42,11 +42,11 @@ export class LandingDataController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get all features',
-    description: 'Retrieve all active features'
+    description: 'Retrieve all active features',
   })
   @ApiResponse({
     status: 200,
-    description: 'Features retrieved successfully'
+    description: 'Features retrieved successfully',
   })
   async getFeatures(): Promise<BaseResponseDto> {
     return this.landingDataService.getFeatures();
@@ -56,15 +56,15 @@ export class LandingDataController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get features recommended for business type',
-    description: 'Retrieve features recommended for a specific business type'
+    description: 'Retrieve features recommended for a specific business type',
   })
   @ApiParam({ name: 'businessType', example: 'fotografo' })
   @ApiResponse({
     status: 200,
-    description: 'Recommended features retrieved successfully'
+    description: 'Recommended features retrieved successfully',
   })
   async getFeaturesForBusinessType(
-    @Param('businessType') businessType: string
+    @Param('businessType') businessType: string,
   ): Promise<BaseResponseDto> {
     return this.landingDataService.getFeaturesForBusinessType(businessType);
   }
@@ -73,11 +73,11 @@ export class LandingDataController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get all plans',
-    description: 'Retrieve all active subscription plans'
+    description: 'Retrieve all active subscription plans',
   })
   @ApiResponse({
     status: 200,
-    description: 'Plans retrieved successfully'
+    description: 'Plans retrieved successfully',
   })
   async getPlans(): Promise<BaseResponseDto> {
     return this.landingDataService.getPlans();
@@ -87,15 +87,15 @@ export class LandingDataController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get business type with recommended features',
-    description: 'Get a specific business type with its recommended features'
+    description: 'Get a specific business type with its recommended features',
   })
   @ApiParam({ name: 'businessType', example: 'fotografo' })
   @ApiResponse({
     status: 200,
-    description: 'Business type configuration retrieved successfully'
+    description: 'Business type configuration retrieved successfully',
   })
   async getBusinessTypeConfig(
-    @Param('businessType') businessType: string
+    @Param('businessType') businessType: string,
   ): Promise<BaseResponseDto> {
     return this.landingDataService.getBusinessTypeWithFeatures(businessType);
   }
@@ -103,15 +103,23 @@ export class LandingDataController {
   @Get('dashboard/metrics/:brandId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get comprehensive business metrics for a specific brand dashboard',
-    description: 'Retrieve advanced business metrics for a specific brand including appointments, revenue, clients, and behavior analytics'
+    summary:
+      'Get comprehensive business metrics for a specific brand dashboard',
+    description:
+      'Retrieve advanced business metrics for a specific brand including appointments, revenue, clients, and behavior analytics',
   })
-  @ApiParam({ name: 'brandId', description: 'ID of the brand to get metrics for', example: 1 })
+  @ApiParam({
+    name: 'brandId',
+    description: 'ID of the brand to get metrics for',
+    example: 1,
+  })
   @ApiResponse({
     status: 200,
-    description: 'Brand metrics retrieved successfully'
+    description: 'Brand metrics retrieved successfully',
   })
-  async getBrandDashboardMetrics(@Param('brandId') brandId: string): Promise<BaseResponseDto> {
+  async getBrandDashboardMetrics(
+    @Param('brandId') brandId: string,
+  ): Promise<BaseResponseDto> {
     return this.landingDataService.getBrandDashboardMetrics(parseInt(brandId));
   }
 }

@@ -1,6 +1,13 @@
 // src/schedule/dto/business-hours.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsBoolean, IsOptional, IsString, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class BusinessHoursDto {

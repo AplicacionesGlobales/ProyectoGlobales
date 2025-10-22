@@ -1,11 +1,20 @@
 // src/brand-features/dto/brand-feature.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsNotEmpty, IsOptional, IsString, IsArray, IsEnum, IsBoolean, Min } from 'class-validator';
+import {
+  IsNumber,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsEnum,
+  IsBoolean,
+  Min,
+} from 'class-validator';
 
 export enum FeatureCategory {
   ESSENTIAL = 'ESSENTIAL',
   BUSINESS = 'BUSINESS',
-  ADVANCED = 'ADVANCED'
+  ADVANCED = 'ADVANCED',
 }
 
 export class FeatureDto {
@@ -18,13 +27,20 @@ export class FeatureDto {
   @ApiProperty({ example: 'Sistema de reservas en línea' })
   title: string;
 
-  @ApiPropertyOptional({ example: 'Permite a tus clientes reservar citas online' })
+  @ApiPropertyOptional({
+    example: 'Permite a tus clientes reservar citas online',
+  })
   subtitle?: string;
 
-  @ApiProperty({ example: 'Sistema completo de gestión de citas y reservas para tu negocio' })
+  @ApiProperty({
+    example: 'Sistema completo de gestión de citas y reservas para tu negocio',
+  })
   description: string;
 
-  @ApiProperty({ example: 15000, description: 'Precio en colones costarricenses' })
+  @ApiProperty({
+    example: 15000,
+    description: 'Precio en colones costarricenses',
+  })
   price: number;
 
   @ApiProperty({ example: true })
@@ -78,7 +94,7 @@ export class BrandFeatureDto {
 export class AssignFeatureDto {
   @ApiProperty({
     example: 1,
-    description: 'ID del feature a asignar al brand'
+    description: 'ID del feature a asignar al brand',
   })
   @IsNumber()
   @IsNotEmpty()
@@ -88,7 +104,7 @@ export class AssignFeatureDto {
 export class UnassignFeatureDto {
   @ApiProperty({
     example: 1,
-    description: 'ID del feature a desasignar del brand'
+    description: 'ID del feature a desasignar del brand',
   })
   @IsNumber()
   @IsNotEmpty()
@@ -98,7 +114,7 @@ export class UnassignFeatureDto {
 export class CreateFeatureDto {
   @ApiProperty({
     example: 'online_booking_pro',
-    description: 'Clave única identificadora de la funcionalidad'
+    description: 'Clave única identificadora de la funcionalidad',
   })
   @IsString()
   @IsNotEmpty()
@@ -106,7 +122,7 @@ export class CreateFeatureDto {
 
   @ApiProperty({
     example: 'Reservas Online Pro',
-    description: 'Título de la funcionalidad'
+    description: 'Título de la funcionalidad',
   })
   @IsString()
   @IsNotEmpty()
@@ -114,23 +130,24 @@ export class CreateFeatureDto {
 
   @ApiPropertyOptional({
     example: 'Sistema avanzado de reservas',
-    description: 'Subtítulo opcional de la funcionalidad'
+    description: 'Subtítulo opcional de la funcionalidad',
   })
   @IsOptional()
   @IsString()
   subtitle?: string;
 
   @ApiProperty({
-    example: 'Sistema completo de reservas online con funciones avanzadas de gestión y automatización',
-    description: 'Descripción detallada de la funcionalidad'
+    example:
+      'Sistema completo de reservas online con funciones avanzadas de gestión y automatización',
+    description: 'Descripción detallada de la funcionalidad',
   })
   @IsString()
   @IsNotEmpty()
   description: string;
 
   @ApiProperty({
-    example: 25.00,
-    description: 'Precio mensual de la funcionalidad en USD'
+    example: 25.0,
+    description: 'Precio mensual de la funcionalidad en USD',
   })
   @IsNumber()
   @Min(0)
@@ -139,14 +156,14 @@ export class CreateFeatureDto {
   @ApiProperty({
     enum: FeatureCategory,
     example: FeatureCategory.BUSINESS,
-    description: 'Categoría de la funcionalidad'
+    description: 'Categoría de la funcionalidad',
   })
   @IsEnum(FeatureCategory)
   category: FeatureCategory;
 
   @ApiProperty({
     example: ['barbershop', 'salon', 'spa'],
-    description: 'Tipos de negocio compatibles con esta funcionalidad'
+    description: 'Tipos de negocio compatibles con esta funcionalidad',
   })
   @IsArray()
   @IsString({ each: true })
@@ -155,7 +172,7 @@ export class CreateFeatureDto {
   @ApiPropertyOptional({
     example: false,
     description: 'Si la funcionalidad es recomendada',
-    default: false
+    default: false,
   })
   @IsOptional()
   @IsBoolean()
@@ -164,7 +181,7 @@ export class CreateFeatureDto {
   @ApiPropertyOptional({
     example: true,
     description: 'Si la funcionalidad es popular',
-    default: false
+    default: false,
   })
   @IsOptional()
   @IsBoolean()
@@ -173,7 +190,7 @@ export class CreateFeatureDto {
   @ApiPropertyOptional({
     example: 1,
     description: 'Orden de visualización (menor número = mayor prioridad)',
-    default: 0
+    default: 0,
   })
   @IsOptional()
   @IsNumber()

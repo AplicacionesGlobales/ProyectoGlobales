@@ -11,12 +11,27 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFile,
-  UseGuards
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiQuery,
+  ApiConsumes,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { MinioService } from './files.service';
-import { CreateFileDto, FileResponseDto, FilesListResponseDto, UploadResultDto, EntityType, FileType } from './dto/file.dto';
+import {
+  CreateFileDto,
+  FileResponseDto,
+  FilesListResponseDto,
+  UploadResultDto,
+  EntityType,
+  FileType,
+} from './dto/file.dto';
 import { BrandImageType, BrandImagesResponseDto } from './dto/brand-image.dto';
 import { BaseResponseDto } from '../common/dto';
 import { Public } from '../common/decorators/public-auth.decorator';
@@ -27,7 +42,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class FilesController {
-  constructor(private readonly minioService: MinioService) { }
+  constructor(private readonly minioService: MinioService) {}
 
   @Post('brand-images')
   @HttpCode(HttpStatus.CREATED)
@@ -35,7 +50,8 @@ export class FilesController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Subir imagen de marca',
-    description: 'Sube una imagen específica de marca (logo, isotipo o imagotipo) y la asocia con el usuario y la marca'
+    description:
+      'Sube una imagen específica de marca (logo, isotipo o imagotipo) y la asocia con el usuario y la marca',
   })
   @ApiBody({
     schema: {
@@ -47,17 +63,17 @@ export class FilesController {
         },
         brandId: {
           type: 'number',
-          description: 'ID de la marca'
+          description: 'ID de la marca',
         },
         imageType: {
           type: 'string',
           enum: Object.values(BrandImageType),
-          description: 'Tipo de imagen de marca'
+          description: 'Tipo de imagen de marca',
         },
         userId: {
           type: 'number',
-          description: 'ID del usuario que sube la imagen'
-        }
+          description: 'ID del usuario que sube la imagen',
+        },
       },
       required: ['file', 'brandId', 'imageType', 'userId'],
     },
@@ -65,26 +81,26 @@ export class FilesController {
   @ApiResponse({
     status: 201,
     description: 'Imagen de marca subida exitosamente',
-    type: UploadResultDto
+    type: UploadResultDto,
   })
   async uploadBrandImage(
     @UploadedFile() file: any,
     @Body('brandId', ParseIntPipe) brandId: number,
     @Body('imageType') imageType: BrandImageType,
-    @Body('userId', ParseIntPipe) userId: number
+    @Body('userId', ParseIntPipe) userId: number,
   ): Promise<UploadResultDto> {
     try {
       const result = await this.minioService.uploadBrandImage(
         file,
         brandId,
         imageType,
-        userId
+        userId,
       );
       return result;
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -93,15 +109,16 @@ export class FilesController {
   @Public()
   @ApiOperation({
     summary: 'Obtener imágenes de marca',
-    description: 'Obtiene todas las imágenes (logo, isotipo, imagotipo) de una marca específica'
+    description:
+      'Obtiene todas las imágenes (logo, isotipo, imagotipo) de una marca específica',
   })
   @ApiResponse({
     status: 200,
     description: 'Imágenes de la marca',
-    type: BrandImagesResponseDto
+    type: BrandImagesResponseDto,
   })
   async getBrandImages(
-    @Param('brandId', ParseIntPipe) brandId: number
+    @Param('brandId', ParseIntPipe) brandId: number,
   ): Promise<BrandImagesResponseDto> {
     return await this.minioService.getBrandImages(brandId);
   }
@@ -112,7 +129,8 @@ export class FilesController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Subir archivo a MinIO',
-    description: 'Sube un archivo mediante FormData a MinIO y guarda los metadatos en la base de datos'
+    description:
+      'Sube un archivo mediante FormData a MinIO y guarda los metadatos en la base de datos',
   })
   @ApiBody({
     schema: {
@@ -143,20 +161,24 @@ export class FilesController {
   @ApiResponse({
     status: 201,
     description: 'Archivo subido exitosamente',
-    type: UploadResultDto
+    type: UploadResultDto,
   })
   async uploadFile(
     @UploadedFile() file: any,
     @Body() createFileDto: CreateFileDto,
-    @Query('uploadedBy') uploadedBy?: number
+    @Query('uploadedBy') uploadedBy?: number,
   ): Promise<UploadResultDto> {
     try {
-      const result = await this.minioService.uploadFile(file, createFileDto, uploadedBy);
+      const result = await this.minioService.uploadFile(
+        file,
+        createFileDto,
+        uploadedBy,
+      );
       return result;
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -164,7 +186,8 @@ export class FilesController {
   @Get('entity/:entityType/:entityId')
   @ApiOperation({
     summary: 'Obtener archivos por entidad',
-    description: 'Obtiene todos los archivos asociados a una entidad específica'
+    description:
+      'Obtiene todos los archivos asociados a una entidad específica',
   })
   @ApiQuery({ name: 'fileType', required: false, enum: FileType })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
@@ -172,43 +195,43 @@ export class FilesController {
   @ApiResponse({
     status: 200,
     description: 'Lista de archivos',
-    type: FilesListResponseDto
+    type: FilesListResponseDto,
   })
   async getFilesByEntity(
     @Param('entityType') entityType: EntityType,
     @Param('entityId', ParseIntPipe) entityId: number,
     @Query('fileType') fileType?: FileType,
     @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 10
+    @Query('limit', ParseIntPipe) limit: number = 10,
   ): Promise<FilesListResponseDto> {
     const result = await this.minioService.getFilesByEntity(
       entityType,
       entityId,
       fileType,
       page,
-      limit
+      limit,
     );
 
     return {
       files: result.files,
       total: result.total,
       page,
-      limit
+      limit,
     };
   }
 
   @Get(':id')
   @ApiOperation({
     summary: 'Obtener archivo por ID',
-    description: 'Obtiene un archivo específico por su ID'
+    description: 'Obtiene un archivo específico por su ID',
   })
   @ApiResponse({
     status: 200,
     description: 'Información del archivo',
-    type: FileResponseDto
+    type: FileResponseDto,
   })
   async getFileById(
-    @Param('id', ParseIntPipe) id: number
+    @Param('id', ParseIntPipe) id: number,
   ): Promise<FileResponseDto | null> {
     return await this.minioService.getFileById(id);
   }
@@ -216,15 +239,15 @@ export class FilesController {
   @Delete(':id')
   @ApiOperation({
     summary: 'Eliminar archivo',
-    description: 'Elimina un archivo tanto de MinIO como de la base de datos'
+    description: 'Elimina un archivo tanto de MinIO como de la base de datos',
   })
   @ApiResponse({
     status: 200,
-    description: 'Archivo eliminado exitosamente'
+    description: 'Archivo eliminado exitosamente',
   })
   async deleteFile(
     @Param('id', ParseIntPipe) id: number,
-    @Query('requestingUserId') requestingUserId?: number
+    @Query('requestingUserId') requestingUserId?: number,
   ): Promise<BaseResponseDto<{ deleted: boolean }>> {
     try {
       const deleted = await this.minioService.deleteFile(id, requestingUserId);
@@ -240,7 +263,8 @@ export class FilesController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Reemplazar archivo de entidad',
-    description: 'Reemplaza un archivo existente del mismo tipo para una entidad específica'
+    description:
+      'Reemplaza un archivo existente del mismo tipo para una entidad específica',
   })
   @ApiBody({
     schema: {
@@ -271,12 +295,12 @@ export class FilesController {
   @ApiResponse({
     status: 201,
     description: 'Archivo reemplazado exitosamente',
-    type: UploadResultDto
+    type: UploadResultDto,
   })
   async replaceEntityFile(
     @UploadedFile() file: any,
     @Body() createFileDto: CreateFileDto,
-    @Query('uploadedBy') uploadedBy?: number
+    @Query('uploadedBy') uploadedBy?: number,
   ): Promise<UploadResultDto> {
     try {
       const result = await this.minioService.replaceEntityFile(
@@ -285,13 +309,13 @@ export class FilesController {
         createFileDto.fileType,
         file,
         createFileDto,
-        uploadedBy
+        uploadedBy,
       );
       return result;
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -300,16 +324,17 @@ export class FilesController {
   @Public()
   @ApiOperation({
     summary: 'Obtener URL firmada',
-    description: 'Genera una URL firmada temporal para acceso directo al archivo'
+    description:
+      'Genera una URL firmada temporal para acceso directo al archivo',
   })
   @ApiQuery({ name: 'expiry', required: false, type: Number, example: 3600 })
   @ApiResponse({
     status: 200,
-    description: 'URL firmada generada'
+    description: 'URL firmada generada',
   })
   async getPresignedUrl(
     @Param('id', ParseIntPipe) id: number,
-    @Query('expiry', ParseIntPipe) expiry: number = 7 * 24 * 60 * 60
+    @Query('expiry', ParseIntPipe) expiry: number = 7 * 24 * 60 * 60,
   ): Promise<BaseResponseDto<{ url: string }>> {
     try {
       const url = await this.minioService.getPresignedUrl(id, expiry);
@@ -323,11 +348,12 @@ export class FilesController {
   @Public()
   @ApiOperation({
     summary: 'Estadísticas de almacenamiento',
-    description: 'Obtiene estadísticas generales del almacenamiento de archivos'
+    description:
+      'Obtiene estadísticas generales del almacenamiento de archivos',
   })
   @ApiResponse({
     status: 200,
-    description: 'Estadísticas de almacenamiento'
+    description: 'Estadísticas de almacenamiento',
   })
   async getStorageStats(): Promise<BaseResponseDto<any>> {
     try {

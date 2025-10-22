@@ -1,4 +1,3 @@
-
 // src/appointments/utils/appointment.constants.ts
 export const APPOINTMENT_CONSTANTS = {
   STATUS: {
@@ -6,19 +5,19 @@ export const APPOINTMENT_CONSTANTS = {
     CONFIRMED: 'CONFIRMED',
     CANCELLED: 'CANCELLED',
     NO_SHOW: 'NO_SHOW',
-    COMPLETED: 'COMPLETED'
+    COMPLETED: 'COMPLETED',
   } as const,
 
   DURATION: {
     MIN: 15,
     MAX: 480,
-    DEFAULT: 30
+    DEFAULT: 30,
   } as const,
 
   BUFFER_TIME: {
     MIN: 0,
     MAX: 60,
-    DEFAULT: 5
+    DEFAULT: 5,
   } as const,
 
   ADVANCE_BOOKING: {
@@ -26,7 +25,7 @@ export const APPOINTMENT_CONSTANTS = {
     MAX_HOURS: 168, // 1 semana
     DEFAULT_MIN_HOURS: 2,
     MAX_DAYS: 365,
-    DEFAULT_MAX_DAYS: 30
+    DEFAULT_MAX_DAYS: 30,
   } as const,
 
   MESSAGES: {
@@ -41,13 +40,13 @@ export const APPOINTMENT_CONSTANTS = {
     SAME_DAY_NOT_ALLOWED: 'No se permiten reservas para el mismo día',
     CLIENT_NOT_FOUND: 'Cliente no encontrado',
     APPOINTMENT_NOT_FOUND: 'Cita no encontrada',
-    ACCESS_DENIED: 'No tiene permisos para esta operación'
+    ACCESS_DENIED: 'No tiene permisos para esta operación',
   } as const,
 
   TIME_FORMATS: {
     DISPLAY: 'DD/MM/YYYY HH:mm',
     API: 'YYYY-MM-DDTHH:mm:ss.sssZ',
     DATE_ONLY: 'YYYY-MM-DD',
-    TIME_ONLY: 'HH:mm'
-  } as const
+    TIME_ONLY: 'HH:mm',
+  } as const,
 };

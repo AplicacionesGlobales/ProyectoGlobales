@@ -21,7 +21,7 @@ import { BrandFeaturesModule } from './brand-features/brand-features.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { Sprint10Module } from './sprint10/sprint10.module';
 import { Sprint11Module } from './sprint11/sprint11.module';
-import { AnalyticsModule } from './analytics/analytics.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -45,7 +45,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     SubscriptionModule,
     Sprint10Module,
     Sprint11Module,
-    AnalyticsModule
+    ReportsModule,
   ],
   controllers: [],
   providers: [
@@ -55,4 +55,4 @@ import { AnalyticsModule } from './analytics/analytics.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -19,20 +24,24 @@ export class ClientSelfAccessGuard implements CanActivate {
       where: {
         brandId,
         userId: user.userId,
-        isActive: true
+        isActive: true,
       },
       include: {
         user: {
           select: {
             role: true,
-            isActive: true
-          }
-        }
-      }
+            isActive: true,
+          },
+        },
+      },
     });
 
     // Solo clientes activos pueden acceder a su propio perfil
-    if (!userBrand || userBrand.user.role !== 'CLIENT' || !userBrand.user.isActive) {
+    if (
+      !userBrand ||
+      userBrand.user.role !== 'CLIENT' ||
+      !userBrand.user.isActive
+    ) {
       throw new ForbiddenException('Client access denied or account inactive');
     }
 

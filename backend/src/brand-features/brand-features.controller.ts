@@ -10,7 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
-  Request
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +18,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
-  ApiBody
+  ApiBody,
 } from '@nestjs/swagger';
 import { BrandFeaturesService } from './brand-features.service';
 import { BaseResponseDto } from '../common/dto';
@@ -31,25 +31,26 @@ import {
   BrandFeatureDto,
   AssignFeatureDto,
   UnassignFeatureDto,
-  CreateFeatureDto
+  CreateFeatureDto,
 } from './dto/brand-feature.dto';
 
 @ApiTags('Brand Features Management')
 @Controller()
 export class BrandFeaturesController {
-  constructor(private readonly brandFeaturesService: BrandFeaturesService) { }
+  constructor(private readonly brandFeaturesService: BrandFeaturesService) {}
 
   // 1. Ver todos los features disponibles - PÚBLICO
   @Get('features')
   @Public()
   @ApiOperation({
     summary: 'Obtener todos los features disponibles',
-    description: 'Retorna la lista completa de features/servicios disponibles en la plataforma. Acceso público.'
+    description:
+      'Retorna la lista completa de features/servicios disponibles en la plataforma. Acceso público.',
   })
   @ApiResponse({
     status: 200,
     description: 'Features obtenidos exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async getAllFeatures(): Promise<BaseResponseDto<FeatureDto[]>> {
     return this.brandFeaturesService.getAllFeatures();
@@ -62,29 +63,30 @@ export class BrandFeaturesController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Crear nueva funcionalidad',
-    description: 'Crea una nueva funcionalidad/servicio disponible en la plataforma. Solo usuarios ROOT pueden realizar esta acción.'
+    description:
+      'Crea una nueva funcionalidad/servicio disponible en la plataforma. Solo usuarios ROOT pueden realizar esta acción.',
   })
   @ApiBody({ type: CreateFeatureDto })
   @ApiResponse({
     status: 201,
     description: 'Funcionalidad creada exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos inválidos'
+    description: 'Datos inválidos',
   })
   @ApiResponse({
     status: 403,
-    description: 'Solo usuarios ROOT pueden crear funcionalidades'
+    description: 'Solo usuarios ROOT pueden crear funcionalidades',
   })
   @ApiResponse({
     status: 409,
-    description: 'Ya existe una funcionalidad con esa clave'
+    description: 'Ya existe una funcionalidad con esa clave',
   })
   async createFeature(
     @Body(ValidationPipe) createFeatureDto: CreateFeatureDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<FeatureDto>> {
     return this.brandFeaturesService.createFeature(createFeatureDto);
   }
@@ -94,16 +96,17 @@ export class BrandFeaturesController {
   @Public()
   @ApiOperation({
     summary: 'Obtener features asignados a un brand',
-    description: 'Retorna los features/servicios que tiene asignados un brand específico. Acceso público.'
+    description:
+      'Retorna los features/servicios que tiene asignados un brand específico. Acceso público.',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 1 })
   @ApiResponse({
     status: 200,
     description: 'Features del brand obtenidos exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async getBrandFeatures(
-    @Param('brandId') brandId: string
+    @Param('brandId') brandId: string,
   ): Promise<BaseResponseDto<BrandFeatureDto[]>> {
     return this.brandFeaturesService.getBrandFeatures(parseInt(brandId));
   }
@@ -115,36 +118,37 @@ export class BrandFeaturesController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Asignar feature a brand',
-    description: 'Asigna un feature/servicio específico al brand. Solo el dueño del brand puede realizar esta acción.'
+    description:
+      'Asigna un feature/servicio específico al brand. Solo el dueño del brand puede realizar esta acción.',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 1 })
   @ApiBody({ type: AssignFeatureDto })
   @ApiResponse({
     status: 201,
     description: 'Feature asignado exitosamente al brand',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Feature ya asignado o datos inválidos'
+    description: 'Feature ya asignado o datos inválidos',
   })
   @ApiResponse({
     status: 403,
-    description: 'No tiene permisos para modificar este brand'
+    description: 'No tiene permisos para modificar este brand',
   })
   @ApiResponse({
     status: 404,
-    description: 'Brand o feature no encontrado'
+    description: 'Brand o feature no encontrado',
   })
   async assignFeatureToBrand(
     @Param('brandId') brandId: string,
     @Body(ValidationPipe) assignData: AssignFeatureDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<BrandFeatureDto>> {
     return this.brandFeaturesService.assignFeatureToBrand(
       parseInt(brandId),
       assignData.featureId,
-      req.user.userId
+      req.user.userId,
     );
   }
 
@@ -155,32 +159,37 @@ export class BrandFeaturesController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Desasignar feature de brand',
-    description: 'Desasigna/desvincula un feature/servicio del brand. Solo el dueño del brand puede realizar esta acción.'
+    description:
+      'Desasigna/desvincula un feature/servicio del brand. Solo el dueño del brand puede realizar esta acción.',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 1 })
-  @ApiParam({ name: 'featureId', description: 'ID del feature a desasignar', example: 1 })
+  @ApiParam({
+    name: 'featureId',
+    description: 'ID del feature a desasignar',
+    example: 1,
+  })
   @ApiResponse({
     status: 200,
     description: 'Feature desasignado exitosamente del brand',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 403,
-    description: 'No tiene permisos para modificar este brand'
+    description: 'No tiene permisos para modificar este brand',
   })
   @ApiResponse({
     status: 404,
-    description: 'Brand, feature o asignación no encontrada'
+    description: 'Brand, feature o asignación no encontrada',
   })
   async unassignFeatureFromBrand(
     @Param('brandId') brandId: string,
     @Param('featureId') featureId: string,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<{ message: string }>> {
     return this.brandFeaturesService.unassignFeatureFromBrand(
       parseInt(brandId),
       parseInt(featureId),
-      req.user.userId
+      req.user.userId,
     );
   }
 }

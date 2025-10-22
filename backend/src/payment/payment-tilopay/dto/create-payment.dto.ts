@@ -1,19 +1,35 @@
 // backend/src/payment/payment-tilopay/dto/create-payment.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, IsNotEmpty, IsArray, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsNotEmpty,
+  IsArray,
+  IsOptional,
+} from 'class-validator';
 
 export class CreatePaymentDto {
-  @ApiProperty({ example: 'Mi Negocio SA', description: 'Nombre de la marca o negocio' })
+  @ApiProperty({
+    example: 'Mi Negocio SA',
+    description: 'Nombre de la marca o negocio',
+  })
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ example: 'contacto@minegocio.com', description: 'Email de contacto' })
+  @ApiProperty({
+    example: 'contacto@minegocio.com',
+    description: 'Email de contacto',
+  })
   @IsEmail()
   @IsNotEmpty()
   email: string;
 
-  @ApiProperty({ example: '88888888', description: 'Teléfono de contacto', required: false })
+  @ApiProperty({
+    example: '88888888',
+    description: 'Teléfono de contacto',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   phone?: string;
@@ -23,25 +39,35 @@ export class CreatePaymentDto {
   @IsNotEmpty()
   ownerName: string;
 
-  @ApiProperty({ example: 'San José, Costa Rica', description: 'Ubicación del negocio', required: false })
+  @ApiProperty({
+    example: 'San José, Costa Rica',
+    description: 'Ubicación del negocio',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   location?: string;
 
-  @ApiProperty({ example: 'app', description: 'Tipo de plan (web, app, completo)' })
+  @ApiProperty({
+    example: 'app',
+    description: 'Tipo de plan (web, app, completo)',
+  })
   @IsString()
   @IsNotEmpty()
   planType: string;
 
-  @ApiProperty({ example: 'monthly', description: 'Ciclo de facturación (monthly, annual)' })
+  @ApiProperty({
+    example: 'monthly',
+    description: 'Ciclo de facturación (monthly, annual)',
+  })
   @IsString()
   @IsNotEmpty()
   billingCycle: string;
 
-  @ApiProperty({ 
-    example: ['citas', 'pagos'], 
-    description: 'Servicios adicionales seleccionados', 
-    required: false 
+  @ApiProperty({
+    example: ['citas', 'pagos'],
+    description: 'Servicios adicionales seleccionados',
+    required: false,
   })
   @IsArray()
   @IsOptional()

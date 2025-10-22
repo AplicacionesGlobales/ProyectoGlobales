@@ -11,18 +11,20 @@ export class ColorPaletteService {
    * @param colorPalette Paleta de colores a validar
    * @returns boolean true si todos los colores son válidos
    */
-  validateHexColors(colorPalette: Omit<ColorPaletteCreationData, 'brandId'>): boolean {
+  validateHexColors(
+    colorPalette: Omit<ColorPaletteCreationData, 'brandId'>,
+  ): boolean {
     const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-    
+
     const colors = [
       colorPalette.primary,
       colorPalette.secondary,
       colorPalette.accent,
       colorPalette.neutral,
-      colorPalette.success
+      colorPalette.success,
     ];
 
-    return colors.every(color => hexColorRegex.test(color));
+    return colors.every((color) => hexColorRegex.test(color));
   }
 
   /**
@@ -30,13 +32,15 @@ export class ColorPaletteService {
    * @param colorPalette Paleta de colores a normalizar
    * @returns Paleta de colores normalizada
    */
-  normalizeColors(colorPalette: Omit<ColorPaletteCreationData, 'brandId'>): Omit<ColorPaletteCreationData, 'brandId'> {
+  normalizeColors(
+    colorPalette: Omit<ColorPaletteCreationData, 'brandId'>,
+  ): Omit<ColorPaletteCreationData, 'brandId'> {
     return {
       primary: colorPalette.primary.toUpperCase(),
       secondary: colorPalette.secondary.toUpperCase(),
       accent: colorPalette.accent.toUpperCase(),
       neutral: colorPalette.neutral.toUpperCase(),
-      success: colorPalette.success.toUpperCase()
+      success: colorPalette.success.toUpperCase(),
     };
   }
 
@@ -51,7 +55,7 @@ export class ColorPaletteService {
     return this.prisma.colorPalette.create({
       data: {
         ...normalizedColors,
-        brandId: colorPaletteData.brandId
+        brandId: colorPaletteData.brandId,
       },
       select: {
         id: true,
@@ -61,8 +65,8 @@ export class ColorPaletteService {
         neutral: true,
         success: true,
         brandId: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
   }
 
@@ -73,8 +77,8 @@ export class ColorPaletteService {
    * @returns Promise con la paleta actualizada
    */
   async updateColorPalette(
-    brandId: number, 
-    colorPaletteData: Omit<ColorPaletteCreationData, 'brandId'>
+    brandId: number,
+    colorPaletteData: Omit<ColorPaletteCreationData, 'brandId'>,
   ) {
     const normalizedColors = this.normalizeColors(colorPaletteData);
 
@@ -83,7 +87,7 @@ export class ColorPaletteService {
       update: normalizedColors,
       create: {
         ...normalizedColors,
-        brandId
+        brandId,
       },
       select: {
         id: true,
@@ -93,8 +97,8 @@ export class ColorPaletteService {
         neutral: true,
         success: true,
         brandId: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
   }
 
@@ -114,8 +118,8 @@ export class ColorPaletteService {
         neutral: true,
         success: true,
         createdAt: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
   }
 
@@ -124,14 +128,16 @@ export class ColorPaletteService {
    * @param primaryColor Color primario en formato hex
    * @returns Paleta de colores generada
    */
-  generateDefaultPalette(primaryColor: string): Omit<ColorPaletteCreationData, 'brandId'> {
+  generateDefaultPalette(
+    primaryColor: string,
+  ): Omit<ColorPaletteCreationData, 'brandId'> {
     // Esta es una implementación básica, se podría mejorar con lógica de color más sofisticada
     return {
       primary: primaryColor.toUpperCase(),
       secondary: '#6B7280', // Gris neutro por defecto
       accent: '#F59E0B', // Ámbar por defecto
       neutral: '#9CA3AF', // Gris más claro
-      success: '#10B981' // Verde por defecto
+      success: '#10B981', // Verde por defecto
     };
   }
 }

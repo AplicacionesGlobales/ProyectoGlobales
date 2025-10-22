@@ -38,9 +38,12 @@ export class PaymentService {
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService
+    private configService: ConfigService,
   ) {
-    this.tilopayApiUrl = this.configService.get('TILOPAY_API_URL', 'https://api.tilopay.com');
+    this.tilopayApiUrl = this.configService.get(
+      'TILOPAY_API_URL',
+      'https://api.tilopay.com',
+    );
     this.tilopayApiKey = this.configService.get('TILOPAY_API_KEY', '');
     this.baseUrl = this.configService.get('BASE_URL', 'http://localhost:3000');
   }
@@ -52,7 +55,7 @@ export class PaymentService {
     brandId: number,
     brandPlanId: number,
     amount: number,
-    metadata?: any
+    metadata?: any,
   ): Promise<PaymentProcessResult> {
     try {
       // Crear registro de pago en BD
@@ -63,8 +66,8 @@ export class PaymentService {
           amount,
           currency: 'CRC',
           status: 'pending', // PaymentStatus.pending
-          metadata
-        }
+          metadata,
+        },
       });
 
       // Si el monto es 0 (plan web), marcar como completado automáticamente
@@ -73,14 +76,16 @@ export class PaymentService {
           where: { id: payment.id },
           data: {
             status: 'completed', // PaymentStatus.completed
-            processedAt: new Date()
-          }
+            processedAt: new Date(),
+          },
         });
 
-        this.logger.log(`Payment auto-completed for free plan: Payment ID ${payment.id}`);
+        this.logger.log(
+          `Payment auto-completed for free plan: Payment ID ${payment.id}`,
+        );
         return {
           success: true,
-          paymentId: payment.id
+          paymentId: payment.id,
         };
       }
 
@@ -92,7 +97,7 @@ export class PaymentService {
         reference: `BRAND_${brandId}_PLAN_${brandPlanId}_${Date.now()}`,
         redirectUrl: `${this.baseUrl}/payment/success?paymentId=${payment.id}`,
         cancelUrl: `${this.baseUrl}/payment/cancel?paymentId=${payment.id}`,
-        metadata: { brandId, brandPlanId, paymentId: payment.id }
+        metadata: { brandId, brandPlanId, paymentId: payment.id },
       });
 
       if (tilopayResult.success) {
@@ -103,15 +108,15 @@ export class PaymentService {
             status: 'processing', // PaymentStatus.processing
             tilopayTransactionId: tilopayResult.transactionId,
             tilopayReference: tilopayResult.reference,
-            paymentMethod: 'tilopay'
-          }
+            paymentMethod: 'tilopay',
+          },
         });
 
         return {
           success: true,
           paymentId: payment.id,
           tilopayTransactionId: tilopayResult.transactionId,
-          paymentUrl: tilopayResult.paymentUrl
+          paymentUrl: tilopayResult.paymentUrl,
         };
       } else {
         // Marcar pago como fallido
@@ -119,20 +124,20 @@ export class PaymentService {
           where: { id: payment.id },
           data: {
             status: 'failed', // PaymentStatus.failed
-            failureReason: tilopayResult.error
-          }
+            failureReason: tilopayResult.error,
+          },
         });
 
         return {
           success: false,
-          error: tilopayResult.error
+          error: tilopayResult.error,
         };
       }
     } catch (error) {
       this.logger.error('Error processing payment', error);
       return {
         success: false,
-        error: 'Error processing payment'
+        error: 'Error processing payment',
       };
     }
   }
@@ -146,11 +151,13 @@ export class PaymentService {
 
       // Buscar pago por transaction ID
       const payment = await this.prisma.payment.findUnique({
-        where: { tilopayTransactionId: transactionId }
+        where: { tilopayTransactionId: transactionId },
       });
 
       if (!payment) {
-        this.logger.warn(`Payment not found for transaction ID: ${transactionId}`);
+        this.logger.warn(
+          `Payment not found for transaction ID: ${transactionId}`,
+        );
         return;
       }
 
@@ -181,13 +188,15 @@ export class PaymentService {
           status: paymentStatus as PaymentStatus,
           processedAt,
           metadata: {
-            ...(payment.metadata as Record<string, any> || {}),
-            tilopayWebhook: payload
-          }
-        }
+            ...((payment.metadata as Record<string, any>) || {}),
+            tilopayWebhook: payload,
+          },
+        },
       });
 
-      this.logger.log(`Payment ${payment.id} updated to status: ${paymentStatus}`);
+      this.logger.log(
+        `Payment ${payment.id} updated to status: ${paymentStatus}`,
+      );
     } catch (error) {
       this.logger.error('Error handling payment webhook', error);
     }
@@ -196,7 +205,9 @@ export class PaymentService {
   /**
    * Crear pago en TiloPay
    */
-  private async createTiloPayPayment(request: TiloPayPaymentRequest): Promise<TiloPayPaymentResponse> {
+  private async createTiloPayPayment(
+    request: TiloPayPaymentRequest,
+  ): Promise<TiloPayPaymentResponse> {
     try {
       // Si no hay API key configurada, simular éxito para desarrollo
       if (!this.tilopayApiKey) {
@@ -205,7 +216,7 @@ export class PaymentService {
           success: true,
           transactionId: `SIM_${Date.now()}`,
           paymentUrl: `${this.baseUrl}/payment/simulate?amount=${request.amount}`,
-          reference: request.reference
+          reference: request.reference,
         };
       }
 
@@ -213,9 +224,9 @@ export class PaymentService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.tilopayApiKey}`
+          Authorization: `Bearer ${this.tilopayApiKey}`,
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify(request),
       });
 
       if (response.ok) {
@@ -224,20 +235,20 @@ export class PaymentService {
           success: true,
           transactionId: data.transactionId,
           paymentUrl: data.paymentUrl,
-          reference: data.reference
+          reference: data.reference,
         };
       } else {
         const errorData = await response.json();
         return {
           success: false,
-          error: errorData.message || 'TiloPay API error'
+          error: errorData.message || 'TiloPay API error',
         };
       }
     } catch (error) {
       this.logger.error('Error calling TiloPay API', error);
       return {
         success: false,
-        error: 'TiloPay service unavailable'
+        error: 'TiloPay service unavailable',
       };
     }
   }
@@ -252,10 +263,10 @@ export class PaymentService {
         brand: true,
         brandPlan: {
           include: {
-            plan: true
-          }
-        }
-      }
+            plan: true,
+          },
+        },
+      },
     });
   }
 
@@ -267,9 +278,9 @@ export class PaymentService {
       where: {
         brandId,
         status: {
-          in: ['pending', 'processing']
-        }
-      }
+          in: ['pending', 'processing'],
+        },
+      },
     });
 
     return pendingPayments > 0;

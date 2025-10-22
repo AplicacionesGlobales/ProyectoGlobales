@@ -1,6 +1,12 @@
 // backend/src/payment/payment-processing/dto/payment-webhook.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsNumber,
+} from 'class-validator';
 
 export enum WebhookEventType {
   PAYMENT_COMPLETED = 'payment.completed',
@@ -14,7 +20,10 @@ export class PaymentWebhookDto {
   @IsNotEmpty()
   event: WebhookEventType;
 
-  @ApiProperty({ example: 'TLP-123456', description: 'ID de transacción de Tilopay' })
+  @ApiProperty({
+    example: 'TLP-123456',
+    description: 'ID de transacción de Tilopay',
+  })
   @IsString()
   @IsNotEmpty()
   transactionId: string;
@@ -29,7 +38,7 @@ export class PaymentWebhookDto {
   @IsNotEmpty()
   status: string;
 
-  @ApiProperty({ example: 100.50, description: 'Monto del pago' })
+  @ApiProperty({ example: 100.5, description: 'Monto del pago' })
   @IsNumber()
   @IsNotEmpty()
   amount: number;
@@ -39,12 +48,20 @@ export class PaymentWebhookDto {
   @IsNotEmpty()
   currency: string;
 
-  @ApiProperty({ example: 'AUTH-123', description: 'Código de autorización', required: false })
+  @ApiProperty({
+    example: 'AUTH-123',
+    description: 'Código de autorización',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   authCode?: string;
 
-  @ApiProperty({ example: '2025-09-29T10:00:00Z', description: 'Fecha de procesamiento', required: false })
+  @ApiProperty({
+    example: '2025-09-29T10:00:00Z',
+    description: 'Fecha de procesamiento',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   processedAt?: string;

@@ -1,14 +1,14 @@
 // client/dto/client-appointments.dto.ts
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { 
-  IsString, 
-  IsOptional, 
-  IsDateString, 
-  IsNumber, 
-  IsEnum, 
-  Min, 
-  Max 
+import {
+  IsString,
+  IsOptional,
+  IsDateString,
+  IsNumber,
+  IsEnum,
+  Min,
+  Max,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { AppointmentStatus } from '../../../generated/prisma';
@@ -17,71 +17,77 @@ export class ClientAppointmentDto {
   @ApiProperty({ example: 1, description: 'ID de la cita' })
   id: number;
 
-  @ApiProperty({ example: '2025-08-25T10:00:00Z', description: 'Fecha y hora de inicio' })
+  @ApiProperty({
+    example: '2025-08-25T10:00:00Z',
+    description: 'Fecha y hora de inicio',
+  })
   startTime: string;
 
-  @ApiProperty({ example: '2025-08-25T10:30:00Z', description: 'Fecha y hora de fin' })
+  @ApiProperty({
+    example: '2025-08-25T10:30:00Z',
+    description: 'Fecha y hora de fin',
+  })
   endTime: string;
 
   @ApiProperty({ example: 30, description: 'Duración en minutos' })
   duration: number;
 
-  @ApiProperty({ 
-    enum: AppointmentStatus, 
+  @ApiProperty({
+    enum: AppointmentStatus,
     example: AppointmentStatus.COMPLETED,
-    description: 'Estado de la cita'
+    description: 'Estado de la cita',
   })
   status: AppointmentStatus;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 'Corte de cabello y barba',
-    description: 'Notas de la cita'
+    description: 'Notas de la cita',
   })
   notes?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: '2025-08-20T14:30:00Z',
-    description: 'Fecha de creación de la cita'
+    description: 'Fecha de creación de la cita',
   })
   createdAt: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: '2025-08-24T16:45:00Z',
-    description: 'Fecha de última actualización'
+    description: 'Fecha de última actualización',
   })
   updatedAt: string;
 }
 
 export class GetClientAppointmentsQueryDto {
-  @ApiPropertyOptional({ 
-    example: '2025-01-01', 
-    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)' 
+  @ApiPropertyOptional({
+    example: '2025-01-01',
+    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)',
   })
   @IsOptional()
   @IsDateString()
   startDate?: string;
 
-  @ApiPropertyOptional({ 
-    example: '2025-12-31', 
-    description: 'Fecha de fin para filtrar (YYYY-MM-DD)' 
+  @ApiPropertyOptional({
+    example: '2025-12-31',
+    description: 'Fecha de fin para filtrar (YYYY-MM-DD)',
   })
   @IsOptional()
   @IsDateString()
   endDate?: string;
 
-  @ApiPropertyOptional({ 
-    enum: AppointmentStatus, 
+  @ApiPropertyOptional({
+    enum: AppointmentStatus,
     description: 'Filtrar por estado de la cita',
-    example: AppointmentStatus.COMPLETED
+    example: AppointmentStatus.COMPLETED,
   })
   @IsOptional()
   @IsEnum(AppointmentStatus)
   status?: AppointmentStatus;
 
-  @ApiPropertyOptional({ 
-    example: 1, 
+  @ApiPropertyOptional({
+    example: 1,
     description: 'Número de página (empezando en 1)',
-    default: 1
+    default: 1,
   })
   @IsOptional()
   @IsNumber()
@@ -89,10 +95,10 @@ export class GetClientAppointmentsQueryDto {
   @Transform(({ value }) => parseInt(value))
   page?: number = 1;
 
-  @ApiPropertyOptional({ 
-    example: 10, 
+  @ApiPropertyOptional({
+    example: 10,
     description: 'Número de citas por página (máximo 50)',
-    default: 10
+    default: 10,
   })
   @IsOptional()
   @IsNumber()
@@ -104,8 +110,9 @@ export class GetClientAppointmentsQueryDto {
   @ApiPropertyOptional({
     enum: ['upcoming', 'past', 'today', 'all'],
     example: 'all',
-    description: 'Período de tiempo: upcoming (próximas), past (pasadas), today (hoy), all (todas)',
-    default: 'all'
+    description:
+      'Período de tiempo: upcoming (próximas), past (pasadas), today (hoy), all (todas)',
+    default: 'all',
   })
   @IsOptional()
   @IsString()
@@ -113,9 +120,9 @@ export class GetClientAppointmentsQueryDto {
 }
 
 export class ClientAppointmentListResponseDto {
-  @ApiProperty({ 
+  @ApiProperty({
     type: [ClientAppointmentDto],
-    description: 'Lista de citas del cliente'
+    description: 'Lista de citas del cliente',
   })
   appointments: ClientAppointmentDto[];
 
@@ -125,8 +132,8 @@ export class ClientAppointmentListResponseDto {
       total: 25,
       page: 1,
       limit: 10,
-      totalPages: 3
-    }
+      totalPages: 3,
+    },
   })
   pagination: {
     total: number;
@@ -141,8 +148,8 @@ export class ClientAppointmentListResponseDto {
       totalAppointments: 25,
       completedAppointments: 20,
       cancelledAppointments: 3,
-      pendingAppointments: 2
-    }
+      pendingAppointments: 2,
+    },
   })
   summary: {
     totalAppointments: number;

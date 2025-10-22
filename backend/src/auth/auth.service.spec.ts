@@ -17,7 +17,16 @@ import * as bcrypt from 'bcryptjs';
 jest.mock('../lib/crypto', () => ({
   createAccessToken: jest.fn(() => 'mock-access-token'),
   createRefreshToken: jest.fn(() => 'mock-refresh-token'),
-  verifyRefreshToken: jest.fn(() => ({ userId: 1, userBrandId: 1, brandId: 1, email: 'test@example.com', username: 'testuser', role: 'CLIENT', type: 'refresh_token', tokenId: 'mock-token-id' })),
+  verifyRefreshToken: jest.fn(() => ({
+    userId: 1,
+    userBrandId: 1,
+    brandId: 1,
+    email: 'test@example.com',
+    username: 'testuser',
+    role: 'CLIENT',
+    type: 'refresh_token',
+    tokenId: 'mock-token-id',
+  })),
   comparePassword: jest.fn(() => Promise.resolve(true)),
 }));
 
@@ -30,13 +39,13 @@ const mockUser = {
   lastName: 'User',
   role: UserRole.CLIENT,
   isActive: true,
-  userBrands: []
+  userBrands: [],
 };
 
 const mockBrand = {
   id: 1,
   name: 'Test Brand',
-  ownerId: 1
+  ownerId: 1,
 };
 
 const mockUserBrand = {
@@ -45,7 +54,7 @@ const mockUserBrand = {
   brandId: 1,
   passwordHash: '$2a$12$hashedpassword',
   salt: 'salt',
-  brand: mockBrand
+  brand: mockBrand,
 };
 
 // Mock services
@@ -128,8 +137,8 @@ describe('AuthService', () => {
 
     // Setup default mocks
     mockServices.config.get.mockReturnValue('TestApp');
-    jest.spyOn(console, 'log').mockImplementation(() => { });
-    jest.spyOn(console, 'error').mockImplementation(() => { });
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.clearAllMocks();
   });
 
@@ -267,7 +276,9 @@ describe('AuthService', () => {
       mockServices.email.loadTemplate.mockReturnValue('email template');
 
       // Act
-      const result = await service.requestPasswordReset({ email: 'test@example.com' });
+      const result = await service.requestPasswordReset({
+        email: 'test@example.com',
+      });
 
       // Assert
       expect(result.success).toBe(true);
@@ -280,7 +291,9 @@ describe('AuthService', () => {
       prisma.user.findFirst.mockResolvedValue(null);
 
       // Act
-      const result = await service.requestPasswordReset({ email: 'nonexistent@example.com' });
+      const result = await service.requestPasswordReset({
+        email: 'nonexistent@example.com',
+      });
 
       // Assert
       expect(result.success).toBe(true);
@@ -415,7 +428,7 @@ describe('AuthService', () => {
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.errors!.some(e => e.code === 1008)).toBe(true);
+      expect(result.errors!.some((e) => e.code === 1008)).toBe(true);
     });
   });
 });

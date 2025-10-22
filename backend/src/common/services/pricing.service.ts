@@ -16,19 +16,19 @@ export interface PricingConfig {
 export class PricingService {
   private readonly config: PricingConfig = {
     plans: {
-      web: 0,      // Plan web gratuito
-      app: 35,     // Plan app base
-      completo: 60 // Plan completo
+      web: 0, // Plan web gratuito
+      app: 35, // Plan app base
+      completo: 60, // Plan completo
     },
     features: {
       'Gestión de Citas': 35,
-      'Ubicaciones': 15,
+      Ubicaciones: 15,
       'Archivos y Documentos': 25,
-      'Pagos': 30,
-      'Reportes': 30,
+      Pagos: 30,
+      Reportes: 30,
       'Catálogo de Servicios': 45,
-      'Notificaciones': 25
-    }
+      Notificaciones: 25,
+    },
   };
 
   /**
@@ -37,16 +37,17 @@ export class PricingService {
   calculateTotalPrice(
     planType: string,
     selectedServices: string[],
-    billingCycle: 'monthly' | 'annual' = 'monthly'
+    billingCycle: 'monthly' | 'annual' = 'monthly',
   ): number {
     console.log('💰 PricingService: Calculating price for:', {
       planType,
       selectedServices,
-      billingCycle
+      billingCycle,
     });
 
     // Obtener precio base del plan
-    const basePrice = this.config.plans[planType as keyof typeof this.config.plans] || 0;
+    const basePrice =
+      this.config.plans[planType as keyof typeof this.config.plans] || 0;
     console.log(`📊 Base price for ${planType}: $${basePrice}`);
 
     // Calcular precio de servicios adicionales
@@ -60,8 +61,9 @@ export class PricingService {
     console.log(`📊 Monthly total: $${monthlyTotal}`);
 
     // Si es anual, aplicar descuento (10 meses por 12)
-    const finalPrice = billingCycle === 'annual' ? monthlyTotal * 10 : monthlyTotal;
-    
+    const finalPrice =
+      billingCycle === 'annual' ? monthlyTotal * 10 : monthlyTotal;
+
     console.log(`📊 Final price (${billingCycle}): $${finalPrice}`);
     return finalPrice;
   }
@@ -88,7 +90,7 @@ export class PricingService {
   formatPrice(price: number, currency: string = 'USD'): string {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency
+      currency: currency,
     }).format(price);
   }
 }

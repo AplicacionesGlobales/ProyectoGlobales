@@ -10,12 +10,32 @@ import { PaymentService } from '../common/services/payment.service';
 import { ColorPaletteService } from './services/color-palette.service';
 import { GoogleAuthService } from './services/google-auth.service';
 import * as bcrypt from 'bcryptjs';
-import { ValidateResetCodeDto, ProfileResponseDto, RegisterClientDto, AuthResponse, UpdateProfileDto, ForgotPasswordDto, ResetPasswordDto, ForgotPasswordResponseDto, ResetPasswordResponseDto, ValidateCodeResponseDto, LoginRequestDto, RefreshRequestDto, RefreshResponseDto, GoogleValidateDto } from './dto';
+import {
+  ValidateResetCodeDto,
+  ProfileResponseDto,
+  RegisterClientDto,
+  AuthResponse,
+  UpdateProfileDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  ForgotPasswordResponseDto,
+  ResetPasswordResponseDto,
+  ValidateCodeResponseDto,
+  LoginRequestDto,
+  RefreshRequestDto,
+  RefreshResponseDto,
+  GoogleValidateDto,
+} from './dto';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
 import { UserRole } from '../../generated/prisma';
 import { randomBytes } from 'crypto';
 import { ERROR_CODES, ERROR_MESSAGES } from '../common/constants';
-import { createAccessToken, createRefreshToken, verifyRefreshToken, comparePassword } from '../lib/crypto';
+import {
+  createAccessToken,
+  createRefreshToken,
+  verifyRefreshToken,
+  comparePassword,
+} from '../lib/crypto';
 
 @Injectable()
 export class AuthService {
@@ -25,13 +45,15 @@ export class AuthService {
     private cryptoService: CryptoService,
     private configService: ConfigService,
     private googleAuthService: GoogleAuthService,
-  ) { }
+  ) {}
 
   private get appName(): string {
     return this.configService.get<string>('APP_NAME') || 'WhiteLabel';
   }
 
-  async registerClient(registerDto: RegisterClientDto): Promise<BaseResponseDto<AuthResponse>> {
+  async registerClient(
+    registerDto: RegisterClientDto,
+  ): Promise<BaseResponseDto<AuthResponse>> {
     console.log('\n🔍 === REGISTRO CLIENT INICIADO ===');
     console.log('📧 Email:', registerDto.email);
     console.log('👤 Username:', registerDto.username);
@@ -64,7 +86,7 @@ export class AuthService {
       // Verificar username único
       console.log('\n🔎 Verificando username único globalmente...');
       const existingUsername = await this.prisma.user.findUnique({
-        where: { username: registerDto.username }
+        where: { username: registerDto.username },
       });
 
       if (existingUsername) {
@@ -72,11 +94,11 @@ export class AuthService {
           id: existingUsername.id,
           email: existingUsername.email,
           username: existingUsername.username,
-          createdAt: existingUsername.createdAt
+          createdAt: existingUsername.createdAt,
         });
         errors.push({
           code: ERROR_CODES.USERNAME_EXISTS,
-          description: ERROR_MESSAGES.USERNAME_EXISTS
+          description: ERROR_MESSAGES.USERNAME_EXISTS,
         });
       } else {
         console.log('✅ Username disponible');
@@ -86,14 +108,14 @@ export class AuthService {
       console.log('\n🏢 Verificando marca existe...');
       const brand = await this.prisma.brand.findUnique({
         where: { id: registerDto.branchId },
-        select: { id: true, name: true }
+        select: { id: true, name: true },
       });
 
       if (!brand) {
         console.log('❌ Marca no encontrada:', registerDto.branchId);
         errors.push({
           code: ERROR_CODES.BRANCH_NOT_EXISTS,
-          description: ERROR_MESSAGES.BRANCH_NOT_EXISTS
+          description: ERROR_MESSAGES.BRANCH_NOT_EXISTS,
         });
       } else {
         console.log('✅ Marca encontrada:', brand);
@@ -105,9 +127,9 @@ export class AuthService {
         where: { email: registerDto.email },
         include: {
           userBrands: {
-            where: { brandId: registerDto.branchId }
-          }
-        }
+            where: { brandId: registerDto.branchId },
+          },
+        },
       });
 
       if (existingUserWithEmail) {
@@ -115,21 +137,26 @@ export class AuthService {
           id: existingUserWithEmail.id,
           username: existingUserWithEmail.username,
           email: existingUserWithEmail.email,
-          userBrandsInThisBrand: existingUserWithEmail.userBrands.length
+          userBrandsInThisBrand: existingUserWithEmail.userBrands.length,
         });
       } else {
         console.log('✅ Email no existe en el sistema');
       }
 
       // Si existe el usuario y ya está registrado en esta marca
-      if (existingUserWithEmail && existingUserWithEmail.userBrands.length > 0) {
+      if (
+        existingUserWithEmail &&
+        existingUserWithEmail.userBrands.length > 0
+      ) {
         console.log('❌ EMAIL YA REGISTRADO EN ESTA MARCA');
         errors.push({
           code: ERROR_CODES.EMAIL_EXISTS_IN_BRANCH,
-          description: ERROR_MESSAGES.EMAIL_EXISTS_IN_BRANCH
+          description: ERROR_MESSAGES.EMAIL_EXISTS_IN_BRANCH,
         });
       } else if (existingUserWithEmail) {
-        console.log('✅ Usuario existe pero no en esta marca - permitir registro');
+        console.log(
+          '✅ Usuario existe pero no en esta marca - permitir registro',
+        );
       }
 
       if (errors.length > 0) {
@@ -152,19 +179,19 @@ export class AuthService {
             role: UserRole.CLIENT,
           },
           include: {
-            userBrands: true
-          }
+            userBrands: true,
+          },
         });
         console.log('✅ Usuario creado:', {
           id: user.id,
           email: user.email,
-          username: user.username
+          username: user.username,
         });
       } else {
         console.log('🔄 Usando usuario existente:', {
           id: existingUserWithEmail.id,
           email: existingUserWithEmail.email,
-          username: existingUserWithEmail.username
+          username: existingUserWithEmail.username,
         });
         user = existingUserWithEmail;
       }
@@ -180,13 +207,13 @@ export class AuthService {
           brandId: registerDto.branchId,
           passwordHash,
           salt,
-        }
+        },
       });
 
       console.log('✅ UserBrand creado:', {
         id: userBrand.id,
         userId: userBrand.userId,
-        brandId: userBrand.brandId
+        brandId: userBrand.brandId,
       });
 
       // Generar JWT
@@ -215,7 +242,7 @@ export class AuthService {
           name: brand!.name,
         },
         token,
-        rememberMe: false // El registro no incluye rememberMe
+        rememberMe: false, // El registro no incluye rememberMe
       };
 
       console.log('\n🎉 === REGISTRO EXITOSO ===');
@@ -225,13 +252,12 @@ export class AuthService {
       console.log('✅ Token generado');
 
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('\n💥 === ERROR EN REGISTRO ===');
       console.error('Error en registerClient:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR,
-        ERROR_MESSAGES.INTERNAL_ERROR
+        ERROR_MESSAGES.INTERNAL_ERROR,
       );
     }
   }
@@ -240,7 +266,9 @@ export class AuthService {
 
   // Métodos actualizados del AuthService
 
-  async requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<BaseResponseDto<ForgotPasswordResponseDto>> {
+  async requestPasswordReset(
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<BaseResponseDto<ForgotPasswordResponseDto>> {
     try {
       const { email } = forgotPasswordDto;
 
@@ -249,16 +277,17 @@ export class AuthService {
         where: { email: email.toLowerCase() },
         include: {
           userBrands: {
-            include: { brand: true }
-          }
-        }
+            include: { brand: true },
+          },
+        },
       });
 
       // Por seguridad, siempre retornamos éxito, incluso si el usuario no existe
       if (!user) {
         return BaseResponseDto.success({
           success: true,
-          message: 'Si existe una cuenta con este email, recibirás un código de restablecimiento.'
+          message:
+            'Si existe una cuenta con este email, recibirás un código de restablecimiento.',
         });
       }
 
@@ -268,9 +297,9 @@ export class AuthService {
           userId: user.id,
           email: email.toLowerCase(),
           used: false,
-          expiresAt: { gt: new Date() }
+          expiresAt: { gt: new Date() },
         },
-        data: { used: true }
+        data: { used: true },
       });
 
       // Generar nuevo código de 6 dígitos
@@ -308,19 +337,21 @@ export class AuthService {
 
       return BaseResponseDto.success({
         success: true,
-        message: 'Si existe una cuenta con este email, recibirás un código de restablecimiento.'
+        message:
+          'Si existe una cuenta con este email, recibirás un código de restablecimiento.',
       });
-
     } catch (error) {
       console.error('Error en requestPasswordReset:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR,
-        'Error interno del servidor. Inténtalo más tarde.'
+        'Error interno del servidor. Inténtalo más tarde.',
       );
     }
   }
 
-  async validateResetCode(validateCodeDto: ValidateResetCodeDto): Promise<BaseResponseDto<ValidateCodeResponseDto>> {
+  async validateResetCode(
+    validateCodeDto: ValidateResetCodeDto,
+  ): Promise<BaseResponseDto<ValidateCodeResponseDto>> {
     try {
       const { code, email } = validateCodeDto;
 
@@ -330,7 +361,7 @@ export class AuthService {
           code: code,
           email: email.toLowerCase(),
           used: false,
-          expiresAt: { gt: new Date() }
+          expiresAt: { gt: new Date() },
         },
         include: { user: true },
       });
@@ -343,13 +374,13 @@ export class AuthService {
             email: email.toLowerCase(),
           },
           data: {
-            attempts: { increment: 1 }
-          }
+            attempts: { increment: 1 },
+          },
         });
 
         return BaseResponseDto.success({
           valid: false,
-          message: 'Código inválido o expirado'
+          message: 'Código inválido o expirado',
         });
       }
 
@@ -357,12 +388,12 @@ export class AuthService {
       if (resetCode.attempts >= 5) {
         await this.prisma.passwordResetCode.update({
           where: { id: resetCode.id },
-          data: { used: true }
+          data: { used: true },
         });
 
         return BaseResponseDto.success({
           valid: false,
-          message: 'Código bloqueado por exceso de intentos'
+          message: 'Código bloqueado por exceso de intentos',
         });
       }
 
@@ -372,17 +403,18 @@ export class AuthService {
         email: resetCode.email,
         message: 'Código válido',
       });
-
     } catch (error) {
       console.error('Error validando código:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR,
-        'Error validando el código'
+        'Error validando el código',
       );
     }
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<BaseResponseDto<ResetPasswordResponseDto>> {
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<BaseResponseDto<ResetPasswordResponseDto>> {
     try {
       const { code, email, password, confirmPassword } = resetPasswordDto;
 
@@ -391,7 +423,7 @@ export class AuthService {
         return BaseResponseDto.success({
           success: false,
           message: 'Las contraseñas no coinciden',
-          errors: { confirmPassword: ['Las contraseñas no coinciden'] }
+          errors: { confirmPassword: ['Las contraseñas no coinciden'] },
         });
       }
 
@@ -400,7 +432,7 @@ export class AuthService {
       if (!validation.data?.valid || !validation.data?.userId) {
         return BaseResponseDto.success({
           success: false,
-          message: validation.data?.message || 'Código inválido'
+          message: validation.data?.message || 'Código inválido',
         });
       }
 
@@ -413,14 +445,14 @@ export class AuthService {
           code: code,
           email: email.toLowerCase(),
           used: false,
-          expiresAt: { gt: new Date() }
-        }
+          expiresAt: { gt: new Date() },
+        },
       });
 
       if (!resetCodeRecord) {
         return BaseResponseDto.success({
           success: false,
-          message: 'Código inválido o expirado'
+          message: 'Código inválido o expirado',
         });
       }
 
@@ -428,28 +460,30 @@ export class AuthService {
       const user = await this.prisma.user.findUnique({
         where: { id: validation.data.userId },
         include: {
-          userBrands: true
-        }
+          userBrands: true,
+        },
       });
 
       if (!user) {
         return BaseResponseDto.success({
           success: false,
-          message: 'Usuario no encontrado'
+          message: 'Usuario no encontrado',
         });
       }
 
       // Actualizar contraseña en transacción
       await this.prisma.$transaction([
         // Actualizar contraseña en todas las UserBrand del usuario
-        ...(user.userBrands.length > 0 ? [
-          this.prisma.userBrand.updateMany({
-            where: {
-              userId: validation.data.userId,
-            },
-            data: { passwordHash: hashedPassword },
-          })
-        ] : []),
+        ...(user.userBrands.length > 0
+          ? [
+              this.prisma.userBrand.updateMany({
+                where: {
+                  userId: validation.data.userId,
+                },
+                data: { passwordHash: hashedPassword },
+              }),
+            ]
+          : []),
 
         // Marcar código como usado
         this.prisma.passwordResetCode.update({
@@ -476,18 +510,20 @@ export class AuthService {
         success: true,
         message: 'Contraseña actualizada exitosamente',
       });
-
     } catch (error) {
       console.error('Error en resetPassword:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR,
-        'Error interno del servidor'
+        'Error interno del servidor',
       );
     }
   }
 
   // Enviar notificación de contraseña actualizada con código de emergencia
-  private async sendPasswordUpdatedNotification(user: any, email: string): Promise<void> {
+  private async sendPasswordUpdatedNotification(
+    user: any,
+    email: string,
+  ): Promise<void> {
     try {
       // Generar código de emergencia (válido por 24 horas)
       const emergencyCode = this.cryptoService.generateResetCode();
@@ -540,10 +576,7 @@ export class AuthService {
     try {
       const result = await this.prisma.passwordResetCode.deleteMany({
         where: {
-          OR: [
-            { expiresAt: { lt: new Date() } },
-            { used: true },
-          ],
+          OR: [{ expiresAt: { lt: new Date() } }, { used: true }],
         },
       });
 
@@ -566,10 +599,11 @@ export class AuthService {
     return `${random}_${timestamp}`;
   }
 
-
   // ==================== LOGIN AND REFRESH TOKEN METHODS ====================
 
-  async login(loginDto: LoginRequestDto): Promise<BaseResponseDto<AuthResponse>> {
+  async login(
+    loginDto: LoginRequestDto,
+  ): Promise<BaseResponseDto<AuthResponse>> {
     console.log('\n🔍 === LOGIN INICIADO ===');
     console.log('📧 Email:', loginDto.email);
     console.log('🔒 Remember Me:', loginDto.rememberMe);
@@ -585,18 +619,18 @@ export class AuthService {
           userBrands: {
             include: {
               brand: {
-                select: { id: true, name: true }
-              }
-            }
-          }
-        }
+                select: { id: true, name: true },
+              },
+            },
+          },
+        },
       });
 
       if (!user) {
         console.log('❌ Usuario no encontrado');
         errors.push({
           code: ERROR_CODES.USER_NOT_FOUND,
-          description: 'Credenciales inválidas'
+          description: 'Credenciales inválidas',
         });
         return BaseResponseDto.error(errors);
       }
@@ -617,14 +651,14 @@ export class AuthService {
             brandId: ub.brandId,
             hasPasswordHash: !!ub.passwordHash,
             passwordHashType: typeof ub.passwordHash,
-            passwordHashLength: ub.passwordHash ? ub.passwordHash.length : 0
+            passwordHashLength: ub.passwordHash ? ub.passwordHash.length : 0,
           });
 
           console.log('📝 Parámetros de comparePassword:', {
             password: '***' + loginDto.password.slice(-2),
             passwordLength: loginDto.password.length,
             hash: ub.passwordHash ? '***' + ub.passwordHash.slice(-10) : 'NULL',
-            hashLength: ub.passwordHash ? ub.passwordHash.length : 0
+            hashLength: ub.passwordHash ? ub.passwordHash.length : 0,
           });
 
           if (await comparePassword(loginDto.password, ub.passwordHash)) {
@@ -644,7 +678,7 @@ export class AuthService {
         console.log('❌ Contraseña inválida');
         errors.push({
           code: ERROR_CODES.USER_NOT_FOUND,
-          description: 'Credenciales inválidas'
+          description: 'Credenciales inválidas',
         });
         return BaseResponseDto.error(errors);
       }
@@ -658,7 +692,7 @@ export class AuthService {
         brandId: userBrand?.brandId,
         email: user.email,
         username: user.username,
-        role: user.role
+        role: user.role,
       };
 
       const accessToken = createAccessToken(tokenPayload);
@@ -679,33 +713,39 @@ export class AuthService {
           lastName: user.lastName || undefined,
           role: user.role,
         },
-        brand: userBrand?.brand ? {
-          id: userBrand.brand.id,
-          name: userBrand.brand.name,
-        } : undefined,
+        brand: userBrand?.brand
+          ? {
+              id: userBrand.brand.id,
+              name: userBrand.brand.name,
+            }
+          : undefined,
         token: accessToken,
         refreshToken,
-        rememberMe: loginDto.rememberMe || false
+        rememberMe: loginDto.rememberMe || false,
       };
 
       console.log('\n🎉 === LOGIN EXITOSO ===');
       console.log('✅ Usuario:', user.email);
       console.log('✅ Remember Me:', loginDto.rememberMe);
-      console.log('✅ Refresh Token:', refreshToken ? 'Generado' : 'No generado');
+      console.log(
+        '✅ Refresh Token:',
+        refreshToken ? 'Generado' : 'No generado',
+      );
 
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('\n💥 === ERROR EN LOGIN ===');
       console.error('Error en login:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR,
-        ERROR_MESSAGES.INTERNAL_ERROR
+        ERROR_MESSAGES.INTERNAL_ERROR,
       );
     }
   }
 
-  async refreshToken(refreshDto: RefreshRequestDto): Promise<BaseResponseDto<RefreshResponseDto>> {
+  async refreshToken(
+    refreshDto: RefreshRequestDto,
+  ): Promise<BaseResponseDto<RefreshResponseDto>> {
     console.log('\n🔄 === REFRESH TOKEN INICIADO ===');
     console.log('📅 Timestamp:', new Date().toISOString());
 
@@ -717,7 +757,7 @@ export class AuthService {
         console.log('❌ Refresh token inválido');
         return BaseResponseDto.singleError(
           ERROR_CODES.USER_NOT_FOUND,
-          'Refresh token inválido o expirado'
+          'Refresh token inválido o expirado',
         );
       }
 
@@ -729,15 +769,15 @@ export class AuthService {
           email: true,
           username: true,
           role: true,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
 
       if (!user || !user.isActive) {
         console.log('❌ Usuario no encontrado o inactivo');
         return BaseResponseDto.singleError(
           ERROR_CODES.USER_NOT_FOUND,
-          'Usuario no encontrado'
+          'Usuario no encontrado',
         );
       }
 
@@ -750,7 +790,7 @@ export class AuthService {
         brandId: payload.brandId,
         email: user.email,
         username: user.username,
-        role: user.role
+        role: user.role,
       };
 
       const newAccessToken = createAccessToken(newTokenPayload);
@@ -763,9 +803,9 @@ export class AuthService {
           id: user.id,
           email: user.email,
           username: user.username,
-          role: user.role
+          role: user.role,
         },
-        renewedAt: new Date().toISOString()
+        renewedAt: new Date().toISOString(),
       };
 
       console.log('\n🎉 === REFRESH EXITOSO ===');
@@ -773,61 +813,66 @@ export class AuthService {
       console.log('✅ Nuevo refresh token indefinido generado');
 
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('\n💥 === ERROR EN REFRESH ===');
       console.error('Error en refreshToken:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR,
-        'Error interno del servidor'
+        'Error interno del servidor',
       );
     }
   }
 
   // ==================== PASSWORD VALIDATION ====================
 
-  private validatePassword(password: string): { isValid: boolean; errors: ErrorDetail[] } {
+  private validatePassword(password: string): {
+    isValid: boolean;
+    errors: ErrorDetail[];
+  } {
     const errors: ErrorDetail[] = [];
 
     if (password.length < 6) {
       errors.push({
         code: ERROR_CODES.WEAK_PASSWORD,
-        description: 'La contraseña debe tener al menos 6 caracteres'
+        description: 'La contraseña debe tener al menos 6 caracteres',
       });
     }
 
     if (!/[a-z]/.test(password)) {
       errors.push({
         code: ERROR_CODES.WEAK_PASSWORD,
-        description: 'La contraseña debe contener al menos una letra minúscula'
+        description: 'La contraseña debe contener al menos una letra minúscula',
       });
     }
 
     if (!/[A-Z]/.test(password)) {
       errors.push({
         code: ERROR_CODES.WEAK_PASSWORD,
-        description: 'La contraseña debe contener al menos una letra mayúscula'
+        description: 'La contraseña debe contener al menos una letra mayúscula',
       });
     }
 
     if (!/\d/.test(password)) {
       errors.push({
         code: ERROR_CODES.WEAK_PASSWORD,
-        description: 'La contraseña debe contener al menos un número'
+        description: 'La contraseña debe contener al menos un número',
       });
     }
 
     return { isValid: errors.length === 0, errors };
   }
 
-  private validateUsername(username: string): { isValid: boolean; errors: ErrorDetail[] } {
+  private validateUsername(username: string): {
+    isValid: boolean;
+    errors: ErrorDetail[];
+  } {
     const errors: ErrorDetail[] = [];
 
     // Validar longitud mínima
     if (username.length < 3) {
       errors.push({
         code: ERROR_CODES.INVALID_USERNAME,
-        description: 'El username debe tener al menos 3 caracteres'
+        description: 'El username debe tener al menos 3 caracteres',
       });
     }
 
@@ -835,7 +880,7 @@ export class AuthService {
     if (username.length > 20) {
       errors.push({
         code: ERROR_CODES.INVALID_USERNAME,
-        description: 'El username no puede tener más de 20 caracteres'
+        description: 'El username no puede tener más de 20 caracteres',
       });
     }
 
@@ -843,7 +888,8 @@ export class AuthService {
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       errors.push({
         code: ERROR_CODES.INVALID_USERNAME,
-        description: 'El username solo puede contener letras, números y guiones bajos'
+        description:
+          'El username solo puede contener letras, números y guiones bajos',
       });
     }
 
@@ -851,7 +897,7 @@ export class AuthService {
     if (/^[0-9_]/.test(username)) {
       errors.push({
         code: ERROR_CODES.INVALID_USERNAME,
-        description: 'El username no puede empezar con número o guión bajo'
+        description: 'El username no puede empezar con número o guión bajo',
       });
     }
 
@@ -860,7 +906,9 @@ export class AuthService {
 
   // ==================== PROFILE METHODS ====================
 
-  async getProfile(userPayload: any): Promise<BaseResponseDto<ProfileResponseDto>> {
+  async getProfile(
+    userPayload: any,
+  ): Promise<BaseResponseDto<ProfileResponseDto>> {
     try {
       console.log('\n🔍 === OBTENIENDO PERFIL ===');
       console.log('👤 User ID:', userPayload.userId);
@@ -870,7 +918,7 @@ export class AuthService {
       const user = await this.prisma.user.findUnique({
         where: {
           id: userPayload.userId,
-          isActive: true
+          isActive: true,
         },
         select: {
           id: true,
@@ -881,15 +929,15 @@ export class AuthService {
           phone: true,
           role: true,
           createdAt: true,
-          updatedAt: true
-        }
+          updatedAt: true,
+        },
       });
 
       if (!user) {
         console.log('❌ Usuario no encontrado o inactivo');
         return BaseResponseDto.singleError(
           ERROR_CODES.USER_NOT_FOUND,
-          'Usuario no encontrado'
+          'Usuario no encontrado',
         );
       }
 
@@ -904,25 +952,23 @@ export class AuthService {
         phone: user.phone || undefined,
         role: user.role,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        updatedAt: user.updatedAt,
       };
 
       return BaseResponseDto.success(profileResponse);
-
     } catch (error) {
       console.error('\n💥 === ERROR OBTENIENDO PERFIL ===');
       console.error('Error en getProfile:', error);
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR,
-        ERROR_MESSAGES.INTERNAL_ERROR
+        ERROR_MESSAGES.INTERNAL_ERROR,
       );
     }
   }
 
-
   async updateProfile(
     userPayload: any,
-    updateProfileDto: UpdateProfileDto
+    updateProfileDto: UpdateProfileDto,
   ): Promise<BaseResponseDto<ProfileResponseDto>> {
     try {
       console.log('\n🔍 === ACTUALIZANDO PERFIL ===');
@@ -934,7 +980,9 @@ export class AuthService {
       if (updateProfileDto.username) {
         // Validar username antes de verificar si existe
         console.log('\n🔎 Validando username...');
-        const usernameValidation = this.validateUsername(updateProfileDto.username);
+        const usernameValidation = this.validateUsername(
+          updateProfileDto.username,
+        );
         if (!usernameValidation.isValid) {
           console.log('❌ Username inválido:', usernameValidation.errors);
           return BaseResponseDto.error(usernameValidation.errors);
@@ -945,15 +993,15 @@ export class AuthService {
         const existingUser = await this.prisma.user.findFirst({
           where: {
             username: updateProfileDto.username,
-            id: { not: userPayload.userId } // Excluir al usuario actual
-          }
+            id: { not: userPayload.userId }, // Excluir al usuario actual
+          },
         });
 
         if (existingUser) {
           console.log('❌ Username ya existe:', updateProfileDto.username);
           return BaseResponseDto.singleError(
             ERROR_CODES.USERNAME_EXISTS,
-            ERROR_MESSAGES.USERNAME_EXISTS
+            ERROR_MESSAGES.USERNAME_EXISTS,
           );
         }
       }
@@ -962,7 +1010,7 @@ export class AuthService {
       const updatedUser = await this.prisma.user.update({
         where: {
           id: userPayload.userId,
-          isActive: true
+          isActive: true,
         },
         data: {
           firstName: updateProfileDto.firstName,
@@ -980,8 +1028,8 @@ export class AuthService {
           phone: true,
           role: true,
           createdAt: true,
-          updatedAt: true
-        }
+          updatedAt: true,
+        },
       });
 
       console.log('✅ Perfil actualizado exitosamente:', updatedUser.email);
@@ -995,11 +1043,10 @@ export class AuthService {
         phone: updatedUser.phone || undefined,
         role: updatedUser.role,
         createdAt: updatedUser.createdAt,
-        updatedAt: updatedUser.updatedAt
+        updatedAt: updatedUser.updatedAt,
       };
 
       return BaseResponseDto.success(profileResponse);
-
     } catch (error) {
       console.error('\n💥 === ERROR ACTUALIZANDO PERFIL ===');
       console.error('Error en updateProfile:', error);
@@ -1010,21 +1057,23 @@ export class AuthService {
         if (target && target.includes('username')) {
           return BaseResponseDto.singleError(
             ERROR_CODES.USERNAME_EXISTS,
-            ERROR_MESSAGES.USERNAME_EXISTS
+            ERROR_MESSAGES.USERNAME_EXISTS,
           );
         }
       }
 
       return BaseResponseDto.singleError(
         ERROR_CODES.INTERNAL_ERROR,
-        ERROR_MESSAGES.INTERNAL_ERROR
+        ERROR_MESSAGES.INTERNAL_ERROR,
       );
     }
   }
 
   // ==================== GOOGLE AUTHENTICATION ====================
 
-  async loginWithGoogle(googleValidateDto: GoogleValidateDto): Promise<BaseResponseDto<AuthResponse>> {
+  async loginWithGoogle(
+    googleValidateDto: GoogleValidateDto,
+  ): Promise<BaseResponseDto<AuthResponse>> {
     console.log('\n🔍 === GOOGLE LOGIN INICIADO ===');
     console.log('🏢 BrandId:', googleValidateDto.brandId);
     console.log('🔒 Remember Me:', googleValidateDto.rememberMe);
@@ -1033,12 +1082,14 @@ export class AuthService {
 
     try {
       // Verificar Google ID Token
-      const googleUser = await this.googleAuthService.verifyIdToken(googleValidateDto.idToken);
+      const googleUser = await this.googleAuthService.verifyIdToken(
+        googleValidateDto.idToken,
+      );
 
       if (!googleUser) {
         errors.push({
           code: ERROR_CODES.INVALID_CREDENTIALS,
-          description: 'Token de Google inválido'
+          description: 'Token de Google inválido',
         });
         return BaseResponseDto.error(errors);
       }
@@ -1048,13 +1099,13 @@ export class AuthService {
       // Verificar que la marca existe
       const brand = await this.prisma.brand.findUnique({
         where: { id: googleValidateDto.brandId },
-        select: { id: true, name: true }
+        select: { id: true, name: true },
       });
 
       if (!brand) {
         errors.push({
           code: ERROR_CODES.VALIDATION_ERROR || 404,
-          description: 'Marca no encontrada'
+          description: 'Marca no encontrada',
         });
         return BaseResponseDto.error(errors);
       }
@@ -1064,9 +1115,9 @@ export class AuthService {
         where: { email: googleUser.email },
         include: {
           userBrands: {
-            where: { brandId: googleValidateDto.brandId }
-          }
-        }
+            where: { brandId: googleValidateDto.brandId },
+          },
+        },
       });
 
       // Si el usuario no existe, crearlo
@@ -1089,13 +1140,13 @@ export class AuthService {
             username,
             firstName: googleUser.firstName,
             lastName: googleUser.lastName,
-            role: UserRole.CLIENT
+            role: UserRole.CLIENT,
           },
           include: {
             userBrands: {
-              where: { brandId: googleValidateDto.brandId }
-            }
-          }
+              where: { brandId: googleValidateDto.brandId },
+            },
+          },
         });
 
         console.log('✅ Usuario creado:', user.id);
@@ -1109,7 +1160,10 @@ export class AuthService {
 
         // Para usuarios de Google, crear UserBrand sin contraseña tradicional
         // Usar un hash especial que indique que es cuenta de Google
-        const googleAccountHash = await bcrypt.hash(`google_${googleUser.googleId}`, 12);
+        const googleAccountHash = await bcrypt.hash(
+          `google_${googleUser.googleId}`,
+          12,
+        );
         const salt = randomBytes(32).toString('hex');
 
         userBrand = await this.prisma.userBrand.create({
@@ -1118,7 +1172,7 @@ export class AuthService {
             brandId: googleValidateDto.brandId,
             passwordHash: googleAccountHash,
             salt,
-          }
+          },
         });
 
         console.log('✅ UserBrand creado para Google user');
@@ -1162,12 +1216,11 @@ export class AuthService {
 
       console.log('🎉 Google login exitoso');
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('💥 Error en loginWithGoogle:', error);
       errors.push({
         code: ERROR_CODES.INTERNAL_ERROR,
-        description: 'Error interno durante autenticación con Google'
+        description: 'Error interno durante autenticación con Google',
       });
       return BaseResponseDto.error(errors);
     }

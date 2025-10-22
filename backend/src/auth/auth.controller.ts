@@ -1,5 +1,22 @@
-import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, UseGuards, Request, Put } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  ValidationPipe,
+  HttpCode,
+  HttpStatus,
+  Get,
+  UseGuards,
+  Request,
+  Put,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
   RegisterClientDto,
@@ -26,7 +43,7 @@ import { ProfileResponseDto } from './dto';
 @ApiTags('Autenticación')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   // ==================== REGISTRATION ENDPOINTS ====================
   @Public()
@@ -34,9 +51,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Registrar cliente en sucursal' })
   @ApiBody({ type: RegisterClientDto })
-  @ApiResponse({ status: 200, description: 'Cliente registrado', type: BaseResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Cliente registrado',
+    type: BaseResponseDto,
+  })
   async registerClient(
-    @Body(ValidationPipe) registerDto: RegisterClientDto
+    @Body(ValidationPipe) registerDto: RegisterClientDto,
   ): Promise<BaseResponseDto<AuthResponse>> {
     return this.authService.registerClient(registerDto);
   }
@@ -51,14 +72,14 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Login exitoso',
-    type: BaseResponseDto<AuthResponse>
+    type: BaseResponseDto<AuthResponse>,
   })
   @ApiResponse({
     status: 401,
-    description: 'Credenciales inválidas'
+    description: 'Credenciales inválidas',
   })
   async login(
-    @Body(ValidationPipe) loginDto: LoginRequestDto
+    @Body(ValidationPipe) loginDto: LoginRequestDto,
   ): Promise<BaseResponseDto<AuthResponse>> {
     return this.authService.login(loginDto);
   }
@@ -71,14 +92,14 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Token renovado exitosamente',
-    type: BaseResponseDto<RefreshResponseDto>
+    type: BaseResponseDto<RefreshResponseDto>,
   })
   @ApiResponse({
     status: 401,
-    description: 'Refresh token inválido o expirado'
+    description: 'Refresh token inválido o expirado',
   })
   async refreshToken(
-    @Body(ValidationPipe) refreshDto: RefreshRequestDto
+    @Body(ValidationPipe) refreshDto: RefreshRequestDto,
   ): Promise<BaseResponseDto<RefreshResponseDto>> {
     return this.authService.refreshToken(refreshDto);
   }
@@ -91,14 +112,14 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Autenticación con Google exitosa',
-    type: BaseResponseDto<AuthResponse>
+    type: BaseResponseDto<AuthResponse>,
   })
   @ApiResponse({
     status: 401,
-    description: 'Token de Google inválido'
+    description: 'Token de Google inválido',
   })
   async validateGoogleToken(
-    @Body(ValidationPipe) googleValidateDto: GoogleValidateDto
+    @Body(ValidationPipe) googleValidateDto: GoogleValidateDto,
   ): Promise<BaseResponseDto<AuthResponse>> {
     return this.authService.loginWithGoogle(googleValidateDto);
   }
@@ -106,7 +127,6 @@ export class AuthController {
   /**
    * Login para usuarios ADMIN/ROOT
    */
-
 
   // ==================== PASSWORD RESET ENDPOINTS ====================
 
@@ -118,10 +138,10 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Solicitud de reset procesada exitosamente',
-    type: ForgotPasswordResponseDto
+    type: ForgotPasswordResponseDto,
   })
   async forgotPassword(
-    @Body(ValidationPipe) forgotPasswordDto: ForgotPasswordDto
+    @Body(ValidationPipe) forgotPasswordDto: ForgotPasswordDto,
   ): Promise<BaseResponseDto<ForgotPasswordResponseDto>> {
     return this.authService.requestPasswordReset(forgotPasswordDto);
   }
@@ -134,10 +154,10 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Código validado',
-    type: ValidateCodeResponseDto
+    type: ValidateCodeResponseDto,
   })
   async validateResetCode(
-    @Body(ValidationPipe) validateCodeDto: ValidateResetCodeDto
+    @Body(ValidationPipe) validateCodeDto: ValidateResetCodeDto,
   ): Promise<BaseResponseDto<ValidateCodeResponseDto>> {
     return this.authService.validateResetCode(validateCodeDto);
   }
@@ -150,10 +170,10 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Contraseña actualizada exitosamente',
-    type: ResetPasswordResponseDto
+    type: ResetPasswordResponseDto,
   })
   async resetPassword(
-    @Body(ValidationPipe) resetPasswordDto: ResetPasswordDto
+    @Body(ValidationPipe) resetPasswordDto: ResetPasswordDto,
   ): Promise<BaseResponseDto<ResetPasswordResponseDto>> {
     return this.authService.resetPassword(resetPasswordDto);
   }
@@ -167,16 +187,17 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Perfil obtenido exitosamente',
-    type: BaseResponseDto<ProfileResponseDto>
+    type: BaseResponseDto<ProfileResponseDto>,
   })
   @ApiResponse({
     status: 401,
-    description: 'No autorizado'
+    description: 'No autorizado',
   })
-  async getProfile(@Request() req): Promise<BaseResponseDto<ProfileResponseDto>> {
+  async getProfile(
+    @Request() req,
+  ): Promise<BaseResponseDto<ProfileResponseDto>> {
     return this.authService.getProfile(req.user);
   }
-
 
   // En src/auth/auth.controller.ts (agrega este método a la clase AuthController)
 
@@ -187,15 +208,15 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Perfil actualizado exitosamente',
-    type: BaseResponseDto<ProfileResponseDto>
+    type: BaseResponseDto<ProfileResponseDto>,
   })
   @ApiResponse({
     status: 401,
-    description: 'No autorizado'
+    description: 'No autorizado',
   })
   async updateProfile(
     @Request() req,
-    @Body(ValidationPipe) updateProfileDto: UpdateProfileDto
+    @Body(ValidationPipe) updateProfileDto: UpdateProfileDto,
   ): Promise<BaseResponseDto<ProfileResponseDto>> {
     return this.authService.updateProfile(req.user, updateProfileDto);
   }

@@ -59,9 +59,9 @@ export interface AnnualRevenueMetrics {
  */
 export interface RevenueBreakdown {
   appointments: number; // Ingresos de citas (Appointment.price)
-  services: number;     // Ingresos de servicios walk-in (Payment tipo SERVICE) - Futuro
-  products: number;     // Ingresos de productos (Payment tipo PRODUCT) - Futuro
-  total: number;        // Total de ingresos
+  services: number; // Ingresos de servicios walk-in (Payment tipo SERVICE) - Futuro
+  products: number; // Ingresos de productos (Payment tipo PRODUCT) - Futuro
+  total: number; // Total de ingresos
 }
 
 /**

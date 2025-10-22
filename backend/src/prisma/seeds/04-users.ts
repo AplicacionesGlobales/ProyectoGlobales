@@ -23,7 +23,7 @@ export async function seedUsers() {
         firstName: 'Carlos',
         lastName: 'García',
         role: UserRole.ROOT,
-      }
+      },
     });
 
     console.log('✅ Created root user:', rootUser.email);
@@ -36,7 +36,7 @@ export async function seedUsers() {
         address: 'Av. Principal 123, Centro',
         phone: '+1234567890',
         ownerId: rootUser.id,
-      }
+      },
     });
 
     console.log('✅ Created brand:', mainBrand.name);
@@ -50,7 +50,7 @@ export async function seedUsers() {
         accent: '#fbbc04',
         neutral: '#9aa0a6',
         success: '#137333',
-      }
+      },
     });
 
     console.log('✅ Created color palette for brand:', mainBrand.name);
@@ -64,22 +64,24 @@ export async function seedUsers() {
           firstName: 'Juan',
           lastName: 'Pérez',
           role: UserRole.CLIENT,
-        }
+        },
       }),
       prisma.user.create({
         data: {
-          email: 'maria@gmail.com', 
+          email: 'maria@gmail.com',
           username: 'maria_gonzalez',
           firstName: 'María',
           lastName: 'González',
           role: UserRole.CLIENT,
-        }
-      })
+        },
+      }),
     ]);
 
     console.log('✅ Created client users:');
-    clientUsers.forEach(user => {
-      console.log(`   - ${user.firstName} ${user.lastName} (@${user.username})`);
+    clientUsers.forEach((user) => {
+      console.log(
+        `   - ${user.firstName} ${user.lastName} (@${user.username})`,
+      );
     });
 
     // Create admin users
@@ -91,13 +93,15 @@ export async function seedUsers() {
           firstName: 'Admin',
           lastName: 'User',
           role: UserRole.ADMIN,
-        }
-      })
+        },
+      }),
     ]);
 
     console.log('✅ Created admin users:');
-    adminUsers.forEach(user => {
-      console.log(`   - ${user.firstName} ${user.lastName} (@${user.username})`);
+    adminUsers.forEach((user) => {
+      console.log(
+        `   - ${user.firstName} ${user.lastName} (@${user.username})`,
+      );
     });
 
     // Create UserBrand relationships for ALL users (including ROOT)
@@ -106,7 +110,7 @@ export async function seedUsers() {
     const salt1 = 'salt_' + Date.now() + '_1';
     const salt2 = 'salt_' + Date.now() + '_2';
     const salt3 = 'salt_' + Date.now() + '_3';
-    
+
     const userBrands = await Promise.all([
       // ROOT user registered in the brand (¡NUEVO!)
       prisma.userBrand.create({
@@ -115,7 +119,7 @@ export async function seedUsers() {
           brandId: mainBrand.id,
           passwordHash,
           salt: saltRoot,
-        }
+        },
       }),
       // Juan registered in the brand
       prisma.userBrand.create({
@@ -124,7 +128,7 @@ export async function seedUsers() {
           brandId: mainBrand.id,
           passwordHash,
           salt: salt1,
-        }
+        },
       }),
       // María registered in the brand
       prisma.userBrand.create({
@@ -133,7 +137,7 @@ export async function seedUsers() {
           brandId: mainBrand.id,
           passwordHash,
           salt: salt2,
-        }
+        },
       }),
       // Admin also registered in the brand
       prisma.userBrand.create({
@@ -142,8 +146,8 @@ export async function seedUsers() {
           brandId: mainBrand.id,
           passwordHash,
           salt: salt3,
-        }
-      })
+        },
+      }),
     ]);
 
     console.log('✅ Created user-brand relationships:');
@@ -156,18 +160,23 @@ export async function seedUsers() {
     console.log(`🏢 Brand: ${mainBrand.name} (ID: ${mainBrand.id})`);
     console.log(`   📍 ${mainBrand.address}`);
     console.log(`   📞 ${mainBrand.phone}`);
-    
+
     console.log('\n👥 Test users (all with password: "password123"):');
     console.log(`   - ROOT: ${rootUser.username} (${rootUser.email})`);
-    clientUsers.forEach(user => {
-      console.log(`   - CLIENT: ${user.username} (${user.firstName} ${user.lastName})`);
+    clientUsers.forEach((user) => {
+      console.log(
+        `   - CLIENT: ${user.username} (${user.firstName} ${user.lastName})`,
+      );
     });
-    adminUsers.forEach(user => {
-      console.log(`   - ADMIN: ${user.username} (${user.firstName} ${user.lastName})`);
+    adminUsers.forEach((user) => {
+      console.log(
+        `   - ADMIN: ${user.username} (${user.firstName} ${user.lastName})`,
+      );
     });
 
-    console.log('\n🔐 All users can login with email and password "password123"');
-
+    console.log(
+      '\n🔐 All users can login with email and password "password123"',
+    );
   } catch (error) {
     console.error('❌ Error seeding users:', error);
     throw error;

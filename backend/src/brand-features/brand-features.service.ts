@@ -4,7 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
-  ConflictException
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
@@ -12,19 +12,22 @@ import {
   FeatureDto,
   BrandFeatureDto,
   FeatureCategory,
-  CreateFeatureDto
+  CreateFeatureDto,
 } from './dto/brand-feature.dto';
 import { FeatureCategory as PrismaFeatureCategory } from '../../generated/prisma';
 
 @Injectable()
 export class BrandFeaturesService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   // Validar si es dueño del brand
-  private async validateBrandOwner(brandId: number, userId: number): Promise<void> {
+  private async validateBrandOwner(
+    brandId: number,
+    userId: number,
+  ): Promise<void> {
     const brand = await this.prisma.brand.findUnique({
       where: { id: brandId },
-      select: { ownerId: true }
+      select: { ownerId: true },
     });
 
     if (!brand) {
@@ -32,7 +35,9 @@ export class BrandFeaturesService {
     }
 
     if (brand.ownerId !== userId) {
-      throw new ForbiddenException('Solo el dueño del brand puede realizar esta acción');
+      throw new ForbiddenException(
+        'Solo el dueño del brand puede realizar esta acción',
+      );
     }
   }
 
@@ -52,7 +57,7 @@ export class BrandFeaturesService {
       isRecommended: feature.isRecommended,
       order: feature.order,
       createdAt: feature.createdAt.toISOString(),
-      updatedAt: feature.updatedAt.toISOString()
+      updatedAt: feature.updatedAt.toISOString(),
     };
   }
 
@@ -65,7 +70,7 @@ export class BrandFeaturesService {
       isActive: brandFeature.isActive,
       createdAt: brandFeature.createdAt.toISOString(),
       updatedAt: brandFeature.updatedAt.toISOString(),
-      feature: this.mapFeatureToDto(brandFeature.feature)
+      feature: this.mapFeatureToDto(brandFeature.feature),
     };
   }
 
@@ -74,15 +79,14 @@ export class BrandFeaturesService {
     try {
       const features = await this.prisma.feature.findMany({
         where: {
-          isActive: true
+          isActive: true,
         },
-        orderBy: [
-          { order: 'asc' },
-          { createdAt: 'asc' }
-        ]
+        orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       });
 
-      const featuresDto = features.map(feature => this.mapFeatureToDto(feature));
+      const featuresDto = features.map((feature) =>
+        this.mapFeatureToDto(feature),
+      );
 
       return BaseResponseDto.success(featuresDto);
     } catch (error) {
@@ -92,12 +96,14 @@ export class BrandFeaturesService {
   }
 
   // 2. Obtener features asignados a un brand - PÚBLICO
-  async getBrandFeatures(brandId: number): Promise<BaseResponseDto<BrandFeatureDto[]>> {
+  async getBrandFeatures(
+    brandId: number,
+  ): Promise<BaseResponseDto<BrandFeatureDto[]>> {
     try {
       // Verificar que el brand existe
       const brand = await this.prisma.brand.findUnique({
         where: { id: brandId },
-        select: { id: true }
+        select: { id: true },
       });
 
       if (!brand) {
@@ -107,20 +113,20 @@ export class BrandFeaturesService {
       const brandFeatures = await this.prisma.brandFeature.findMany({
         where: {
           brandId,
-          isActive: true
+          isActive: true,
         },
         include: {
-          feature: true
+          feature: true,
         },
         orderBy: {
           feature: {
-            order: 'asc'
-          }
-        }
+            order: 'asc',
+          },
+        },
       });
 
-      const brandFeaturesDto = brandFeatures.map(brandFeature =>
-        this.mapBrandFeatureToDto(brandFeature)
+      const brandFeaturesDto = brandFeatures.map((brandFeature) =>
+        this.mapBrandFeatureToDto(brandFeature),
       );
 
       return BaseResponseDto.success(brandFeaturesDto);
@@ -134,7 +140,7 @@ export class BrandFeaturesService {
   async assignFeatureToBrand(
     brandId: number,
     featureId: number,
-    userId: number
+    userId: number,
   ): Promise<BaseResponseDto<BrandFeatureDto>> {
     try {
       // Validar que el usuario es dueño del brand
@@ -142,7 +148,7 @@ export class BrandFeaturesService {
 
       // Verificar que el feature existe y está activo
       const feature = await this.prisma.feature.findUnique({
-        where: { id: featureId }
+        where: { id: featureId },
       });
 
       if (!feature) {
@@ -157,8 +163,8 @@ export class BrandFeaturesService {
       const existingAssignment = await this.prisma.brandFeature.findFirst({
         where: {
           brandId,
-          featureId
-        }
+          featureId,
+        },
       });
 
       if (existingAssignment) {
@@ -166,23 +172,25 @@ export class BrandFeaturesService {
         if (!existingAssignment.isActive) {
           const brandFeature = await this.prisma.brandFeature.update({
             where: {
-              id: existingAssignment.id
+              id: existingAssignment.id,
             },
             data: {
               isActive: true,
-              updatedAt: new Date()
+              updatedAt: new Date(),
             },
             include: {
-              feature: true
-            }
+              feature: true,
+            },
           });
 
           return BaseResponseDto.success(
-            this.mapBrandFeatureToDto(brandFeature)
+            this.mapBrandFeatureToDto(brandFeature),
           );
         } else {
           // Si ya está activa, lanzar error
-          throw new ConflictException('El feature ya está asignado y activo en este brand');
+          throw new ConflictException(
+            'El feature ya está asignado y activo en este brand',
+          );
         }
       }
 
@@ -191,16 +199,14 @@ export class BrandFeaturesService {
         data: {
           brandId,
           featureId,
-          isActive: true
+          isActive: true,
         },
         include: {
-          feature: true
-        }
+          feature: true,
+        },
       });
 
-      return BaseResponseDto.success(
-        this.mapBrandFeatureToDto(brandFeature)
-      );
+      return BaseResponseDto.success(this.mapBrandFeatureToDto(brandFeature));
     } catch (error) {
       console.error('Error assigning feature to brand:', error);
       throw error;
@@ -211,7 +217,7 @@ export class BrandFeaturesService {
   async unassignFeatureFromBrand(
     brandId: number,
     featureId: number,
-    userId: number
+    userId: number,
   ): Promise<BaseResponseDto<{ message: string }>> {
     try {
       // Validar que el usuario es dueño del brand
@@ -222,28 +228,30 @@ export class BrandFeaturesService {
         where: {
           brandId,
           featureId,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
 
       if (!brandFeature) {
-        throw new NotFoundException('La asignación del feature al brand no existe o ya fue desactivada');
+        throw new NotFoundException(
+          'La asignación del feature al brand no existe o ya fue desactivada',
+        );
       }
 
       // Desactivar la asignación (no eliminar, solo desactivar)
       await this.prisma.brandFeature.update({
         where: {
-          id: brandFeature.id
+          id: brandFeature.id,
         },
         data: {
           isActive: false,
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       });
 
-      return BaseResponseDto.success(
-        { message: 'Feature desasignado exitosamente del brand' }
-      );
+      return BaseResponseDto.success({
+        message: 'Feature desasignado exitosamente del brand',
+      });
     } catch (error) {
       console.error('Error unassigning feature from brand:', error);
       throw error;
@@ -253,15 +261,19 @@ export class BrandFeaturesService {
   /**
    * Crear nueva funcionalidad (solo para usuarios ROOT)
    */
-  async createFeature(createFeatureDto: CreateFeatureDto): Promise<BaseResponseDto<FeatureDto>> {
+  async createFeature(
+    createFeatureDto: CreateFeatureDto,
+  ): Promise<BaseResponseDto<FeatureDto>> {
     try {
       // Verificar que el key no exista
       const existingFeature = await this.prisma.feature.findUnique({
-        where: { key: createFeatureDto.key }
+        where: { key: createFeatureDto.key },
       });
 
       if (existingFeature) {
-        throw new ConflictException(`Ya existe una funcionalidad con la clave '${createFeatureDto.key}'`);
+        throw new ConflictException(
+          `Ya existe una funcionalidad con la clave '${createFeatureDto.key}'`,
+        );
       }
 
       // Crear la nueva feature
@@ -277,14 +289,13 @@ export class BrandFeaturesService {
           isRecommended: createFeatureDto.isRecommended || false,
           isPopular: createFeatureDto.isPopular || false,
           order: createFeatureDto.order || 0,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
 
       const featureDto = this.mapFeatureToDto(newFeature);
 
       return BaseResponseDto.success(featureDto);
-
     } catch (error) {
       console.error('Error creating feature:', error);
 

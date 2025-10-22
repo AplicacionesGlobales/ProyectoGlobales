@@ -1,27 +1,27 @@
 // src/brand-register/dto/create-brand.dto.ts
 
-import { 
-  IsString, 
-  IsEmail, 
-  IsOptional, 
-  IsEnum, 
-  IsArray, 
-  ValidateNested, 
-  IsObject, 
-  IsNumber, 
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsEnum,
+  IsArray,
+  ValidateNested,
+  IsObject,
+  IsNumber,
   IsBoolean,
   IsHexColor,
   Min,
   Max,
   MinLength,
-  MaxLength
+  MaxLength,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum PlanType {
   WEB = 'web',
-  APP = 'app', 
+  APP = 'app',
   COMPLETE = 'complete',
 }
 
@@ -53,53 +53,53 @@ export class ColorPaletteDto {
 }
 
 export class ServiceTypeInitialDto {
-  @ApiProperty({ 
+  @ApiProperty({
     example: 'Corte de Cabello',
-    description: 'Nombre del tipo de servicio' 
+    description: 'Nombre del tipo de servicio',
   })
   @IsString()
   @MinLength(2)
   @MaxLength(50)
   name: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 'Corte clásico para caballeros',
-    description: 'Descripción del servicio' 
+    description: 'Descripción del servicio',
   })
   @IsString()
   @IsOptional()
   @MaxLength(200)
   description?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: 30,
-    description: 'Duración en minutos (debe ser múltiplo de 15)' 
+    description: 'Duración en minutos (debe ser múltiplo de 15)',
   })
   @IsNumber()
   @Min(15)
   @Max(480) // Máximo 8 horas
   duration: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 15000,
-    description: 'Precio del servicio' 
+    description: 'Precio del servicio',
   })
   @IsNumber()
   @IsOptional()
   @Min(0)
   price?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: '#3B82F6',
-    description: 'Color hexadecimal para visualización' 
+    description: 'Color hexadecimal para visualización',
   })
   @IsHexColor()
   @IsOptional()
   color?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 'scissors',
-    description: 'Nombre del ícono para UI' 
+    description: 'Nombre del ícono para UI',
   })
   @IsString()
   @IsOptional()
@@ -107,16 +107,16 @@ export class ServiceTypeInitialDto {
 }
 
 export class AppointmentSettingsInitialDto {
-  @ApiProperty({ 
+  @ApiProperty({
     example: true,
-    description: 'Activar tipos de servicio personalizados' 
+    description: 'Activar tipos de servicio personalizados',
   })
   @IsBoolean()
   useServiceTypes: boolean;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 30,
-    description: 'Duración por defecto para citas sin tipo específico' 
+    description: 'Duración por defecto para citas sin tipo específico',
   })
   @IsNumber()
   @IsOptional()
@@ -124,7 +124,7 @@ export class AppointmentSettingsInitialDto {
   @Max(480)
   defaultDuration?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     type: [ServiceTypeInitialDto],
     description: 'Lista de tipos de servicio iniciales',
     example: [
@@ -134,7 +134,7 @@ export class AppointmentSettingsInitialDto {
         duration: 30,
         price: 15000,
         color: '#3B82F6',
-        icon: 'scissors'
+        icon: 'scissors',
       },
       {
         name: 'Barba',
@@ -142,9 +142,9 @@ export class AppointmentSettingsInitialDto {
         duration: 15,
         price: 8000,
         color: '#10B981',
-        icon: 'razor'
-      }
-    ]
+        icon: 'razor',
+      },
+    ],
   })
   @IsArray()
   @ValidateNested({ each: true })
@@ -201,7 +201,10 @@ export class CreateBrandDto {
   @IsNumber()
   businessTypeId: number;
 
-  @ApiProperty({ example: [236, 237, 238], description: 'Array de IDs numéricos de features' })
+  @ApiProperty({
+    example: [236, 237, 238],
+    description: 'Array de IDs numéricos de features',
+  })
   @IsArray()
   @IsNumber({}, { each: true })
   selectedFeatureIds: number[];
@@ -228,7 +231,7 @@ export class CreateBrandDto {
   totalPrice: number;
 
   // Configuración de citas y tipos de servicio
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     type: AppointmentSettingsInitialDto,
     description: 'Configuración inicial de citas y tipos de servicio',
     example: {
@@ -241,7 +244,7 @@ export class CreateBrandDto {
           duration: 30,
           price: 15000,
           color: '#3B82F6',
-          icon: 'scissors'
+          icon: 'scissors',
         },
         {
           name: 'Barba',
@@ -249,10 +252,10 @@ export class CreateBrandDto {
           duration: 15,
           price: 8000,
           color: '#10B981',
-          icon: 'razor'
-        }
-      ]
-    }
+          icon: 'razor',
+        },
+      ],
+    },
   })
   @ValidateNested()
   @Type(() => AppointmentSettingsInitialDto)

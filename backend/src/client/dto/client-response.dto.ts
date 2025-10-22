@@ -13,13 +13,13 @@ export class ClientResponseDto {
   firstName: string;
 
   @ApiPropertyOptional({ example: 'Pérez' })
-  lastName?: string | null;  // 🔧 Corregido: solo un punto y coma
+  lastName?: string | null; // 🔧 Corregido: solo un punto y coma
 
-  @ApiPropertyOptional({ example: '+50688887777' })  // 🔧 Cambiado a Optional
-  phone?: string;  // 🔧 Hecho opcional con ?
+  @ApiPropertyOptional({ example: '+50688887777' }) // 🔧 Cambiado a Optional
+  phone?: string; // 🔧 Hecho opcional con ?
 
   @ApiPropertyOptional({ example: 'Cliente preferencial' })
-  notes?: string | null;  // 🔧 Corregido: solo un punto y coma
+  notes?: string | null; // 🔧 Corregido: solo un punto y coma
 
   @ApiProperty({ example: true })
   isActive: boolean;
@@ -31,7 +31,7 @@ export class ClientResponseDto {
   totalAppointments: number;
 
   @ApiPropertyOptional({ example: '2024-08-20T10:00:00Z' })
-  lastVisit?: Date | null;  // 🔧 Corregido: solo un punto y coma
+  lastVisit?: Date | null; // 🔧 Corregido: solo un punto y coma
 
   @ApiProperty({ example: '2024-01-15T10:30:00Z' })
   createdAt: Date;

@@ -34,19 +34,23 @@ export class TilopayService {
     this.baseUrl = this.configService.get<string>('TILOPAY_BASE_URL') || '';
     this.apiKey = this.configService.get<string>('TILOPAY_API_KEY') || '';
     this.apiUser = this.configService.get<string>('TILOPAY_API_USER') || '';
-    this.apiPassword = this.configService.get<string>('TILOPAY_API_PASSWORD') || '';
-    this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+    this.apiPassword =
+      this.configService.get<string>('TILOPAY_API_PASSWORD') || '';
+    this.frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
   }
 
-  async createPayment(createPaymentDto: CreatePaymentDto): Promise<BaseResponseDto<any>> {
+  async createPayment(
+    createPaymentDto: CreatePaymentDto,
+  ): Promise<BaseResponseDto<any>> {
     try {
       console.log('💳 Payment request received:', createPaymentDto);
-      
+
       // Calcular el monto total usando PricingService
       const totalAmount = this.pricingService.calculateTotalPrice(
         createPaymentDto.planType,
         createPaymentDto.selectedServices || [],
-        createPaymentDto.billingCycle as 'monthly' | 'annual'
+        createPaymentDto.billingCycle as 'monthly' | 'annual',
       );
 
       console.log('💰 Calculated amount using PricingService:', totalAmount);
@@ -61,14 +65,19 @@ export class TilopayService {
       });
     } catch (error) {
       console.error('💥 Error creating payment:', error);
-      return BaseResponseDto.error([{
-        code: 5000,
-        description: 'Error procesando el pago'
-      }]);
+      return BaseResponseDto.error([
+        {
+          code: 5000,
+          description: 'Error procesando el pago',
+        },
+      ]);
     }
   }
-  
-  private buildPaymentData(createPaymentDto: CreatePaymentDto, totalAmount: number): TilopayPaymentRequest {
+
+  private buildPaymentData(
+    createPaymentDto: CreatePaymentDto,
+    totalAmount: number,
+  ): TilopayPaymentRequest {
     return {
       redirect: `${this.frontendUrl}/payment/callback`,
       amount: totalAmount.toFixed(2),
@@ -76,7 +85,8 @@ export class TilopayService {
       orderNumber: `ORDER-${Date.now()}`,
       capture: '1',
       billToFirstName: createPaymentDto.ownerName.split(' ')[0] || 'Cliente',
-      billToLastName: createPaymentDto.ownerName.split(' ').slice(1).join(' ') || 'Empresa',
+      billToLastName:
+        createPaymentDto.ownerName.split(' ').slice(1).join(' ') || 'Empresa',
       billToAddress: 'San José Centro',
       billToAddress2: 'N/A',
       billToCity: 'San José',
@@ -87,20 +97,25 @@ export class TilopayService {
       billToEmail: createPaymentDto.email,
       subscription: '0',
       platform: 'api',
-      returnData: Buffer.from(JSON.stringify({
-        brandData: createPaymentDto,
-        amount: totalAmount,
-        timestamp: new Date().toISOString()
-      })).toString('base64'),
+      returnData: Buffer.from(
+        JSON.stringify({
+          brandData: createPaymentDto,
+          amount: totalAmount,
+          timestamp: new Date().toISOString(),
+        }),
+      ).toString('base64'),
     };
   }
 
-  private async handleSuccessfulPayment(query: PaymentCallbackQuery, callbackUrl: URL): Promise<void> {
+  private async handleSuccessfulPayment(
+    query: PaymentCallbackQuery,
+    callbackUrl: URL,
+  ): Promise<void> {
     console.log('✅ Payment approved:', {
       transactionId: query['tilopay-transaction'],
       orderNumber: query.order,
       authCode: query.auth,
-      description: query.description
+      description: query.description,
     });
 
     // Procesar returnData
@@ -111,40 +126,49 @@ export class TilopayService {
 
     // Actualizar pago en base de datos
     await this.updatePaymentStatus(
-      query.order || '', 
-      'completed', 
+      query.order || '',
+      'completed',
       query['tilopay-transaction'] || '',
       query.auth || '',
-      brandData
+      brandData,
     );
 
     // Configurar parámetros de redirección
     callbackUrl.searchParams.set('code', '1');
     callbackUrl.searchParams.set('order', query.order || '');
-    callbackUrl.searchParams.set('description', query.description || 'Pago completado');
+    callbackUrl.searchParams.set(
+      'description',
+      query.description || 'Pago completado',
+    );
   }
 
-  private async handleFailedPayment(query: PaymentCallbackQuery, callbackUrl: URL): Promise<void> {
+  private async handleFailedPayment(
+    query: PaymentCallbackQuery,
+    callbackUrl: URL,
+  ): Promise<void> {
     console.log('❌ Payment failed:', {
       code: query.code,
       description: query.description,
-      orderNumber: query.order
+      orderNumber: query.order,
     });
 
     await this.updatePaymentStatus(
-      query.order || '', 
-      'failed', 
+      query.order || '',
+      'failed',
       undefined,
       undefined,
       undefined,
       query.code,
-      query.description
+      query.description,
     );
 
     // Configurar parámetros de redirección
     callbackUrl.searchParams.set('code', query.code || '0');
     callbackUrl.searchParams.set('order', query.order || '');
-    callbackUrl.searchParams.set('description', query.description || 'Pago fallido');
+    callbackUrl.searchParams.set(
+      'description',
+      query.description || 'Pago fallido',
+    );
   }
 
   private decodeReturnData(returnData: string): any {
@@ -173,27 +197,28 @@ export class TilopayService {
     authCode?: string,
     brandData?: any,
     errorCode?: string,
-    errorDescription?: string
+    errorDescription?: string,
   ): Promise<void> {
     try {
       console.log('💾 Updating payment status:', {
         orderNumber,
         status,
         tilopayTransactionId,
-        brandData
+        brandData,
       });
 
       if (status === 'completed' && brandData) {
         await this.processSuccessfulPayment(
-          orderNumber, 
-          tilopayTransactionId || '', 
-          authCode || '', 
-          brandData
+          orderNumber,
+          tilopayTransactionId || '',
+          authCode || '',
+          brandData,
         );
       } else if (status === 'failed') {
-        console.log(`❌ Payment failed for order ${orderNumber}: ${errorCode} - ${errorDescription}`);
+        console.log(
+          `❌ Payment failed for order ${orderNumber}: ${errorCode} - ${errorDescription}`,
+        );
       }
-
     } catch (error) {
       console.error('💥 Error updating payment status:', error);
     }
@@ -203,18 +228,20 @@ export class TilopayService {
     orderNumber: string,
     tilopayTransactionId: string,
     authCode: string,
-    brandData: any
+    brandData: any,
   ): Promise<void> {
     console.log('✅ Processing successful payment...');
-    
+
     const brand = await this.findBrandByEmail(brandData.email);
 
     if (brand && brand.brandPlans.length > 0) {
       const brandPlan = brand.brandPlans[0];
-      
+
       console.log(`📋 Brand found: ${brand.name} (ID: ${brand.id})`);
-      console.log(`📋 BrandPlan found: ${brandPlan.plan.name} (ID: ${brandPlan.id})`);
-      
+      console.log(
+        `📋 BrandPlan found: ${brandPlan.plan.name} (ID: ${brandPlan.id})`,
+      );
+
       // Crear registro de pago
       const payment = await this.createPaymentRecord(
         brand.id,
@@ -222,15 +249,14 @@ export class TilopayService {
         brandData,
         orderNumber,
         tilopayTransactionId,
-        authCode
+        authCode,
       );
 
       console.log(`✅ Payment record created with ID: ${payment.id}`);
-      
+
       // Actualizar el brandPlan
       await this.updateBrandPlanEndDate(brandPlan.id);
       console.log('✅ BrandPlan updated with new end date');
-      
     } else {
       this.logBrandNotFoundError(brand, brandData.email);
     }
@@ -241,19 +267,19 @@ export class TilopayService {
       where: {
         userBrands: {
           some: {
-            user: { email }
-          }
-        }
+            user: { email },
+          },
+        },
       },
       include: {
         brandPlans: {
           where: { isActive: true },
-          include: { plan: true }
+          include: { plan: true },
         },
         userBrands: {
-          include: { user: true }
-        }
-      }
+          include: { user: true },
+        },
+      },
     });
   }
 
@@ -263,7 +289,7 @@ export class TilopayService {
     brandData: any,
     orderNumber: string,
     tilopayTransactionId: string,
-    authCode: string
+    authCode: string,
   ) {
     return await this.prisma.payment.create({
       data: {
@@ -280,9 +306,9 @@ export class TilopayService {
           description: 'Pago completado via Tilopay',
           brandData,
           orderNumber,
-          tilopayTransactionId
-        }
-      }
+          tilopayTransactionId,
+        },
+      },
     });
   }
 
@@ -290,8 +316,8 @@ export class TilopayService {
     await this.prisma.brandPlan.update({
       where: { id: brandPlanId },
       data: {
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 días desde ahora
-      }
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 días desde ahora
+      },
     });
   }
 
@@ -310,17 +336,18 @@ export class TilopayService {
         password: this.apiPassword,
       };
 
-      const response: AxiosResponse<TilopayLoginResponse> = await firstValueFrom(
-        this.httpService.post<TilopayLoginResponse>(
-          `${this.baseUrl}/login`,
-          loginData,
-          {
-            headers: {
-              'Content-Type': 'application/json',
+      const response: AxiosResponse<TilopayLoginResponse> =
+        await firstValueFrom(
+          this.httpService.post<TilopayLoginResponse>(
+            `${this.baseUrl}/login`,
+            loginData,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
             },
-          },
-        ),
-      );
+          ),
+        );
 
       return response.data.access_token;
     } catch (error) {
@@ -331,44 +358,51 @@ export class TilopayService {
     }
   }
 
-  async processPayment(paymentData: TilopayPaymentRequest): Promise<TilopayPaymentResponse> {
+  async processPayment(
+    paymentData: TilopayPaymentRequest,
+  ): Promise<TilopayPaymentResponse> {
     try {
       const token = await this.getAuthToken();
 
       // Validar datos requeridos
-      if (!paymentData.amount || !paymentData.currency || !paymentData.orderNumber) {
+      if (
+        !paymentData.amount ||
+        !paymentData.currency ||
+        !paymentData.orderNumber
+      ) {
         throw new HttpException(
           'Datos de pago incompletos',
-          HttpStatus.BAD_REQUEST
+          HttpStatus.BAD_REQUEST,
         );
       }
 
-      const response: AxiosResponse<TilopayPaymentResponse> = await firstValueFrom(
-        this.httpService.post<TilopayPaymentResponse>(
-          `${this.baseUrl}/processPayment`,
-          {
-            ...paymentData,
-            key: this.apiKey,
-            platform: 'api',
-            subscription: '0',
-            capture: '1',
-            hashVersion: 'V2'
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
+      const response: AxiosResponse<TilopayPaymentResponse> =
+        await firstValueFrom(
+          this.httpService.post<TilopayPaymentResponse>(
+            `${this.baseUrl}/processPayment`,
+            {
+              ...paymentData,
+              key: this.apiKey,
+              platform: 'api',
+              subscription: '0',
+              capture: '1',
+              hashVersion: 'V2',
             },
-            timeout: 10000 // 10 segundos de timeout
-          },
-        ),
-      );
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+              },
+              timeout: 10000, // 10 segundos de timeout
+            },
+          ),
+        );
 
       if (!response.data.url) {
         throw new HttpException(
           'No se recibió URL de pago de Tilopay',
-          HttpStatus.INTERNAL_SERVER_ERROR
+          HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
 
@@ -379,13 +413,13 @@ export class TilopayService {
       if (error.response?.data) {
         throw new HttpException(
           error.response.data.message || 'Error procesando pago con Tilopay',
-          error.response.status || HttpStatus.INTERNAL_SERVER_ERROR
+          error.response.status || HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
 
       throw new HttpException(
         'Error de conexión con Tilopay',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

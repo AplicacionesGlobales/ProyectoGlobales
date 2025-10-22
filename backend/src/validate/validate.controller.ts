@@ -1,6 +1,23 @@
 // backend\src\validate\validate.controller.ts
-import { Controller, Post, Body, ValidationPipe, HttpCode, HttpStatus, Get, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  ValidationPipe,
+  HttpCode,
+  HttpStatus,
+  Get,
+  Param,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { ValidateService } from './validate.service';
 import {
   ValidateEmailDto,
@@ -10,7 +27,7 @@ import {
   PaymentValidationResponseDto,
   ValidatePaymentDto,
   ValidateCalendarDto,
-  CalendarValidationResponseDto
+  CalendarValidationResponseDto,
 } from './dto';
 import { BaseResponseDto } from '../common/dto';
 import { Public } from '../common/decorators';
@@ -18,7 +35,7 @@ import { Public } from '../common/decorators';
 @ApiTags('Validación')
 @Controller('validate')
 export class ValidateController {
-  constructor(private readonly validateService: ValidateService) { }
+  constructor(private readonly validateService: ValidateService) {}
 
   @Public()
   @Post('email')
@@ -28,12 +45,15 @@ export class ValidateController {
   @ApiResponse({
     status: 200,
     description: 'Email validado exitosamente',
-    type: BaseResponseDto<EmailValidationResponseDto>
+    type: BaseResponseDto<EmailValidationResponseDto>,
   })
   async validateEmail(
-    @Body(ValidationPipe) validateEmailDto: ValidateEmailDto
+    @Body(ValidationPipe) validateEmailDto: ValidateEmailDto,
   ): Promise<BaseResponseDto<EmailValidationResponseDto>> {
-    return this.validateService.validateEmail(validateEmailDto.email, validateEmailDto.brandId);
+    return this.validateService.validateEmail(
+      validateEmailDto.email,
+      validateEmailDto.brandId,
+    );
   }
 
   @Public()
@@ -44,15 +64,15 @@ export class ValidateController {
   @ApiResponse({
     status: 200,
     description: 'Username validado exitosamente',
-    type: BaseResponseDto<UsernameValidationResponseDto>
+    type: BaseResponseDto<UsernameValidationResponseDto>,
   })
   async validateUsername(
-    @Body(ValidationPipe) validateUsernameDto: ValidateUsernameDto
+    @Body(ValidationPipe) validateUsernameDto: ValidateUsernameDto,
   ): Promise<BaseResponseDto<UsernameValidationResponseDto>> {
     return this.validateService.validateUsername(validateUsernameDto.username);
   }
 
- @Public()
+  @Public()
   @Post('payment')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Validar estado de pago de un brand' })
@@ -60,10 +80,10 @@ export class ValidateController {
   @ApiResponse({
     status: 200,
     description: 'Estado de pago validado',
-    type: BaseResponseDto<PaymentValidationResponseDto>
+    type: BaseResponseDto<PaymentValidationResponseDto>,
   })
   async validatePayment(
-    @Body(ValidationPipe) validatePaymentDto: ValidatePaymentDto
+    @Body(ValidationPipe) validatePaymentDto: ValidatePaymentDto,
   ): Promise<BaseResponseDto<PaymentValidationResponseDto>> {
     return this.validateService.validatePayment(validatePaymentDto.brandId);
   }
@@ -71,27 +91,28 @@ export class ValidateController {
   @Public()
   @Get('calendar-available/:brandId')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Validar disponibilidad de calendario',
-    description: 'Valida si un día y hora específicos están disponibles para un brand sin requerir autenticación'
+    description:
+      'Valida si un día y hora específicos están disponibles para un brand sin requerir autenticación',
   })
   @ApiParam({
     name: 'brandId',
     required: true,
     description: 'ID del brand para validar',
-    example: 123
+    example: 123,
   })
   @ApiQuery({
     name: 'date',
     required: true,
     description: 'Fecha para validar (YYYY-MM-DD)',
-    example: '2024-12-25'
+    example: '2024-12-25',
   })
   @ApiQuery({
     name: 'time',
     required: true,
     description: 'Hora para validar (HH:MM)',
-    example: '14:30'
+    example: '14:30',
   })
   @ApiResponse({
     status: 200,
@@ -100,30 +121,29 @@ export class ValidateController {
     schema: {
       example: {
         success: true,
-        message: "Disponibilidad validada exitosamente",
+        message: 'Disponibilidad validada exitosamente',
         data: {
           isAvailable: true,
-          message: "Horario disponible",
-          date: "2024-12-25",
-          time: "14:30"
-        }
-      }
-    }
+          message: 'Horario disponible',
+          date: '2024-12-25',
+          time: '14:30',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 400,
-    description: 'Parámetros inválidos'
+    description: 'Parámetros inválidos',
   })
   @ApiResponse({
     status: 404,
-    description: 'Brand no encontrado'
+    description: 'Brand no encontrado',
   })
   async validateCalendarAvailable(
     @Param('brandId') brandId: string,
-    @Query(ValidationPipe) query: ValidateCalendarDto
+    @Query(ValidationPipe) query: ValidateCalendarDto,
   ): Promise<BaseResponseDto<CalendarValidationResponseDto>> {
     const parsedBrandId = parseInt(brandId);
     return this.validateService.validateCalendarAvailable(parsedBrandId, query);
   }
-
 }

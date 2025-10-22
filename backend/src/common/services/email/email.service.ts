@@ -13,7 +13,14 @@ export interface EmailOptions {
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
-  private templatePath = path.join(process.cwd(), 'src', 'common', 'services', 'email', 'templates');
+  private templatePath = path.join(
+    process.cwd(),
+    'src',
+    'common',
+    'services',
+    'email',
+    'templates',
+  );
   private readonly APP_NAME: string = process.env.APP_NAME || 'WhiteLabel';
 
   constructor() {
@@ -46,22 +53,25 @@ export class EmailService {
   }
 
   // Método genérico para cargar cualquier template
-  loadTemplate(templateName: string, variables: { [key: string]: string }): string {
+  loadTemplate(
+    templateName: string,
+    variables: { [key: string]: string },
+  ): string {
     try {
       const templateFile = path.join(this.templatePath, `${templateName}.html`);
-      
+
       if (fs.existsSync(templateFile)) {
         let html = fs.readFileSync(templateFile, 'utf8');
-        
+
         // Reemplazar todas las variables
         Object.entries(variables).forEach(([key, value]) => {
           const regex = new RegExp(`{{${key}}}`, 'g');
           html = html.replace(regex, value || '');
         });
-        
+
         return html;
       }
-      
+
       throw new Error(`Template ${templateName} no encontrado`);
     } catch (error) {
       console.error(`Error cargando template ${templateName}:`, error);

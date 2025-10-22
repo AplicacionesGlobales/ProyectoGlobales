@@ -1,8 +1,15 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FileService } from '../common/services/file.service';
 import { BaseResponseDto, ErrorDetail } from '../common/dto';
-import { ServiceTypeInitialDto, AppointmentSettingsInitialDto } from 'src/brand-register/dto';
+import {
+  ServiceTypeInitialDto,
+  AppointmentSettingsInitialDto,
+} from 'src/brand-register/dto';
 import { ERROR_CODES, ERROR_MESSAGES } from '../common/constants';
 import {
   BrandAdminResponseDto,
@@ -16,296 +23,316 @@ import {
 } from './dto/index';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
-import { ServiceTypeResponseDto, AppointmentSettingsDto } from './dto/service-type.dto';
+import {
+  ServiceTypeResponseDto,
+  AppointmentSettingsDto,
+} from './dto/service-type.dto';
 
 @Injectable()
 export class BrandService {
   constructor(
     private prisma: PrismaService,
-    private fileService: FileService
+    private fileService: FileService,
   ) {}
 
-  async getBrandAdminInfo(brandId: number, requestingUserId: number): Promise<BaseResponseDto<BrandAdminResponseDto>> {
-  try {
-    // Verificar que el usuario tenga acceso a este brand
-    await this.validateBrandAccess(brandId, requestingUserId);
+  async getBrandAdminInfo(
+    brandId: number,
+    requestingUserId: number,
+  ): Promise<BaseResponseDto<BrandAdminResponseDto>> {
+    try {
+      // Verificar que el usuario tenga acceso a este brand
+      await this.validateBrandAccess(brandId, requestingUserId);
 
-    const brand = await this.prisma.brand.findUnique({
-      where: { id: brandId },
-      include: {
-        // Usuarios del brand
-        userBrands: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                username: true,
-                firstName: true,
-                lastName: true,
-                role: true,
-                isActive: true,
-                createdAt: true,
-                updatedAt: true
-              }
-            }
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId },
+        include: {
+          // Usuarios del brand
+          userBrands: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                  role: true,
+                  isActive: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
+            },
+            where: { isActive: true },
           },
-          where: { isActive: true }
-        },
-        // Features activas
-        brandFeatures: {
-          include: {
-            feature: {
-              select: {
-                id: true,
-                key: true,
-                title: true,
-                description: true,
-                price: true,
-                category: true,
-                isRecommended: true,
-                isPopular: true,
-                isActive: true
-              }
-            }
+          // Features activas
+          brandFeatures: {
+            include: {
+              feature: {
+                select: {
+                  id: true,
+                  key: true,
+                  title: true,
+                  description: true,
+                  price: true,
+                  category: true,
+                  isRecommended: true,
+                  isPopular: true,
+                  isActive: true,
+                },
+              },
+            },
+            where: { isActive: true },
           },
-          where: { isActive: true }
-        },
-        // Plan actual
-        brandPlans: {
-          include: {
-            plan: {
-              select: {
-                id: true,
-                type: true,
-                name: true,
-                description: true,
-                basePrice: true
-              }
-            }
+          // Plan actual
+          brandPlans: {
+            include: {
+              plan: {
+                select: {
+                  id: true,
+                  type: true,
+                  name: true,
+                  description: true,
+                  basePrice: true,
+                },
+              },
+            },
+            where: { isActive: true },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
           },
-          where: { isActive: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1
-        },
-        // Paleta de colores
-        colorPalette: true,
-        // Pagos recientes
-        payments: {
-          select: {
-            id: true,
-            amount: true,
-            currency: true,
-            status: true,
-            paymentMethod: true,
-            tilopayReference: true,
-            createdAt: true,
-            processedAt: true
+          // Paleta de colores
+          colorPalette: true,
+          // Pagos recientes
+          payments: {
+            select: {
+              id: true,
+              amount: true,
+              currency: true,
+              status: true,
+              paymentMethod: true,
+              tilopayReference: true,
+              createdAt: true,
+              processedAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
           },
-          orderBy: { createdAt: 'desc' },
-          take: 5
+          // AGREGAR: Configuración de citas
+          appointmentSettings: true,
+          // AGREGAR: Tipos de servicio
+          serviceTypes: {
+            where: { isActive: true },
+            orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+          },
         },
-        // AGREGAR: Configuración de citas
-        appointmentSettings: true,
-        // AGREGAR: Tipos de servicio
-        serviceTypes: {
-          where: { isActive: true },
-          orderBy: [{ order: 'asc' }, { createdAt: 'asc' }]
-        }
-      }
-    });
-
-    if (!brand) {
-      throw new NotFoundException('Brand not found');
-    }
-
-    // Obtener información del tipo de negocio
-    let businessType: any = null;
-    if (brand.businessType) {
-      businessType = await this.prisma.businessType.findUnique({
-        where: { key: brand.businessType }
       });
+
+      if (!brand) {
+        throw new NotFoundException('Brand not found');
+      }
+
+      // Obtener información del tipo de negocio
+      let businessType: any = null;
+      if (brand.businessType) {
+        businessType = await this.prisma.businessType.findUnique({
+          where: { key: brand.businessType },
+        });
+      }
+
+      // Calcular estadísticas actualizadas
+      const stats = await this.calculateBrandStats(brandId);
+
+      // Procesar tipos de servicio con contadores
+      let serviceTypesWithCount: ServiceTypeResponseDto[] = [];
+      if (brand.serviceTypes && brand.serviceTypes.length > 0) {
+        serviceTypesWithCount = await Promise.all(
+          brand.serviceTypes.map(async (st) => {
+            const [appointmentCount, futureAppointments] = await Promise.all([
+              this.prisma.appointment.count({
+                where: { serviceTypeId: st.id },
+              }),
+              this.prisma.appointment.count({
+                where: {
+                  serviceTypeId: st.id,
+                  startTime: { gte: new Date() },
+                  status: { notIn: ['CANCELLED'] },
+                },
+              }),
+            ]);
+
+            return {
+              id: st.id,
+              brandId: st.brandId,
+              name: st.name,
+              description: st.description ?? undefined,
+              duration: st.duration,
+              price: st.price ? Number(st.price) : undefined,
+              color: st.color ?? undefined,
+              icon: st.icon ?? undefined,
+              isActive: st.isActive,
+              order: st.order,
+              createdAt: st.createdAt.toISOString(),
+              updatedAt: st.updatedAt.toISOString(),
+              appointmentCount,
+              hasFutureAppointments: futureAppointments > 0,
+            };
+          }),
+        );
+      }
+
+      // Construir respuesta
+      const response: BrandAdminResponseDto = {
+        id: brand.id,
+        name: brand.name,
+        description: brand.description ?? undefined,
+        address: brand.address ?? undefined,
+        phone: brand.phone ?? undefined,
+        isActive: brand.isActive,
+        createdAt: brand.createdAt.toISOString(),
+        updatedAt: brand.updatedAt.toISOString(),
+
+        businessType: {
+          id: businessType?.id ?? 0,
+          key: businessType?.key ?? '',
+          title: businessType?.title ?? '',
+          subtitle: businessType?.subtitle ?? '',
+          description: businessType?.description ?? '',
+          icon: businessType?.icon ?? '',
+        },
+
+        users: brand.userBrands.map((ub) => ({
+          id: ub.user.id,
+          email: ub.user.email,
+          username: ub.user.username,
+          firstName: ub.user.firstName ?? '',
+          lastName: ub.user.lastName ?? '',
+          role: ub.user.role,
+          isActive: ub.user.isActive,
+          createdAt: ub.user.createdAt.toISOString(),
+          lastLogin: undefined,
+        })),
+
+        features: brand.brandFeatures.map((bf) => ({
+          id: bf.feature.id,
+          key: bf.feature.key,
+          title: bf.feature.title,
+          description: bf.feature.description,
+          price: Number(bf.feature.price),
+          category: bf.feature.category,
+          isRecommended: bf.feature.isRecommended,
+          isPopular: bf.feature.isPopular,
+          isActive: bf.feature.isActive,
+          activatedAt: bf.createdAt.toISOString(),
+        })),
+
+        currentPlan: brand.brandPlans[0]
+          ? {
+              id: brand.brandPlans[0].id,
+              planId: brand.brandPlans[0].plan.id,
+              planType: brand.brandPlans[0].plan.type,
+              planName: brand.brandPlans[0].plan.name,
+              planDescription: brand.brandPlans[0].plan.description || '',
+              basePrice: Number(brand.brandPlans[0].plan.basePrice),
+              currentPrice: Number(brand.brandPlans[0].price),
+              billingPeriod: brand.brandPlans[0].billingPeriod,
+              startDate: brand.brandPlans[0].startDate.toISOString(),
+              endDate: brand.brandPlans[0].endDate?.toISOString(),
+              isActive: brand.brandPlans[0].isActive,
+              nextBillingDate: this.calculateNextBillingDate(
+                brand.brandPlans[0],
+              )?.toISOString(),
+            }
+          : {
+              id: 0,
+              planId: 0,
+              planType: '',
+              planName: '',
+              planDescription: '',
+              basePrice: 0,
+              currentPrice: 0,
+              billingPeriod: 'monthly',
+              startDate: new Date(0).toISOString(),
+              endDate: undefined,
+              isActive: false,
+              nextBillingDate: undefined,
+            },
+
+        colorPalette: brand.colorPalette
+          ? {
+              id: brand.colorPalette.id,
+              primary: brand.colorPalette.primary,
+              secondary: brand.colorPalette.secondary,
+              accent: brand.colorPalette.accent,
+              neutral: brand.colorPalette.neutral,
+              success: brand.colorPalette.success,
+              createdAt: brand.colorPalette.createdAt.toISOString(),
+              updatedAt: brand.colorPalette.updatedAt.toISOString(),
+            }
+          : {
+              id: 0,
+              primary: '',
+              secondary: '',
+              accent: '',
+              neutral: '',
+              success: '',
+              createdAt: new Date(0).toISOString(),
+              updatedAt: new Date(0).toISOString(),
+            },
+
+        // NUEVO: Configuración de citas
+        appointmentSettings: brand.appointmentSettings
+          ? {
+              id: brand.appointmentSettings.id,
+              useServiceTypes: brand.appointmentSettings.useServiceTypes,
+              defaultDuration: brand.appointmentSettings.defaultDuration,
+              bufferTime: brand.appointmentSettings.bufferTime,
+              maxAdvanceBookingDays:
+                brand.appointmentSettings.maxAdvanceBookingDays,
+              minAdvanceBookingHours:
+                brand.appointmentSettings.minAdvanceBookingHours,
+              allowSameDayBooking:
+                brand.appointmentSettings.allowSameDayBooking,
+              createdAt: brand.appointmentSettings.createdAt.toISOString(),
+              updatedAt: brand.appointmentSettings.updatedAt.toISOString(),
+            }
+          : undefined,
+
+        // NUEVO: Tipos de servicio
+        serviceTypes:
+          serviceTypesWithCount.length > 0 ? serviceTypesWithCount : undefined,
+
+        recentPayments: brand.payments.map((payment) => ({
+          id: payment.id,
+          amount: Number(payment.amount),
+          currency: payment.currency,
+          status: payment.status,
+          paymentMethod: payment.paymentMethod ?? undefined,
+          tilopayReference: payment.tilopayReference ?? undefined,
+          createdAt: payment.createdAt.toISOString(),
+          processedAt: payment.processedAt?.toISOString(),
+        })),
+
+        stats,
+      };
+
+      return BaseResponseDto.success(response);
+    } catch (error) {
+      console.error('Error getting brand admin info:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new Error('Failed to get brand information');
     }
-
-    // Calcular estadísticas actualizadas
-    const stats = await this.calculateBrandStats(brandId);
-
-    // Procesar tipos de servicio con contadores
-    let serviceTypesWithCount: ServiceTypeResponseDto[] = [];
-    if (brand.serviceTypes && brand.serviceTypes.length > 0) {
-      serviceTypesWithCount = await Promise.all(
-        brand.serviceTypes.map(async (st) => {
-          const [appointmentCount, futureAppointments] = await Promise.all([
-            this.prisma.appointment.count({
-              where: { serviceTypeId: st.id }
-            }),
-            this.prisma.appointment.count({
-              where: {
-                serviceTypeId: st.id,
-                startTime: { gte: new Date() },
-                status: { notIn: ['CANCELLED'] }
-              }
-            })
-          ]);
-
-          return {
-            id: st.id,
-            brandId: st.brandId,
-            name: st.name,
-            description: st.description ?? undefined,
-            duration: st.duration,
-            price: st.price ? Number(st.price) : undefined,
-            color: st.color ?? undefined,
-            icon: st.icon ?? undefined,
-            isActive: st.isActive,
-            order: st.order,
-            createdAt: st.createdAt.toISOString(),
-            updatedAt: st.updatedAt.toISOString(),
-            appointmentCount,
-            hasFutureAppointments: futureAppointments > 0
-          };
-        })
-      );
-    }
-
-    // Construir respuesta
-    const response: BrandAdminResponseDto = {
-      id: brand.id,
-      name: brand.name,
-      description: brand.description ?? undefined,
-      address: brand.address ?? undefined,
-      phone: brand.phone ?? undefined,
-      isActive: brand.isActive,
-      createdAt: brand.createdAt.toISOString(),
-      updatedAt: brand.updatedAt.toISOString(),
-
-      businessType: {
-        id: businessType?.id ?? 0,
-        key: businessType?.key ?? '',
-        title: businessType?.title ?? '',
-        subtitle: businessType?.subtitle ?? '',
-        description: businessType?.description ?? '',
-        icon: businessType?.icon ?? ''
-      },
-
-      users: brand.userBrands.map(ub => ({
-        id: ub.user.id,
-        email: ub.user.email,
-        username: ub.user.username,
-        firstName: ub.user.firstName ?? '',
-        lastName: ub.user.lastName ?? '',
-        role: ub.user.role,
-        isActive: ub.user.isActive,
-        createdAt: ub.user.createdAt.toISOString(),
-        lastLogin: undefined
-      })),
-
-      features: brand.brandFeatures.map(bf => ({
-        id: bf.feature.id,
-        key: bf.feature.key,
-        title: bf.feature.title,
-        description: bf.feature.description,
-        price: Number(bf.feature.price),
-        category: bf.feature.category,
-        isRecommended: bf.feature.isRecommended,
-        isPopular: bf.feature.isPopular,
-        isActive: bf.feature.isActive,
-        activatedAt: bf.createdAt.toISOString()
-      })),
-
-      currentPlan: brand.brandPlans[0] ? {
-        id: brand.brandPlans[0].id,
-        planId: brand.brandPlans[0].plan.id,
-        planType: brand.brandPlans[0].plan.type,
-        planName: brand.brandPlans[0].plan.name,
-        planDescription: brand.brandPlans[0].plan.description || '',
-        basePrice: Number(brand.brandPlans[0].plan.basePrice),
-        currentPrice: Number(brand.brandPlans[0].price),
-        billingPeriod: brand.brandPlans[0].billingPeriod,
-        startDate: brand.brandPlans[0].startDate.toISOString(),
-        endDate: brand.brandPlans[0].endDate?.toISOString(),
-        isActive: brand.brandPlans[0].isActive,
-        nextBillingDate: this.calculateNextBillingDate(brand.brandPlans[0])?.toISOString()
-      } : {
-        id: 0,
-        planId: 0,
-        planType: '',
-        planName: '',
-        planDescription: '',
-        basePrice: 0,
-        currentPrice: 0,
-        billingPeriod: 'monthly',
-        startDate: new Date(0).toISOString(),
-        endDate: undefined,
-        isActive: false,
-        nextBillingDate: undefined
-      },
-
-      colorPalette: brand.colorPalette ? {
-        id: brand.colorPalette.id,
-        primary: brand.colorPalette.primary,
-        secondary: brand.colorPalette.secondary,
-        accent: brand.colorPalette.accent,
-        neutral: brand.colorPalette.neutral,
-        success: brand.colorPalette.success,
-        createdAt: brand.colorPalette.createdAt.toISOString(),
-        updatedAt: brand.colorPalette.updatedAt.toISOString()
-      } : {
-        id: 0,
-        primary: '',
-        secondary: '',
-        accent: '',
-        neutral: '',
-        success: '',
-        createdAt: new Date(0).toISOString(),
-        updatedAt: new Date(0).toISOString()
-      },
-
-      // NUEVO: Configuración de citas
-      appointmentSettings: brand.appointmentSettings ? {
-        id: brand.appointmentSettings.id,
-        useServiceTypes: brand.appointmentSettings.useServiceTypes,
-        defaultDuration: brand.appointmentSettings.defaultDuration,
-        bufferTime: brand.appointmentSettings.bufferTime,
-        maxAdvanceBookingDays: brand.appointmentSettings.maxAdvanceBookingDays,
-        minAdvanceBookingHours: brand.appointmentSettings.minAdvanceBookingHours,
-        allowSameDayBooking: brand.appointmentSettings.allowSameDayBooking,
-        createdAt: brand.appointmentSettings.createdAt.toISOString(),
-        updatedAt: brand.appointmentSettings.updatedAt.toISOString()
-      } : undefined,
-
-      // NUEVO: Tipos de servicio
-      serviceTypes: serviceTypesWithCount.length > 0 ? serviceTypesWithCount : undefined,
-
-      recentPayments: brand.payments.map(payment => ({
-        id: payment.id,
-        amount: Number(payment.amount),
-        currency: payment.currency,
-        status: payment.status,
-        paymentMethod: payment.paymentMethod ?? undefined,
-        tilopayReference: payment.tilopayReference ?? undefined,
-        createdAt: payment.createdAt.toISOString(),
-        processedAt: payment.processedAt?.toISOString()
-      })),
-
-      stats
-    };
-
-    return BaseResponseDto.success(response);
-
-  } catch (error) {
-    console.error('Error getting brand admin info:', error);
-    if (error instanceof NotFoundException || error instanceof ForbiddenException) {
-      throw error;
-    }
-    throw new Error('Failed to get brand information');
   }
-}
 
   async updateBrand(
-    brandId: number, 
-    updateData: UpdateBrandDto, 
-    requestingUserId: number
+    brandId: number,
+    updateData: UpdateBrandDto,
+    requestingUserId: number,
   ): Promise<BaseResponseDto<BrandAdminResponseDto>> {
     try {
       await this.validateBrandAccess(brandId, requestingUserId);
@@ -314,15 +341,19 @@ export class BrandService {
       const brandUpdateData: any = {};
 
       if (updateData.name !== undefined) brandUpdateData.name = updateData.name;
-      if (updateData.description !== undefined) brandUpdateData.description = updateData.description;
-      if (updateData.address !== undefined) brandUpdateData.address = updateData.address;
-      if (updateData.phone !== undefined) brandUpdateData.phone = updateData.phone;
-      if (updateData.isActive !== undefined) brandUpdateData.isActive = updateData.isActive;
+      if (updateData.description !== undefined)
+        brandUpdateData.description = updateData.description;
+      if (updateData.address !== undefined)
+        brandUpdateData.address = updateData.address;
+      if (updateData.phone !== undefined)
+        brandUpdateData.phone = updateData.phone;
+      if (updateData.isActive !== undefined)
+        brandUpdateData.isActive = updateData.isActive;
 
       // Manejar cambio de tipo de negocio
       if (updateData.businessTypeId !== undefined) {
         const businessType = await this.prisma.businessType.findUnique({
-          where: { id: updateData.businessTypeId }
+          where: { id: updateData.businessTypeId },
         });
         if (businessType) {
           brandUpdateData.businessType = businessType.key;
@@ -333,7 +364,7 @@ export class BrandService {
         // Actualizar brand
         await prisma.brand.update({
           where: { id: brandId },
-          data: brandUpdateData
+          data: brandUpdateData,
         });
 
         // Actualizar paleta de colores si se proporcionó
@@ -350,9 +381,9 @@ export class BrandService {
             where: { brandId },
             create: {
               brandId,
-              ...colorPaletteData
+              ...colorPaletteData,
             },
-            update: colorPaletteData
+            update: colorPaletteData,
           });
         }
 
@@ -361,7 +392,7 @@ export class BrandService {
           // Desactivar todas las features actuales
           await prisma.brandFeature.updateMany({
             where: { brandId },
-            data: { isActive: false }
+            data: { isActive: false },
           });
 
           // Activar las nuevas features
@@ -370,36 +401,35 @@ export class BrandService {
               where: {
                 brandId_featureId: {
                   brandId,
-                  featureId
-                }
+                  featureId,
+                },
               },
               create: {
                 brandId,
                 featureId,
-                isActive: true
+                isActive: true,
               },
               update: {
-                isActive: true
-              }
+                isActive: true,
+              },
             });
           }
 
           // Actualizar el array de selectedFeatures en el brand
           const features = await prisma.feature.findMany({
-            where: { id: { in: updateData.selectedFeatureIds } }
+            where: { id: { in: updateData.selectedFeatureIds } },
           });
           await prisma.brand.update({
             where: { id: brandId },
             data: {
-              selectedFeatures: features.map(f => f.key)
-            }
+              selectedFeatures: features.map((f) => f.key),
+            },
           });
         }
       });
 
       // Retornar información actualizada
       return this.getBrandAdminInfo(brandId, requestingUserId);
-
     } catch (error) {
       console.error('Error updating brand:', error);
       throw new Error('Failed to update brand');
@@ -411,7 +441,7 @@ export class BrandService {
     page: number,
     limit: number,
     role: string,
-    requestingUserId: number
+    requestingUserId: number,
   ): Promise<BaseResponseDto<BrandUserResponseDto[]>> {
     try {
       await this.validateBrandAccess(brandId, requestingUserId);
@@ -421,7 +451,7 @@ export class BrandService {
       // Construir filtros
       const where: any = {
         brandId,
-        isActive: true
+        isActive: true,
       };
 
       // Aplicar filtro de rol si no es "all"
@@ -438,20 +468,20 @@ export class BrandService {
       // Excluir al usuario que está haciendo la consulta
       where.user = {
         ...where.user,
-        id: { not: requestingUserId }
+        id: { not: requestingUserId },
       };
 
       const userBrands = await this.prisma.userBrand.findMany({
         where,
         include: {
-          user: true
+          user: true,
         },
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       });
 
-      const users: BrandUserResponseDto[] = userBrands.map(ub => ({
+      const users: BrandUserResponseDto[] = userBrands.map((ub) => ({
         id: ub.user.id,
         email: ub.user.email,
         username: ub.user.username,
@@ -461,11 +491,10 @@ export class BrandService {
         isActive: ub.user.isActive,
         createdAt: ub.user.createdAt.toISOString(),
         updatedAt: ub.user.updatedAt.toISOString(),
-        lastLogin: undefined // TODO: Implementar tracking
+        lastLogin: undefined, // TODO: Implementar tracking
       }));
 
       return BaseResponseDto.success(users);
-
     } catch (error) {
       console.error('Error getting brand users:', error);
       throw new Error('Failed to get brand users');
@@ -475,7 +504,7 @@ export class BrandService {
   async createBrandUser(
     brandId: number,
     createUserDto: CreateBrandUserDto,
-    requestingUserId: number
+    requestingUserId: number,
   ): Promise<BaseResponseDto<BrandUserResponseDto>> {
     try {
       await this.validateBrandAccess(brandId, requestingUserId);
@@ -485,9 +514,9 @@ export class BrandService {
         where: {
           OR: [
             { email: createUserDto.email },
-            { username: createUserDto.username }
-          ]
-        }
+            { username: createUserDto.username },
+          ],
+        },
       });
 
       if (existingUser) {
@@ -504,8 +533,8 @@ export class BrandService {
             username: createUserDto.username,
             firstName: createUserDto.firstName,
             lastName: createUserDto.lastName,
-            role: createUserDto.role || 'CLIENT'
-          }
+            role: createUserDto.role || 'CLIENT',
+          },
         });
 
         // Crear relación UserBrand
@@ -515,8 +544,8 @@ export class BrandService {
             userId: user.id,
             brandId,
             passwordHash: hashedPassword,
-            salt
-          }
+            salt,
+          },
         });
 
         return user;
@@ -532,11 +561,10 @@ export class BrandService {
         isActive: result.isActive,
         createdAt: result.createdAt.toISOString(),
         updatedAt: result.updatedAt.toISOString(),
-        lastLogin: undefined
+        lastLogin: undefined,
       };
 
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('Error creating brand user:', error);
       throw new Error('Failed to create brand user');
@@ -544,47 +572,56 @@ export class BrandService {
   }
 
   // Helper methods
-  private async validateBrandAccess(brandId: number, userId: number): Promise<void> {
+  private async validateBrandAccess(
+    brandId: number,
+    userId: number,
+  ): Promise<void> {
     const userBrand = await this.prisma.userBrand.findFirst({
       where: {
         brandId,
         userId,
-        isActive: true
+        isActive: true,
       },
       include: {
-        user: true
-      }
+        user: true,
+      },
     });
 
-    if (!userBrand || (!['ROOT', 'ADMIN'].includes(userBrand.user.role))) {
+    if (!userBrand || !['ROOT', 'ADMIN'].includes(userBrand.user.role)) {
       throw new ForbiddenException('Access denied to this brand');
     }
   }
 
   private async calculateBrandStats(brandId: number): Promise<any> {
-    const [userCount, featureCount, activeFeatureCount, totalRevenue, monthlyRevenue] = await Promise.all([
+    const [
+      userCount,
+      featureCount,
+      activeFeatureCount,
+      totalRevenue,
+      monthlyRevenue,
+    ] = await Promise.all([
       this.prisma.userBrand.count({ where: { brandId, isActive: true } }),
       this.prisma.brandFeature.count({ where: { brandId } }),
       this.prisma.brandFeature.count({ where: { brandId, isActive: true } }),
       this.prisma.payment.aggregate({
         where: { brandId, status: 'completed' },
-        _sum: { amount: true }
+        _sum: { amount: true },
       }),
       this.prisma.payment.aggregate({
         where: {
           brandId,
           status: 'completed',
           createdAt: {
-            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-          }
+            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          },
         },
-        _sum: { amount: true }
-      })
+        _sum: { amount: true },
+      }),
     ]);
 
     const currentPlan = await this.prisma.brandPlan.findFirst({
       where: { brandId, isActive: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
 
     return {
@@ -593,9 +630,11 @@ export class BrandService {
       activeFeatures: activeFeatureCount,
       totalRevenue: Number(totalRevenue._sum.amount || 0),
       monthlyRevenue: Number(monthlyRevenue._sum.amount || 0),
-      daysUntilNextBilling: currentPlan ? this.calculateDaysUntilNextBilling(currentPlan) : 0,
+      daysUntilNextBilling: currentPlan
+        ? this.calculateDaysUntilNextBilling(currentPlan)
+        : 0,
       isSubscriptionActive: currentPlan?.isActive || false,
-      lastActivity: new Date().toISOString() // TODO: Implementar tracking real
+      lastActivity: new Date().toISOString(), // TODO: Implementar tracking real
     };
   }
 
@@ -626,7 +665,12 @@ export class BrandService {
   }
 
   // Métodos adicionales que necesitarás implementar
-  async updateBrandUser(brandId: number, userId: number, updateData: UpdateBrandUserDto, requestingUserId: number): Promise<BaseResponseDto<BrandUserResponseDto>> {
+  async updateBrandUser(
+    brandId: number,
+    userId: number,
+    updateData: UpdateBrandUserDto,
+    requestingUserId: number,
+  ): Promise<BaseResponseDto<BrandUserResponseDto>> {
     try {
       // Verificar acceso al brand
       await this.validateBrandAccess(brandId, requestingUserId);
@@ -636,15 +680,18 @@ export class BrandService {
         where: {
           brandId: brandId,
           userId: userId,
-          isActive: true
+          isActive: true,
         },
         include: {
-          user: true
-        }
+          user: true,
+        },
       });
 
       if (!userBrand) {
-        return BaseResponseDto.singleError(404, 'Usuario no encontrado en este brand');
+        return BaseResponseDto.singleError(
+          404,
+          'Usuario no encontrado en este brand',
+        );
       }
 
       // Solo permitir actualizar el rol y estado activo
@@ -652,8 +699,11 @@ export class BrandService {
         where: { id: userId },
         data: {
           role: updateData.role || userBrand.user.role,
-          isActive: updateData.isActive !== undefined ? updateData.isActive : userBrand.user.isActive
-        }
+          isActive:
+            updateData.isActive !== undefined
+              ? updateData.isActive
+              : userBrand.user.isActive,
+        },
       });
 
       const response: BrandUserResponseDto = {
@@ -665,28 +715,36 @@ export class BrandService {
         role: updatedUser.role,
         isActive: updatedUser.isActive,
         createdAt: updatedUser.createdAt.toISOString(),
-        updatedAt: updatedUser.updatedAt.toISOString()
+        updatedAt: updatedUser.updatedAt.toISOString(),
       };
 
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('Error updating brand user:', error);
       if (error.status === 403) {
-        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+        return BaseResponseDto.singleError(
+          403,
+          'No tienes permisos para acceder a este brand',
+        );
       }
       return BaseResponseDto.singleError(500, 'Error interno del servidor');
     }
   }
 
-  async deleteBrandUser(brandId: number, userId: number, requestingUserId: number): Promise<void> {
+  async deleteBrandUser(
+    brandId: number,
+    userId: number,
+    requestingUserId: number,
+  ): Promise<void> {
     try {
       // Verificar acceso al brand
       await this.validateBrandAccess(brandId, requestingUserId);
 
       // No permitir que el usuario se elimine a sí mismo
       if (userId === requestingUserId) {
-        throw new ForbiddenException('No puedes eliminarte a ti mismo del brand');
+        throw new ForbiddenException(
+          'No puedes eliminarte a ti mismo del brand',
+        );
       }
 
       // Verificar que el usuario existe en el brand
@@ -694,11 +752,11 @@ export class BrandService {
         where: {
           brandId: brandId,
           userId: userId,
-          isActive: true
+          isActive: true,
         },
         include: {
-          user: true
-        }
+          user: true,
+        },
       });
 
       if (!userBrand) {
@@ -707,24 +765,25 @@ export class BrandService {
 
       // No permitir eliminar al owner del brand
       const brand = await this.prisma.brand.findUnique({
-        where: { id: brandId }
+        where: { id: brandId },
       });
 
       if (brand?.ownerId === userId) {
-        throw new ForbiddenException('No se puede eliminar al propietario del brand');
+        throw new ForbiddenException(
+          'No se puede eliminar al propietario del brand',
+        );
       }
 
       // Desactivar la relación usuario-brand en lugar de eliminar
       await this.prisma.userBrand.update({
         where: {
-          id: userBrand.id
+          id: userBrand.id,
         },
         data: {
           isActive: false,
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       });
-
     } catch (error) {
       console.error('Error deleting brand user:', error);
       if (error.status === 403 || error.status === 404) {
@@ -734,46 +793,55 @@ export class BrandService {
     }
   }
 
-  async updateBrandFeatures(brandId: number, featureIds: number[], requestingUserId: number): Promise<BaseResponseDto<BrandAdminResponseDto>> {
+  async updateBrandFeatures(
+    brandId: number,
+    featureIds: number[],
+    requestingUserId: number,
+  ): Promise<BaseResponseDto<BrandAdminResponseDto>> {
     try {
       // Verificar acceso al brand
       await this.validateBrandAccess(brandId, requestingUserId);
 
       // Obtener las features existentes del brand
       const existingBrandFeatures = await this.prisma.brandFeature.findMany({
-        where: { brandId: brandId }
+        where: { brandId: brandId },
       });
 
       // Obtener las features válidas
       const validFeatures = await this.prisma.feature.findMany({
         where: {
           id: { in: featureIds },
-          isActive: true
-        }
+          isActive: true,
+        },
       });
 
       if (validFeatures.length !== featureIds.length) {
-        return BaseResponseDto.singleError(400, 'Algunas features no son válidas o están inactivas');
+        return BaseResponseDto.singleError(
+          400,
+          'Algunas features no son válidas o están inactivas',
+        );
       }
 
       // Desactivar todas las features existentes
       await this.prisma.brandFeature.updateMany({
         where: { brandId: brandId },
-        data: { isActive: false }
+        data: { isActive: false },
       });
 
       // Activar o crear las nuevas features
       for (const featureId of featureIds) {
-        const existingBrandFeature = existingBrandFeatures.find(bf => bf.featureId === featureId);
-        
+        const existingBrandFeature = existingBrandFeatures.find(
+          (bf) => bf.featureId === featureId,
+        );
+
         if (existingBrandFeature) {
           // Reactivar feature existente
           await this.prisma.brandFeature.update({
             where: { id: existingBrandFeature.id },
-            data: { 
+            data: {
               isActive: true,
-              updatedAt: new Date()
-            }
+              updatedAt: new Date(),
+            },
           });
         } else {
           // Crear nueva relación brand-feature
@@ -781,43 +849,51 @@ export class BrandService {
             data: {
               brandId: brandId,
               featureId: featureId,
-              isActive: true
-            }
+              isActive: true,
+            },
           });
         }
       }
 
       // Devolver la información actualizada del brand
       return this.getBrandAdminInfo(brandId, requestingUserId);
-
     } catch (error) {
       console.error('Error updating brand features:', error);
       if (error.status === 403) {
-        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+        return BaseResponseDto.singleError(
+          403,
+          'No tienes permisos para acceder a este brand',
+        );
       }
       return BaseResponseDto.singleError(500, 'Error interno del servidor');
     }
   }
 
-  async getBrandPlanDetails(brandId: number, requestingUserId: number): Promise<BaseResponseDto<BrandPlanResponseDto>> {
+  async getBrandPlanDetails(
+    brandId: number,
+    requestingUserId: number,
+  ): Promise<BaseResponseDto<BrandPlanResponseDto>> {
     try {
       // Verificar acceso al brand
       await this.validateBrandAccess(brandId, requestingUserId);
 
       // Obtener el plan actual del brand
       const currentBrandPlan = await this.prisma.brandPlan.findFirst({
-        where: { 
+        where: {
           brandId: brandId,
-          isActive: true 
+          isActive: true,
         },
         include: {
-          plan: true
+          plan: true,
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       });
 
       if (!currentBrandPlan) {
-        return BaseResponseDto.singleError(404, 'No se encontró un plan activo para este brand');
+        return BaseResponseDto.singleError(
+          404,
+          'No se encontró un plan activo para este brand',
+        );
       }
 
       // Obtener historial de planes
@@ -825,16 +901,16 @@ export class BrandService {
         where: { brandId: brandId },
         include: { plan: true },
         orderBy: { createdAt: 'desc' },
-        take: 10
+        take: 10,
       });
 
       // Obtener planes disponibles para upgrade
       const availablePlans = await this.prisma.plan.findMany({
-        where: { 
+        where: {
           isActive: true,
-          id: { not: currentBrandPlan.planId }
+          id: { not: currentBrandPlan.planId },
         },
-        orderBy: { basePrice: 'asc' }
+        orderBy: { basePrice: 'asc' },
       });
 
       const response: BrandPlanResponseDto = {
@@ -851,7 +927,7 @@ export class BrandService {
         isActive: currentBrandPlan.isActive,
         nextBillingDate: undefined, // TODO: Calcular fecha de próximo pago
         daysUntilNextBilling: 0, // TODO: Calcular días restantes
-        history: planHistory.map(bp => ({
+        history: planHistory.map((bp) => ({
           id: bp.id,
           planId: bp.planId,
           planName: bp.plan.name,
@@ -861,9 +937,9 @@ export class BrandService {
           startDate: bp.startDate.toISOString(),
           endDate: bp.endDate?.toISOString(),
           isActive: bp.isActive,
-          changeReason: bp.id === currentBrandPlan.id ? 'current' : 'upgrade'
+          changeReason: bp.id === currentBrandPlan.id ? 'current' : 'upgrade',
         })),
-        availableUpgrades: availablePlans.map(plan => ({
+        availableUpgrades: availablePlans.map((plan) => ({
           planId: plan.id,
           name: plan.name,
           description: plan.description || '',
@@ -872,54 +948,63 @@ export class BrandService {
           totalPriceWithFeatures: Number(plan.basePrice), // TODO: Calcular con features
           includedFeatures: [], // TODO: Implementar features del plan
           isRecommended: false,
-          isCurrentPlan: false
-        }))
+          isCurrentPlan: false,
+        })),
       };
 
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('Error getting brand plan:', error);
       if (error.status === 403) {
-        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+        return BaseResponseDto.singleError(
+          403,
+          'No tienes permisos para acceder a este brand',
+        );
       }
       return BaseResponseDto.singleError(500, 'Error interno del servidor');
     }
   }
 
-  async updateBrandPlan(brandId: number, updateData: UpdateBrandPlanDto, requestingUserId: number): Promise<BaseResponseDto<BrandPlanResponseDto>> {
+  async updateBrandPlan(
+    brandId: number,
+    updateData: UpdateBrandPlanDto,
+    requestingUserId: number,
+  ): Promise<BaseResponseDto<BrandPlanResponseDto>> {
     try {
       // Verificar acceso al brand
       await this.validateBrandAccess(brandId, requestingUserId);
 
       // Verificar que el plan nuevo existe
       const newPlan = await this.prisma.plan.findUnique({
-        where: { 
+        where: {
           id: updateData.planId,
-          isActive: true 
-        }
+          isActive: true,
+        },
       });
 
       if (!newPlan) {
-        return BaseResponseDto.singleError(404, 'Plan no encontrado o inactivo');
+        return BaseResponseDto.singleError(
+          404,
+          'Plan no encontrado o inactivo',
+        );
       }
 
       // Desactivar el plan actual
       await this.prisma.brandPlan.updateMany({
-        where: { 
+        where: {
           brandId: brandId,
-          isActive: true 
+          isActive: true,
         },
-        data: { 
+        data: {
           isActive: false,
-          endDate: new Date()
-        }
+          endDate: new Date(),
+        },
       });
 
       // Calcular próxima fecha de facturación
       const startDate = new Date();
       let nextBillingDate = new Date(startDate);
-      
+
       switch (updateData.billingPeriod || BillingPeriod.MONTHLY) {
         case BillingPeriod.MONTHLY:
           nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
@@ -937,15 +1022,18 @@ export class BrandService {
           price: newPlan.basePrice,
           billingPeriod: updateData.billingPeriod || BillingPeriod.MONTHLY,
           startDate: startDate,
-          isActive: true
+          isActive: true,
         },
         include: {
-          plan: true
-        }
+          plan: true,
+        },
       });
 
       // Calcular días hasta próxima facturación
-      const daysUntilNextBilling = Math.ceil((nextBillingDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      const daysUntilNextBilling = Math.ceil(
+        (nextBillingDate.getTime() - new Date().getTime()) /
+          (1000 * 60 * 60 * 24),
+      );
 
       const response: BrandPlanResponseDto = {
         id: newBrandPlan.id,
@@ -962,21 +1050,27 @@ export class BrandService {
         nextBillingDate: nextBillingDate.toISOString(),
         daysUntilNextBilling: daysUntilNextBilling,
         history: [],
-        availableUpgrades: []
+        availableUpgrades: [],
       };
 
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('Error updating brand plan:', error);
       if (error.status === 403) {
-        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+        return BaseResponseDto.singleError(
+          403,
+          'No tienes permisos para acceder a este brand',
+        );
       }
       return BaseResponseDto.singleError(500, 'Error interno del servidor');
     }
   }
 
-  async getBrandStats(brandId: number, period: string, requestingUserId: number): Promise<BaseResponseDto<any>> {
+  async getBrandStats(
+    brandId: number,
+    period: string,
+    requestingUserId: number,
+  ): Promise<BaseResponseDto<any>> {
     try {
       // Verificar acceso al brand
       await this.validateBrandAccess(brandId, requestingUserId);
@@ -984,7 +1078,7 @@ export class BrandService {
       // Calcular fechas según el período
       const endDate = new Date();
       let startDate = new Date();
-      
+
       switch (period) {
         case '7d':
           startDate.setDate(endDate.getDate() - 7);
@@ -1008,17 +1102,17 @@ export class BrandService {
         include: {
           userBrands: {
             where: { isActive: true },
-            include: { user: true }
+            include: { user: true },
           },
           brandFeatures: {
-            include: { feature: true }
+            include: { feature: true },
           },
           brandPlans: {
             where: { isActive: true },
             orderBy: { createdAt: 'desc' },
-            take: 1
-          }
-        }
+            take: 1,
+          },
+        },
       });
 
       if (!brand) {
@@ -1026,7 +1120,9 @@ export class BrandService {
       }
 
       // Contar características activas
-      const activeFeatures = brand.brandFeatures.filter(bf => bf.isActive).length;
+      const activeFeatures = brand.brandFeatures.filter(
+        (bf) => bf.isActive,
+      ).length;
 
       // Calcular estadísticas
       const stats = {
@@ -1038,43 +1134,54 @@ export class BrandService {
         subscriptionStatus: brand.brandPlans.length > 0 ? 'active' : 'inactive',
         lastActivity: brand.updatedAt,
         createdAt: brand.createdAt,
-        daysActive: Math.floor((endDate.getTime() - brand.createdAt.getTime()) / (1000 * 60 * 60 * 24)),
+        daysActive: Math.floor(
+          (endDate.getTime() - brand.createdAt.getTime()) /
+            (1000 * 60 * 60 * 24),
+        ),
         userGrowth: {
           period: period,
           totalUsers: brand.userBrands.length,
-          newUsers: brand.userBrands.filter(ub => 
-            ub.createdAt >= startDate && ub.createdAt <= endDate
-          ).length
+          newUsers: brand.userBrands.filter(
+            (ub) => ub.createdAt >= startDate && ub.createdAt <= endDate,
+          ).length,
         },
-        featureUsage: brand.brandFeatures.map(brandFeature => ({
+        featureUsage: brand.brandFeatures.map((brandFeature) => ({
           id: brandFeature.id,
           key: brandFeature.feature.key,
           title: brandFeature.feature.title,
           isActive: brandFeature.isActive,
           activatedAt: brandFeature.createdAt,
-          price: brandFeature.feature.price
-        }))
+          price: brandFeature.feature.price,
+        })),
       };
 
       return BaseResponseDto.success(stats);
-
     } catch (error) {
       console.error('Error getting brand stats:', error);
       if (error.status === 403) {
-        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+        return BaseResponseDto.singleError(
+          403,
+          'No tienes permisos para acceder a este brand',
+        );
       }
       return BaseResponseDto.singleError(500, 'Error interno del servidor');
     }
   }
 
-  async getBrandPayments(brandId: number, page: number, limit: number, status: string, requestingUserId: number): Promise<BaseResponseDto<any>> {
+  async getBrandPayments(
+    brandId: number,
+    page: number,
+    limit: number,
+    status: string,
+    requestingUserId: number,
+  ): Promise<BaseResponseDto<any>> {
     try {
       // Verificar acceso al brand
       await this.validateBrandAccess(brandId, requestingUserId);
 
       // Construir filtros
       const where: any = {
-        brandId: brandId
+        brandId: brandId,
       };
 
       // Aplicar filtro de status si no es "all"
@@ -1095,18 +1202,18 @@ export class BrandService {
           include: {
             brandPlan: {
               include: {
-                plan: true
-              }
-            }
-          }
+                plan: true,
+              },
+            },
+          },
         }),
-        this.prisma.payment.count({ where })
+        this.prisma.payment.count({ where }),
       ]);
 
       const totalPages = Math.ceil(totalCount / limit);
 
       return BaseResponseDto.success({
-        payments: payments.map(payment => ({
+        payments: payments.map((payment) => ({
           id: payment.id,
           amount: payment.amount,
           currency: payment.currency,
@@ -1117,31 +1224,40 @@ export class BrandService {
           processedAt: payment.processedAt,
           createdAt: payment.createdAt,
           updatedAt: payment.updatedAt,
-          plan: payment.brandPlan?.plan ? {
-            id: payment.brandPlan.plan.id,
-            name: payment.brandPlan.plan.name,
-            type: payment.brandPlan.plan.type
-          } : null
+          plan: payment.brandPlan?.plan
+            ? {
+                id: payment.brandPlan.plan.id,
+                name: payment.brandPlan.plan.name,
+                type: payment.brandPlan.plan.type,
+              }
+            : null,
         })),
         pagination: {
           currentPage: page,
           totalPages,
           totalCount,
           hasNextPage: page < totalPages,
-          hasPrevPage: page > 1
-        }
+          hasPrevPage: page > 1,
+        },
       });
-
     } catch (error) {
       console.error('Error getting brand payments:', error);
       if (error.status === 403) {
-        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+        return BaseResponseDto.singleError(
+          403,
+          'No tienes permisos para acceder a este brand',
+        );
       }
       return BaseResponseDto.singleError(500, 'Error interno del servidor');
     }
   }
 
-  async getBrandActivity(brandId: number, page: number, limit: number, requestingUserId: number): Promise<BaseResponseDto<any>> {
+  async getBrandActivity(
+    brandId: number,
+    page: number,
+    limit: number,
+    requestingUserId: number,
+  ): Promise<BaseResponseDto<any>> {
     try {
       // Verificar acceso al brand
       await this.validateBrandAccess(brandId, requestingUserId);
@@ -1155,27 +1271,27 @@ export class BrandService {
           where: { brandId, isActive: true },
           orderBy: { createdAt: 'desc' },
           take: 10,
-          include: { user: true }
+          include: { user: true },
         }),
         this.prisma.brandFeature.findMany({
           where: { brandId },
           orderBy: { createdAt: 'desc' },
           take: 10,
-          include: { feature: true }
+          include: { feature: true },
         }),
         this.prisma.payment.findMany({
           where: { brandId },
           orderBy: { createdAt: 'desc' },
           take: 10,
-          include: { brandPlan: { include: { plan: true } } }
-        })
+          include: { brandPlan: { include: { plan: true } } },
+        }),
       ]);
 
       // Crear actividades combinadas
       const activities: any[] = [];
 
       // Actividades de usuarios
-      recentUsers.forEach(userBrand => {
+      recentUsers.forEach((userBrand) => {
         activities.push({
           id: `user-${userBrand.id}`,
           type: 'user_joined',
@@ -1185,13 +1301,13 @@ export class BrandService {
           metadata: {
             userId: userBrand.user.id,
             userName: `${userBrand.user.firstName} ${userBrand.user.lastName}`,
-            userRole: userBrand.user.role
-          }
+            userRole: userBrand.user.role,
+          },
         });
       });
 
       // Actividades de features
-      recentFeatures.forEach(brandFeature => {
+      recentFeatures.forEach((brandFeature) => {
         activities.push({
           id: `feature-${brandFeature.id}`,
           type: 'feature_activated',
@@ -1201,13 +1317,13 @@ export class BrandService {
           metadata: {
             featureId: brandFeature.feature.id,
             featureName: brandFeature.feature.title,
-            featurePrice: brandFeature.feature.price
-          }
+            featurePrice: brandFeature.feature.price,
+          },
         });
       });
 
       // Actividades de pagos
-      recentPayments.forEach(payment => {
+      recentPayments.forEach((payment) => {
         activities.push({
           id: `payment-${payment.id}`,
           type: 'payment_processed',
@@ -1219,14 +1335,17 @@ export class BrandService {
             amount: payment.amount,
             currency: payment.currency,
             status: payment.status,
-            planName: payment.brandPlan?.plan?.name
-          }
+            planName: payment.brandPlan?.plan?.name,
+          },
         });
       });
 
       // Ordenar por fecha descendente y paginar
-      activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
+      activities.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+
       const totalCount = activities.length;
       const paginatedActivities = activities.slice(skip, skip + limit);
       const totalPages = Math.ceil(totalCount / limit);
@@ -1238,14 +1357,16 @@ export class BrandService {
           totalPages,
           totalCount,
           hasNextPage: page < totalPages,
-          hasPrevPage: page > 1
-        }
+          hasPrevPage: page > 1,
+        },
       });
-
     } catch (error) {
       console.error('Error getting brand activity:', error);
       if (error.status === 403) {
-        return BaseResponseDto.singleError(403, 'No tienes permisos para acceder a este brand');
+        return BaseResponseDto.singleError(
+          403,
+          'No tienes permisos para acceder a este brand',
+        );
       }
       return BaseResponseDto.singleError(500, 'Error interno del servidor');
     }

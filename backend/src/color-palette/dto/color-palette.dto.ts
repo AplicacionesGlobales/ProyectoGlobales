@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsNumber, IsOptional, Matches } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  Matches,
+} from 'class-validator';
 
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
 
@@ -7,56 +13,66 @@ export class CreateColorPaletteDto {
   @ApiProperty({
     description: 'Primary color in hex format',
     example: '#8B5CF6',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Primary color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Primary color must be a valid hex color (e.g., #FF5733)',
+  })
   primary: string;
 
   @ApiProperty({
     description: 'Secondary color in hex format',
     example: '#EC4899',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Secondary color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Secondary color must be a valid hex color (e.g., #FF5733)',
+  })
   secondary: string;
 
   @ApiProperty({
     description: 'Accent color in hex format',
     example: '#F59E0B',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Accent color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Accent color must be a valid hex color (e.g., #FF5733)',
+  })
   accent: string;
 
   @ApiProperty({
     description: 'Neutral color in hex format',
     example: '#10B981',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Neutral color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Neutral color must be a valid hex color (e.g., #FF5733)',
+  })
   neutral: string;
 
   @ApiProperty({
     description: 'Success color in hex format',
     example: '#3B82F6',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Success color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Success color must be a valid hex color (e.g., #FF5733)',
+  })
   success: string;
 
   @ApiProperty({
     description: 'Brand ID associated with this color palette',
-    example: 1
+    example: 1,
   })
   @IsNumber()
   @IsNotEmpty()
@@ -68,55 +84,65 @@ export class UpdateColorPaletteDto {
     description: 'Primary color in hex format',
     example: '#8B5CF6',
     required: false,
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsOptional()
-  @Matches(HEX_COLOR_REGEX, { message: 'Primary color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Primary color must be a valid hex color (e.g., #FF5733)',
+  })
   primary?: string;
 
   @ApiProperty({
     description: 'Secondary color in hex format',
     example: '#EC4899',
     required: false,
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsOptional()
-  @Matches(HEX_COLOR_REGEX, { message: 'Secondary color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Secondary color must be a valid hex color (e.g., #FF5733)',
+  })
   secondary?: string;
 
   @ApiProperty({
     description: 'Accent color in hex format',
     example: '#F59E0B',
     required: false,
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsOptional()
-  @Matches(HEX_COLOR_REGEX, { message: 'Accent color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Accent color must be a valid hex color (e.g., #FF5733)',
+  })
   accent?: string;
 
   @ApiProperty({
     description: 'Neutral color in hex format',
     example: '#10B981',
     required: false,
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsOptional()
-  @Matches(HEX_COLOR_REGEX, { message: 'Neutral color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Neutral color must be a valid hex color (e.g., #FF5733)',
+  })
   neutral?: string;
 
   @ApiProperty({
     description: 'Success color in hex format',
     example: '#3B82F6',
     required: false,
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsOptional()
-  @Matches(HEX_COLOR_REGEX, { message: 'Success color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Success color must be a valid hex color (e.g., #FF5733)',
+  })
   success?: string;
 }
 
@@ -124,51 +150,61 @@ export class ColorPaletteValidationDto {
   @ApiProperty({
     description: 'Primary color in hex format',
     example: '#8B5CF6',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Primary color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Primary color must be a valid hex color (e.g., #FF5733)',
+  })
   primary: string;
 
   @ApiProperty({
     description: 'Secondary color in hex format',
     example: '#EC4899',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Secondary color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Secondary color must be a valid hex color (e.g., #FF5733)',
+  })
   secondary: string;
 
   @ApiProperty({
     description: 'Accent color in hex format',
     example: '#F59E0B',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Accent color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Accent color must be a valid hex color (e.g., #FF5733)',
+  })
   accent: string;
 
   @ApiProperty({
     description: 'Neutral color in hex format',
     example: '#10B981',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Neutral color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Neutral color must be a valid hex color (e.g., #FF5733)',
+  })
   neutral: string;
 
   @ApiProperty({
     description: 'Success color in hex format',
     example: '#3B82F6',
-    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+    pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(HEX_COLOR_REGEX, { message: 'Success color must be a valid hex color (e.g., #FF5733)' })
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'Success color must be a valid hex color (e.g., #FF5733)',
+  })
   success: string;
 }
 

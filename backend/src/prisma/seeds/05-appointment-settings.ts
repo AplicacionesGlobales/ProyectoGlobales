@@ -9,7 +9,7 @@ export async function seedAppointmentSettings() {
     // Obtener todos los brands activos
     const brands = await prisma.brand.findMany({
       where: { isActive: true },
-      select: { id: true }
+      select: { id: true },
     });
 
     let createdCount = 0;
@@ -17,7 +17,7 @@ export async function seedAppointmentSettings() {
     // Crear configuración para cada brand que no tenga una
     for (const brand of brands) {
       const existingSettings = await prisma.appointmentSettings.findUnique({
-        where: { brandId: brand.id }
+        where: { brandId: brand.id },
       });
 
       if (!existingSettings) {
@@ -28,14 +28,16 @@ export async function seedAppointmentSettings() {
             bufferTime: 5, // 5 minutos entre citas
             maxAdvanceBookingDays: 30, // 30 días de anticipación
             minAdvanceBookingHours: 2, // 2 horas mínimas de anticipación
-            allowSameDayBooking: true
-          }
+            allowSameDayBooking: true,
+          },
         });
         createdCount++;
       }
     }
 
-    console.log(`✅ Created/verified appointment settings for ${createdCount} brands`);
+    console.log(
+      `✅ Created/verified appointment settings for ${createdCount} brands`,
+    );
   } catch (error) {
     console.error('❌ Error seeding appointment settings:', error);
     throw error;

@@ -4,8 +4,8 @@ import { FileResponseDto } from './file.dto';
 
 export enum BrandImageType {
   LOGO = 'LOGO',
-  ISOTOPO = 'ISOTOPO', 
-  IMAGOTIPO = 'IMAGOTIPO'
+  ISOTOPO = 'ISOTOPO',
+  IMAGOTIPO = 'IMAGOTIPO',
 }
 
 export class UploadBrandImageDto {

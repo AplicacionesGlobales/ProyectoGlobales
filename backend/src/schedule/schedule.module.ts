@@ -9,6 +9,6 @@ import { BrandModule } from '../brand/brand.module';
   imports: [PrismaModule, BrandModule],
   controllers: [ScheduleController],
   providers: [ScheduleService],
-  exports: [ScheduleService]
+  exports: [ScheduleService],
 })
 export class ScheduleModule {}

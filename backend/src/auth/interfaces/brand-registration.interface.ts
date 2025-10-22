@@ -49,12 +49,12 @@ export interface BrandRegistrationResult {
   };
 }
 
-export type BusinessFeature = 
-  | 'citas' 
-  | 'ubicaciones' 
-  | 'archivos' 
-  | 'pagos' 
-  | 'tipos-citas' 
+export type BusinessFeature =
+  | 'citas'
+  | 'ubicaciones'
+  | 'archivos'
+  | 'pagos'
+  | 'tipos-citas'
   | 'reportes';
 
 export type PlanType = 'monthly' | 'annual';

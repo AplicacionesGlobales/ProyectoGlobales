@@ -6,10 +6,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ServiceTypeService {
   constructor(private prisma: PrismaService) {}
 
-    async getServiceTypesByBrand(brandId: number) {
-      return this.prisma.serviceType.findMany({
-        where: { brandId },
-        orderBy: { name: 'asc' }
-      });
-    }
+  async getServiceTypesByBrand(brandId: number) {
+    return this.prisma.serviceType.findMany({
+      where: { brandId },
+      orderBy: { name: 'asc' },
+    });
+  }
 }

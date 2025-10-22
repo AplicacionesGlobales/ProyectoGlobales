@@ -1,35 +1,42 @@
-import { IsEnum, IsOptional, IsString, MinLength, IsDateString, IsBoolean } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
+  IsDateString,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AppointmentStatus } from 'generated/prisma';
 
 export class StatusTransitionDto {
-  @ApiProperty({ 
+  @ApiProperty({
     enum: AppointmentStatus,
-    description: 'Nuevo estado de la cita' 
+    description: 'Nuevo estado de la cita',
   })
   @IsEnum(AppointmentStatus)
   newStatus: AppointmentStatus;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Razón del cambio de estado',
-    example: 'Cliente solicitó cancelar por motivos personales'
+    example: 'Cliente solicitó cancelar por motivos personales',
   })
   @IsOptional()
   @IsString()
   @MinLength(10)
   reason?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Nueva fecha/hora si es reprogramación',
-    example: '2024-08-20T10:00:00Z'
+    example: '2024-08-20T10:00:00Z',
   })
   @IsOptional()
   @IsDateString()
   rescheduleDateTime?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Notas internas adicionales',
-    example: 'Cliente prefiere horarios matutinos para futuras citas'
+    example: 'Cliente prefiere horarios matutinos para futuras citas',
   })
   @IsOptional()
   @IsString()
@@ -37,7 +44,7 @@ export class StatusTransitionDto {
 
   @ApiPropertyOptional({
     description: 'Notificar al cliente del cambio',
-    default: true
+    default: true,
   })
   @IsOptional()
   @IsBoolean()

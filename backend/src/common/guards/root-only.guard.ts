@@ -1,6 +1,10 @@
-
 // src/common/guards/root-only.guard.ts
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -21,11 +25,11 @@ export class RootOnlyGuard implements CanActivate {
       where: {
         brandId: parseInt(brandId),
         userId,
-        isActive: true
+        isActive: true,
       },
       include: {
-        user: true
-      }
+        user: true,
+      },
     });
 
     if (!userBrand || userBrand.user.role !== 'ROOT') {

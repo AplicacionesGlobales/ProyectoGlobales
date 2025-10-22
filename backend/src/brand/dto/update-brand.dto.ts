@@ -1,4 +1,12 @@
-import { IsString, IsOptional, ValidateNested, IsObject, IsArray, IsNumber, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  ValidateNested,
+  IsObject,
+  IsArray,
+  IsNumber,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -50,14 +58,17 @@ export class UpdateBrandDto {
   @IsOptional()
   phone?: string;
 
-  @ApiPropertyOptional({ example: 19, description: 'ID del nuevo tipo de negocio' })
+  @ApiPropertyOptional({
+    example: 19,
+    description: 'ID del nuevo tipo de negocio',
+  })
   @IsNumber()
   @IsOptional()
   businessTypeId?: number;
 
-  @ApiPropertyOptional({ 
-    example: [236, 237, 240], 
-    description: 'Array de IDs de features a activar/desactivar' 
+  @ApiPropertyOptional({
+    example: [236, 237, 240],
+    description: 'Array de IDs de features a activar/desactivar',
   })
   @IsArray()
   @IsNumber({}, { each: true })

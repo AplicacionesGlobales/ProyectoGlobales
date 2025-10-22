@@ -10,7 +10,7 @@ const defaultBusinessHours = [
   { dayOfWeek: 4, isOpen: true, openTime: '08:00', closeTime: '17:00' }, // Jueves
   { dayOfWeek: 5, isOpen: true, openTime: '08:00', closeTime: '17:00' }, // Viernes
   { dayOfWeek: 6, isOpen: false }, // Sábado
-  { dayOfWeek: 0, isOpen: false }  // Domingo
+  { dayOfWeek: 0, isOpen: false }, // Domingo
 ];
 
 export async function seedBusinessHours() {
@@ -20,7 +20,7 @@ export async function seedBusinessHours() {
     // Obtener todos los brands activos
     const brands = await prisma.brand.findMany({
       where: { isActive: true },
-      select: { id: true }
+      select: { id: true },
     });
 
     let createdCount = 0;
@@ -28,7 +28,7 @@ export async function seedBusinessHours() {
     for (const brand of brands) {
       // Verificar si ya tiene horarios
       const existingHours = await prisma.businessHours.findMany({
-        where: { brandId: brand.id }
+        where: { brandId: brand.id },
       });
 
       if (existingHours.length === 0) {
@@ -40,8 +40,8 @@ export async function seedBusinessHours() {
               dayOfWeek: hourConfig.dayOfWeek,
               isOpen: hourConfig.isOpen,
               openTime: hourConfig.openTime,
-              closeTime: hourConfig.closeTime
-            }
+              closeTime: hourConfig.closeTime,
+            },
           });
         }
         createdCount++;

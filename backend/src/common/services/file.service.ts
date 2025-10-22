@@ -25,9 +25,9 @@ export class FileService {
    * Sube una imagen desde base64 string
    */
   async uploadBase64Image(
-    brandId: number, 
-    base64String: string, 
-    imageType: 'logo' | 'isotipo' | 'imagotipo'
+    brandId: number,
+    base64String: string,
+    imageType: 'logo' | 'isotipo' | 'imagotipo',
   ): Promise<{ success: boolean; url?: string; error?: string }> {
     try {
       console.log(`🔄 Uploading ${imageType} for brand ${brandId}...`);
@@ -36,16 +36,18 @@ export class FileService {
       if (!base64String.startsWith('data:image/')) {
         return {
           success: false,
-          error: 'Invalid base64 image format'
+          error: 'Invalid base64 image format',
         };
       }
 
       // Extraer información del data URL
-      const matches = base64String.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+      const matches = base64String.match(
+        /^data:image\/([a-zA-Z]+);base64,(.+)$/,
+      );
       if (!matches || matches.length !== 3) {
         return {
           success: false,
-          error: 'Invalid base64 data URL format'
+          error: 'Invalid base64 data URL format',
         };
       }
 
@@ -57,7 +59,7 @@ export class FileService {
       if (!validExtensions.includes(imageExtension.toLowerCase())) {
         return {
           success: false,
-          error: `Invalid image extension: ${imageExtension}`
+          error: `Invalid image extension: ${imageExtension}`,
         };
       }
 
@@ -83,14 +85,13 @@ export class FileService {
 
       return {
         success: true,
-        url: publicUrl
+        url: publicUrl,
       };
-
     } catch (error) {
       console.error(`❌ Error uploading ${imageType}:`, error);
       return {
         success: false,
-        error: error.message || 'Upload failed'
+        error: error.message || 'Upload failed',
       };
     }
   }
@@ -98,7 +99,9 @@ export class FileService {
   /**
    * Elimina una imagen de marca
    */
-  async deleteBrandImage(imageUrl: string): Promise<{ success: boolean; error?: string }> {
+  async deleteBrandImage(
+    imageUrl: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       if (!imageUrl) return { success: true };
 
@@ -107,12 +110,12 @@ export class FileService {
       if (urlParts.length !== 2) {
         return {
           success: false,
-          error: 'Invalid image URL format'
+          error: 'Invalid image URL format',
         };
       }
 
       const filePath = join(this.uploadsDir, urlParts[1]);
-      
+
       if (existsSync(filePath)) {
         const { unlink } = await import('fs/promises');
         await unlink(filePath);
@@ -120,12 +123,11 @@ export class FileService {
       }
 
       return { success: true };
-
     } catch (error) {
       console.error('❌ Error deleting image:', error);
       return {
         success: false,
-        error: error.message || 'Delete failed'
+        error: error.message || 'Delete failed',
       };
     }
   }
@@ -133,13 +135,16 @@ export class FileService {
   /**
    * Valida el tamaño de una imagen base64
    */
-  validateBase64ImageSize(base64String: string, maxSizeInMB: number = 5): boolean {
+  validateBase64ImageSize(
+    base64String: string,
+    maxSizeInMB: number = 5,
+  ): boolean {
     try {
       // Calcular tamaño aproximado del archivo
       const base64Data = base64String.split(',')[1] || base64String;
       const sizeInBytes = (base64Data.length * 3) / 4;
       const sizeInMB = sizeInBytes / (1024 * 1024);
-      
+
       return sizeInMB <= maxSizeInMB;
     } catch (error) {
       return false;
@@ -149,18 +154,20 @@ export class FileService {
   /**
    * Obtiene información de una imagen base64
    */
-  getBase64ImageInfo(base64String: string): { 
-    mimeType?: string; 
-    extension?: string; 
-    sizeInMB?: number; 
-    isValid: boolean 
+  getBase64ImageInfo(base64String: string): {
+    mimeType?: string;
+    extension?: string;
+    sizeInMB?: number;
+    isValid: boolean;
   } {
     try {
       if (!base64String.startsWith('data:image/')) {
         return { isValid: false };
       }
 
-      const matches = base64String.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+      const matches = base64String.match(
+        /^data:image\/([a-zA-Z]+);base64,(.+)$/,
+      );
       if (!matches || matches.length !== 3) {
         return { isValid: false };
       }
@@ -168,7 +175,7 @@ export class FileService {
       const extension = matches[1];
       const base64Data = matches[2];
       const mimeType = `image/${extension}`;
-      
+
       // Calcular tamaño
       const sizeInBytes = (base64Data.length * 3) / 4;
       const sizeInMB = sizeInBytes / (1024 * 1024);
@@ -177,9 +184,8 @@ export class FileService {
         mimeType,
         extension,
         sizeInMB: Math.round(sizeInMB * 100) / 100,
-        isValid: true
+        isValid: true,
       };
-
     } catch (error) {
       return { isValid: false };
     }

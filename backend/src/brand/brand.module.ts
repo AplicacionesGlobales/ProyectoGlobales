@@ -8,11 +8,7 @@ import { BrandOwnerGuard } from '../common/guards/brand-owner.guard';
 @Module({
   imports: [PrismaModule],
   controllers: [BrandController],
-  providers: [
-    BrandService,
-    FileService,
-    BrandOwnerGuard
-  ],
-  exports: [BrandService]
+  providers: [BrandService, FileService, BrandOwnerGuard],
+  exports: [BrandService],
 })
 export class BrandModule {}

@@ -1,17 +1,17 @@
 // src/appointments/dto/appointment.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { 
-  IsString, 
-  IsOptional, 
-  IsDateString, 
-  IsNumber, 
-  IsEnum, 
-  Min, 
+import {
+  IsString,
+  IsOptional,
+  IsDateString,
+  IsNumber,
+  IsEnum,
+  Min,
   Max,
   IsNotEmpty,
   MinLength,
   MaxLength,
-  IsBoolean
+  IsBoolean,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
@@ -21,7 +21,7 @@ export enum AppointmentStatus {
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
-  NO_SHOW = 'NO_SHOW'
+  NO_SHOW = 'NO_SHOW',
 }
 
 export class AppointmentDto {
@@ -31,11 +31,14 @@ export class AppointmentDto {
   @ApiProperty({ example: 1 })
   brandId: number;
 
-  @ApiPropertyOptional({ example: 2, description: 'ID del cliente (opcional para citas sin asignar)' })
+  @ApiPropertyOptional({
+    example: 2,
+    description: 'ID del cliente (opcional para citas sin asignar)',
+  })
   clientId?: number;
-   @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 8,
-    description: 'ID del tipo de servicio' 
+    description: 'ID del tipo de servicio',
   })
   serviceTypeId?: number;
 
@@ -48,8 +51,8 @@ export class AppointmentDto {
       duration: 30,
       price: 15000,
       color: '#3B82F6',
-      icon: 'scissors'
-    }
+      icon: 'scissors',
+    },
   })
   serviceType?: {
     id: number;
@@ -104,25 +107,26 @@ export class AppointmentDto {
 }
 
 export class CreateAppointmentDto {
-  @ApiProperty({ 
-    example: '2024-08-20T10:00:00Z', 
-    description: 'Fecha y hora de inicio de la cita' 
+  @ApiProperty({
+    example: '2024-08-20T10:00:00Z',
+    description: 'Fecha y hora de inicio de la cita',
   })
   @IsDateString()
   @IsNotEmpty()
   startTime: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 1,
-    description: 'ID del tipo de servicio a agendar (opcional - si no se especifica, usará el servicio por defecto)' 
+    description:
+      'ID del tipo de servicio a agendar (opcional - si no se especifica, usará el servicio por defecto)',
   })
   @IsNumber()
   @IsOptional()
   serviceTypeId?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 'Necesito consulta sobre...',
-    description: 'Notas adicionales para la cita'
+    description: 'Notas adicionales para la cita',
   })
   @IsString()
   @IsOptional()
@@ -134,31 +138,32 @@ export class CreateAppointmentDto {
 export class CreateAppointmentByRootDto {
   @ApiPropertyOptional({
     example: 123,
-    description: 'ID del cliente para asignar la cita (opcional)'
+    description: 'ID del cliente para asignar la cita (opcional)',
   })
   @IsOptional()
   @IsNumber()
   clientId?: number;
 
-  @ApiProperty({ 
-    example: '2024-08-20T10:00:00Z', 
-    description: 'Fecha y hora de inicio de la cita' 
+  @ApiProperty({
+    example: '2024-08-20T10:00:00Z',
+    description: 'Fecha y hora de inicio de la cita',
   })
   @IsDateString()
   @IsNotEmpty()
   startTime: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 1,
-    description: 'ID del tipo de servicio a agendar (opcional - si no se especifica, usará el servicio por defecto)' 
+    description:
+      'ID del tipo de servicio a agendar (opcional - si no se especifica, usará el servicio por defecto)',
   })
   @IsNumber()
   @IsOptional()
   serviceTypeId?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 'Cita agendada por administrador',
-    description: 'Notas adicionales para la cita'
+    description: 'Notas adicionales para la cita',
   })
   @IsString()
   @IsOptional()
@@ -168,17 +173,17 @@ export class CreateAppointmentByRootDto {
 }
 
 export class UpdateAppointmentDto {
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: '2024-08-20T11:00:00Z',
-    description: 'Nueva fecha y hora de inicio de la cita'
+    description: 'Nueva fecha y hora de inicio de la cita',
   })
   @IsDateString()
   @IsOptional()
   startTime?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 45,
-    description: 'Nueva duración en minutos (15-480)'
+    description: 'Nueva duración en minutos (15-480)',
   })
   @IsNumber()
   @Min(15)
@@ -196,17 +201,17 @@ export class UpdateAppointmentDto {
   @IsOptional()
   notes?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 3,
-    description: 'ID del nuevo cliente asignado'
+    description: 'ID del nuevo cliente asignado',
   })
   @IsNumber()
   @IsOptional()
   clientId?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 2,
-    description: 'ID del nuevo tipo de servicio'
+    description: 'ID del nuevo tipo de servicio',
   })
   @IsNumber()
   @IsOptional()
@@ -214,77 +219,76 @@ export class UpdateAppointmentDto {
 }
 
 export class UpdateAppointmentStatusDto {
-  @ApiProperty({ 
+  @ApiProperty({
     enum: AppointmentStatus,
     example: AppointmentStatus.CONFIRMED,
-    description: 'Nuevo estado de la cita'
+    description: 'Nuevo estado de la cita',
   })
   @IsEnum(AppointmentStatus)
   @IsNotEmpty()
   status: AppointmentStatus;
 
-  @ApiPropertyOptional({ 
-    example: 'Cliente confirmó la cita',
-    description: 'Notas adicionales sobre el cambio de estado'
-  })
-
   @ApiPropertyOptional({
-    description: 'Razón del cambio de estado',  // AGREGAR ESTA PROPIEDAD
-    example: 'Cliente no puede asistir'
+    example: 'Cliente confirmó la cita',
+    description: 'Notas adicionales sobre el cambio de estado',
+  })
+  @ApiPropertyOptional({
+    description: 'Razón del cambio de estado', // AGREGAR ESTA PROPIEDAD
+    example: 'Cliente no puede asistir',
   })
   @IsString()
   @IsOptional()
   @MinLength(3)
-  notes?: string
+  notes?: string;
   reason?: string;
 }
 
 export class GetAppointmentsQueryDto {
-  @ApiPropertyOptional({ 
-    example: '2024-08-20', 
-    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)' 
+  @ApiPropertyOptional({
+    example: '2024-08-20',
+    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)',
   })
   @IsOptional()
   @IsDateString()
   startDate?: string;
 
-  @ApiPropertyOptional({ 
-    example: '2024-08-27', 
-    description: 'Fecha de fin para filtrar (YYYY-MM-DD)' 
+  @ApiPropertyOptional({
+    example: '2024-08-27',
+    description: 'Fecha de fin para filtrar (YYYY-MM-DD)',
   })
   @IsOptional()
   @IsDateString()
   endDate?: string;
 
-  @ApiPropertyOptional({ 
-    enum: AppointmentStatus, 
-    description: 'Filtrar por estatus' 
+  @ApiPropertyOptional({
+    enum: AppointmentStatus,
+    description: 'Filtrar por estatus',
   })
   @IsOptional()
   @IsEnum(AppointmentStatus)
   status?: AppointmentStatus;
 
-  @ApiPropertyOptional({ 
-    example: 2, 
-    description: 'Filtrar por cliente' 
+  @ApiPropertyOptional({
+    example: 2,
+    description: 'Filtrar por cliente',
   })
   @IsOptional()
   @IsNumber()
   @Transform(({ value }) => parseInt(value))
   clientId?: number;
 
-  @ApiPropertyOptional({ 
-    example: 1, 
-    description: 'Filtrar por tipo de servicio' 
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Filtrar por tipo de servicio',
   })
   @IsOptional()
   @IsNumber()
   @Transform(({ value }) => parseInt(value))
   serviceTypeId?: number;
 
-  @ApiPropertyOptional({ 
-    example: 1, 
-    description: 'Página' 
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Página',
   })
   @IsOptional()
   @IsNumber()
@@ -292,9 +296,9 @@ export class GetAppointmentsQueryDto {
   @Transform(({ value }) => parseInt(value))
   page?: number = 1;
 
-  @ApiPropertyOptional({ 
-    example: 20, 
-    description: 'Elementos por página' 
+  @ApiPropertyOptional({
+    example: 20,
+    description: 'Elementos por página',
   })
   @IsOptional()
   @IsNumber()
@@ -305,17 +309,17 @@ export class GetAppointmentsQueryDto {
 }
 
 export class AvailableTimeSlotsDto {
-  @ApiProperty({ 
-    example: '2024-08-20', 
-    description: 'Fecha para consultar disponibilidad (YYYY-MM-DD)' 
+  @ApiProperty({
+    example: '2024-08-20',
+    description: 'Fecha para consultar disponibilidad (YYYY-MM-DD)',
   })
   @IsDateString()
   @IsNotEmpty()
   date: string;
 
-  @ApiPropertyOptional({ 
-    example: 30, 
-    description: 'Duración deseada en minutos' 
+  @ApiPropertyOptional({
+    example: 30,
+    description: 'Duración deseada en minutos',
   })
   @IsNumber()
   @Min(15)
@@ -337,19 +341,20 @@ export class TimeSlotDto {
 
 // NUEVO: DTO para cálculo avanzado de disponibilidad
 export class CalculateAvailabilityDto {
-  @ApiProperty({ 
-    example: '2024-08-20', 
-    description: 'Fecha para calcular disponibilidad (YYYY-MM-DD)' 
+  @ApiProperty({
+    example: '2024-08-20',
+    description: 'Fecha para calcular disponibilidad (YYYY-MM-DD)',
   })
   @IsDateString()
   @IsNotEmpty()
   date: string;
 
-  @ApiPropertyOptional({ 
-    example: 30, 
-    description: 'Duración deseada en minutos (opcional, usa la configuración del negocio)',
+  @ApiPropertyOptional({
+    example: 30,
+    description:
+      'Duración deseada en minutos (opcional, usa la configuración del negocio)',
     minimum: 15,
-    maximum: 480
+    maximum: 480,
   })
   @Type(() => Number)
   @IsNumber()
@@ -358,18 +363,20 @@ export class CalculateAvailabilityDto {
   @IsOptional()
   duration?: number;
 
-  @ApiPropertyOptional({ 
-    example: false, 
-    description: 'Incluir slots no disponibles en la respuesta (por defecto false)' 
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Incluir slots no disponibles en la respuesta (por defecto false)',
   })
   @Type(() => Boolean)
   @IsBoolean()
   @IsOptional()
   includeUnavailable?: boolean;
 
-  @ApiPropertyOptional({ 
-    example: true, 
-    description: 'Incluir razones por las que un slot no está disponible (por defecto true)' 
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Incluir razones por las que un slot no está disponible (por defecto true)',
   })
   @Type(() => Boolean)
   @IsBoolean()
@@ -379,83 +386,84 @@ export class CalculateAvailabilityDto {
 
 // NUEVO: DTO para respuesta de cálculo de disponibilidad
 export class AvailabilityCalculationResultDto {
-  @ApiProperty({ 
-    example: '2024-08-20', 
-    description: 'Fecha consultada' 
+  @ApiProperty({
+    example: '2024-08-20',
+    description: 'Fecha consultada',
   })
   date: string;
 
-  @ApiProperty({ 
-    example: 'lunes', 
-    description: 'Nombre del día de la semana' 
+  @ApiProperty({
+    example: 'lunes',
+    description: 'Nombre del día de la semana',
   })
   dayName: string;
 
-  @ApiProperty({ 
-    example: true, 
-    description: 'Indica si el negocio está abierto este día' 
+  @ApiProperty({
+    example: true,
+    description: 'Indica si el negocio está abierto este día',
   })
   isOpen: boolean;
 
-  @ApiProperty({ 
-    example: '09:00', 
-    description: 'Hora de apertura' 
+  @ApiProperty({
+    example: '09:00',
+    description: 'Hora de apertura',
   })
   openTime?: string;
 
-  @ApiProperty({ 
-    example: '18:00', 
-    description: 'Hora de cierre' 
+  @ApiProperty({
+    example: '18:00',
+    description: 'Hora de cierre',
   })
   closeTime?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     type: [TimeSlotDto],
-    description: 'Lista de slots de tiempo disponibles'
+    description: 'Lista de slots de tiempo disponibles',
   })
   slots: TimeSlotDto[];
 
-  @ApiProperty({ 
-    example: 15, 
-    description: 'Total de slots disponibles' 
+  @ApiProperty({
+    example: 15,
+    description: 'Total de slots disponibles',
   })
   totalAvailableSlots: number;
 
-  @ApiProperty({ 
-    example: 3, 
-    description: 'Total de slots ocupados' 
+  @ApiProperty({
+    example: 3,
+    description: 'Total de slots ocupados',
   })
   totalOccupiedSlots: number;
 
-  @ApiProperty({ 
-    example: 18, 
-    description: 'Total de slots calculados' 
+  @ApiProperty({
+    example: 18,
+    description: 'Total de slots calculados',
   })
   totalSlots: number;
 
-  @ApiProperty({ 
-    example: 30, 
-    description: 'Duración utilizada para el cálculo (en minutos)' 
+  @ApiProperty({
+    example: 30,
+    description: 'Duración utilizada para el cálculo (en minutos)',
   })
   usedDuration: number;
 
-  @ApiProperty({ 
-    example: '2024-08-19T10:30:00.000Z', 
-    description: 'Timestamp de cuando se realizó el cálculo' 
+  @ApiProperty({
+    example: '2024-08-19T10:30:00.000Z',
+    description: 'Timestamp de cuando se realizó el cálculo',
   })
   calculatedAt: string;
 
-  @ApiPropertyOptional({ 
-    example: 'Día especial - Feriado', 
-    description: 'Información adicional sobre el día (horarios especiales, etc.)' 
+  @ApiPropertyOptional({
+    example: 'Día especial - Feriado',
+    description:
+      'Información adicional sobre el día (horarios especiales, etc.)',
   })
   specialNote?: string;
 }
 
 export class CancelAppointmentDto {
-  @ApiProperty({ 
+  @ApiProperty({
     example: 'El cliente solicitó cancelar debido a un imprevisto',
-    description: 'Motivo de la cancelación que se enviará al cliente'
+    description: 'Motivo de la cancelación que se enviará al cliente',
   })
   @IsString()
   @IsNotEmpty()
@@ -463,10 +471,10 @@ export class CancelAppointmentDto {
   @MaxLength(500)
   reason: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: true,
     description: 'Si se debe enviar notificación por email al cliente',
-    default: true
+    default: true,
   })
   @IsOptional()
   sendNotification?: boolean;

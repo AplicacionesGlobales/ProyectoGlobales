@@ -1,5 +1,10 @@
 // src/common/guards/appointment-access.guard.ts
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -20,11 +25,11 @@ export class AppointmentAccessGuard implements CanActivate {
       where: {
         brandId: parseInt(brandId),
         userId,
-        isActive: true
+        isActive: true,
       },
       include: {
-        user: true
-      }
+        user: true,
+      },
     });
 
     const isRoot = userBrand?.user.role === 'ROOT';
@@ -37,7 +42,7 @@ export class AppointmentAccessGuard implements CanActivate {
     // Si no es ROOT y se está accediendo a una cita específica
     if (appointmentId) {
       const appointment = await this.prisma.appointment.findUnique({
-        where: { id: parseInt(appointmentId) }
+        where: { id: parseInt(appointmentId) },
       });
 
       if (!appointment || appointment.brandId !== parseInt(brandId)) {

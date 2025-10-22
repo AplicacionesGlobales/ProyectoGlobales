@@ -19,13 +19,13 @@ export class AppointmentStatsDto {
 }
 
 export class RevenueStatsDto {
-  @ApiProperty({ example: 2500.00 })
+  @ApiProperty({ example: 2500.0 })
   total: number;
 
-  @ApiProperty({ example: 125.00 })
+  @ApiProperty({ example: 125.0 })
   average: number;
 
-  @ApiProperty({ example: 350.00 })
+  @ApiProperty({ example: 350.0 })
   lastPayment: number;
 }
 
@@ -94,7 +94,7 @@ export class TopClientDto {
   @ApiProperty({ example: 25 })
   totalAppointments: number;
 
-  @ApiProperty({ example: 2500.00 })
+  @ApiProperty({ example: 2500.0 })
   totalRevenue: number;
 
   @ApiPropertyOptional({ example: '2024-08-20T10:00:00Z' })
@@ -170,7 +170,7 @@ export class ClientsSummaryResponseDto {
   @ApiProperty({ type: ClientRetentionDto })
   retention: ClientRetentionDto;
 
-  @ApiProperty({ example: 125.50 })
+  @ApiProperty({ example: 125.5 })
   averageClientValue: number;
 
   @ApiProperty({ example: 85.5 })

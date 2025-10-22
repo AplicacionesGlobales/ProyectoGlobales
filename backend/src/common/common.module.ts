@@ -15,7 +15,7 @@ import { EmailService } from './services/email/email.service';
     PlanService,
     PaymentService,
     PricingService,
-    EmailService
+    EmailService,
   ],
   exports: [
     PrismaService,
@@ -23,7 +23,7 @@ import { EmailService } from './services/email/email.service';
     PlanService,
     PaymentService,
     PricingService,
-    EmailService
-  ]
+    EmailService,
+  ],
 })
 export class CommonModule {}

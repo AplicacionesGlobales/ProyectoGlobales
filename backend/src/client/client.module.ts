@@ -19,15 +19,7 @@ import { ClientStatsService } from './services/client-stats.service';
     AuthModule, // Para usar guards y servicios de autenticación
   ],
   controllers: [ClientController, ClientProfileController],
-  providers: [
-    ClientService,
-    ClientValidationService,
-    ClientStatsService,
-  ],
-  exports: [
-    ClientService,
-    ClientValidationService,
-    ClientStatsService,
-  ],
+  providers: [ClientService, ClientValidationService, ClientStatsService],
+  exports: [ClientService, ClientValidationService, ClientStatsService],
 })
-export class ClientModule { }
+export class ClientModule {}

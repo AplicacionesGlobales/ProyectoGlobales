@@ -1,11 +1,11 @@
 // backend/src/brand-register/brand-registration.controller.ts
-import { 
-  Controller, 
-  Post, 
-  Body, 
-  ValidationPipe, 
-  HttpCode, 
-  HttpStatus
+import {
+  Controller,
+  Post,
+  Body,
+  ValidationPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { BrandRegistrationService } from './brand-registration.service';
@@ -16,12 +16,14 @@ import { Public } from '../common/decorators/public-auth.decorator';
 @ApiTags('Registro de Marca')
 @Controller('auth')
 export class BrandRegistrationController {
-  constructor(private readonly brandRegistrationService: BrandRegistrationService) {}
+  constructor(
+    private readonly brandRegistrationService: BrandRegistrationService,
+  ) {}
 
   @Post('register/brand')
   @Public()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Registrar nueva marca completa',
     description: `Crea una nueva marca con toda la información del flujo de onboarding. 
     Incluye:
@@ -30,11 +32,11 @@ export class BrandRegistrationController {
     - Selección de plan y features
     - Paleta de colores
     - Configuración de citas y tipos de servicio (opcional)
-    - Las imágenes se suben posteriormente mediante el endpoint /files/brand-images`
+    - Las imágenes se suben posteriormente mediante el endpoint /files/brand-images`,
   })
   @ApiBody({ type: CreateBrandDto })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Marca creada exitosamente',
     schema: {
       example: {
@@ -45,13 +47,13 @@ export class BrandRegistrationController {
           brandId: 456,
           email: 'usuario@ejemplo.com',
           brandName: 'Mi Empresa',
-          serviceTypesCreated: 3
-        }
-      }
-    }
+          serviceTypesCreated: 3,
+        },
+      },
+    },
   })
-  @ApiResponse({ 
-    status: 400, 
+  @ApiResponse({
+    status: 400,
     description: 'Datos inválidos o email ya registrado',
     schema: {
       example: {
@@ -59,14 +61,14 @@ export class BrandRegistrationController {
         errors: [
           {
             code: 400,
-            description: 'El email ya está registrado'
-          }
-        ]
-      }
-    }
+            description: 'El email ya está registrado',
+          },
+        ],
+      },
+    },
   })
   async registerBrand(
-    @Body(ValidationPipe) createBrandDto: CreateBrandDto
+    @Body(ValidationPipe) createBrandDto: CreateBrandDto,
   ): Promise<BaseResponseDto> {
     // Logging mejorado para incluir configuración de citas
     console.log('📥 RECEIVED REGISTRATION REQUEST:', {
@@ -77,29 +79,39 @@ export class BrandRegistrationController {
       selectedFeatures: createBrandDto.selectedFeatureIds.length,
       appointmentSettings: {
         enabled: createBrandDto.appointmentSettings?.useServiceTypes || false,
-        serviceTypes: createBrandDto.appointmentSettings?.serviceTypes?.length || 0,
-        defaultDuration: createBrandDto.appointmentSettings?.defaultDuration || 30
-      }
+        serviceTypes:
+          createBrandDto.appointmentSettings?.serviceTypes?.length || 0,
+        defaultDuration:
+          createBrandDto.appointmentSettings?.defaultDuration || 30,
+      },
     });
-    
+
     try {
       return await this.brandRegistrationService.registerBrand(createBrandDto);
-      
     } catch (error) {
       console.error('❌ Registration controller error:', error);
-      
+
       // Manejo específico de errores de validación de tipos de servicio
-      if (error.message?.includes('duración') || error.message?.includes('múltiplo')) {
+      if (
+        error.message?.includes('duración') ||
+        error.message?.includes('múltiplo')
+      ) {
         return BaseResponseDto.singleError(400, error.message);
       }
-      
+
       // Manejo de errores de duplicación
-      if (error.message?.includes('ya existe') || error.message?.includes('already exists')) {
+      if (
+        error.message?.includes('ya existe') ||
+        error.message?.includes('already exists')
+      ) {
         return BaseResponseDto.singleError(400, error.message);
       }
-      
+
       // Error genérico
-      return BaseResponseDto.singleError(400, error.message || 'Invalid request data');
+      return BaseResponseDto.singleError(
+        400,
+        error.message || 'Invalid request data',
+      );
     }
   }
 }

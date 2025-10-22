@@ -4,9 +4,9 @@ import { IsString, IsDateString, IsNotEmpty } from 'class-validator';
 import { AppointmentStatus } from './appointment.dto';
 
 export class GetCalendarMonthDto {
-  @ApiProperty({ 
-    example: '2024-08', 
-    description: 'Mes en formato YYYY-MM' 
+  @ApiProperty({
+    example: '2024-08',
+    description: 'Mes en formato YYYY-MM',
   })
   @IsString()
   @IsNotEmpty()
@@ -35,13 +35,22 @@ export class DayOccupancyDto {
   @ApiProperty({ example: 180, description: 'Total de minutos ocupados' })
   totalOccupiedMinutes: number;
 
-  @ApiProperty({ example: 480, description: 'Total de minutos disponibles en el día' })
+  @ApiProperty({
+    example: 480,
+    description: 'Total de minutos disponibles en el día',
+  })
   totalAvailableMinutes: number;
 
-  @ApiProperty({ example: 37.5, description: 'Porcentaje de ocupación del día' })
+  @ApiProperty({
+    example: 37.5,
+    description: 'Porcentaje de ocupación del día',
+  })
   occupancyPercentage: number;
 
-  @ApiProperty({ example: true, description: 'Si el negocio está abierto este día' })
+  @ApiProperty({
+    example: true,
+    description: 'Si el negocio está abierto este día',
+  })
   isBusinessOpen: boolean;
 }
 
@@ -61,13 +70,22 @@ export class MonthSummaryDto {
   @ApiProperty({ example: 5 })
   cancelledAppointments: number;
 
-  @ApiProperty({ example: 1350, description: 'Total de minutos ocupados en el mes' })
+  @ApiProperty({
+    example: 1350,
+    description: 'Total de minutos ocupados en el mes',
+  })
   totalOccupiedMinutes: number;
 
-  @ApiProperty({ example: 10080, description: 'Total de minutos disponibles en el mes' })
+  @ApiProperty({
+    example: 10080,
+    description: 'Total de minutos disponibles en el mes',
+  })
   totalAvailableMinutes: number;
 
-  @ApiProperty({ example: 13.4, description: 'Porcentaje de ocupación promedio del mes' })
+  @ApiProperty({
+    example: 13.4,
+    description: 'Porcentaje de ocupación promedio del mes',
+  })
   averageOccupancyPercentage: number;
 
   @ApiProperty({ example: 22, description: 'Días laborables en el mes' })

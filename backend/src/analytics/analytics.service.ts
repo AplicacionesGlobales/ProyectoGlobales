@@ -32,7 +32,10 @@ export class AnalyticsService {
       });
 
       if (!brand) {
-        return BaseResponseDto.singleError(404, `Brand with ID ${brandId} not found`);
+        return BaseResponseDto.singleError(
+          404,
+          `Brand with ID ${brandId} not found`,
+        );
       }
 
       const now = referenceDate || new Date();
@@ -56,10 +59,22 @@ export class AnalyticsService {
         monthly,
         annual,
         breakdown: {
-          daily: await this.getRevenueBreakdown(brandId, ...this.getDayRange(now)),
-          weekly: await this.getRevenueBreakdown(brandId, ...this.getWeekRange(now)),
-          monthly: await this.getRevenueBreakdown(brandId, ...this.getMonthRange(now)),
-          annual: await this.getRevenueBreakdown(brandId, ...this.getYearRange(now)),
+          daily: await this.getRevenueBreakdown(
+            brandId,
+            ...this.getDayRange(now),
+          ),
+          weekly: await this.getRevenueBreakdown(
+            brandId,
+            ...this.getWeekRange(now),
+          ),
+          monthly: await this.getRevenueBreakdown(
+            brandId,
+            ...this.getMonthRange(now),
+          ),
+          annual: await this.getRevenueBreakdown(
+            brandId,
+            ...this.getYearRange(now),
+          ),
         },
       };
 
@@ -203,7 +218,10 @@ export class AnalyticsService {
     return {
       currentWeek: currentWeekRevenue,
       previousWeek: previousWeekRevenue,
-      comparison: this.calculateComparison(currentWeekRevenue, previousWeekRevenue),
+      comparison: this.calculateComparison(
+        currentWeekRevenue,
+        previousWeekRevenue,
+      ),
       weekStartDate: currentWeekStart.toISOString(),
       weekEndDate: currentWeekEnd.toISOString(),
     };
@@ -216,9 +234,15 @@ export class AnalyticsService {
     brandId: number,
     referenceDate: Date,
   ): Promise<MonthlyRevenueMetrics> {
-    const [currentMonthStart, currentMonthEnd] = this.getMonthRange(referenceDate);
-    const previousMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 1, 1);
-    const [previousMonthStart, previousMonthEnd] = this.getMonthRange(previousMonth);
+    const [currentMonthStart, currentMonthEnd] =
+      this.getMonthRange(referenceDate);
+    const previousMonth = new Date(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth() - 1,
+      1,
+    );
+    const [previousMonthStart, previousMonthEnd] =
+      this.getMonthRange(previousMonth);
 
     const [currentMonthRevenue, previousMonthRevenue] = await Promise.all([
       this.getTotalRevenue(brandId, currentMonthStart, currentMonthEnd),
@@ -228,7 +252,10 @@ export class AnalyticsService {
     return {
       currentMonth: currentMonthRevenue,
       previousMonth: previousMonthRevenue,
-      comparison: this.calculateComparison(currentMonthRevenue, previousMonthRevenue),
+      comparison: this.calculateComparison(
+        currentMonthRevenue,
+        previousMonthRevenue,
+      ),
       month: `${referenceDate.getFullYear()}-${String(referenceDate.getMonth() + 1).padStart(2, '0')}`,
       year: referenceDate.getFullYear(),
     };
@@ -243,7 +270,8 @@ export class AnalyticsService {
   ): Promise<AnnualRevenueMetrics> {
     const [currentYearStart, currentYearEnd] = this.getYearRange(referenceDate);
     const previousYear = new Date(referenceDate.getFullYear() - 1, 0, 1);
-    const [previousYearStart, previousYearEnd] = this.getYearRange(previousYear);
+    const [previousYearStart, previousYearEnd] =
+      this.getYearRange(previousYear);
 
     const [currentYearRevenue, previousYearRevenue] = await Promise.all([
       this.getTotalRevenue(brandId, currentYearStart, currentYearEnd),
@@ -253,7 +281,10 @@ export class AnalyticsService {
     return {
       currentYear: currentYearRevenue,
       previousYear: previousYearRevenue,
-      comparison: this.calculateComparison(currentYearRevenue, previousYearRevenue),
+      comparison: this.calculateComparison(
+        currentYearRevenue,
+        previousYearRevenue,
+      ),
       year: referenceDate.getFullYear(),
     };
   }
@@ -309,7 +340,9 @@ export class AnalyticsService {
       this.getAppointmentsRevenue(brandId, startDate, endDate),
     ]);
 
-    return paymentsRevenue.services + paymentsRevenue.products + appointmentsRevenue;
+    return (
+      paymentsRevenue.services + paymentsRevenue.products + appointmentsRevenue
+    );
   }
 
   /**
@@ -431,9 +464,13 @@ export class AnalyticsService {
   /**
    * Calcula la comparación entre dos valores
    */
-  private calculateComparison(current: number, previous: number): PeriodComparison {
+  private calculateComparison(
+    current: number,
+    previous: number,
+  ): PeriodComparison {
     const difference = current - previous;
-    const percentageChange = previous > 0 ? (difference / previous) * 100 : current > 0 ? 100 : 0;
+    const percentageChange =
+      previous > 0 ? (difference / previous) * 100 : current > 0 ? 100 : 0;
 
     return {
       current,
@@ -447,8 +484,24 @@ export class AnalyticsService {
    * Obtiene el rango de fechas de un día (00:00:00 - 23:59:59)
    */
   private getDayRange(date: Date): [Date, Date] {
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-    const end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+    const start = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+    const end = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
     return [start, end];
   }
 
@@ -475,7 +528,15 @@ export class AnalyticsService {
    */
   private getMonthRange(date: Date): [Date, Date] {
     const start = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
-    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+    const end = new Date(
+      date.getFullYear(),
+      date.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
     return [start, end];
   }
 

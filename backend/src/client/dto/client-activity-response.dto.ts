@@ -18,8 +18,8 @@ export class ClientActivityDto {
   @ApiPropertyOptional({ example: 'Juan Pérez' })
   createdBy?: string;
 
-  @ApiPropertyOptional({ 
-    example: { appointmentId: 456, service: 'Corte de cabello' }
+  @ApiPropertyOptional({
+    example: { appointmentId: 456, service: 'Corte de cabello' },
   })
   metadata?: any;
 }
@@ -28,14 +28,14 @@ export class ClientActivityResponseDto {
   @ApiProperty({ type: [ClientActivityDto] })
   activities: ClientActivityDto[];
 
-  @ApiProperty({ 
+  @ApiProperty({
     type: 'object',
     properties: {
       total: { type: 'number', example: 100 },
       page: { type: 'number', example: 1 },
       limit: { type: 'number', example: 10 },
-      totalPages: { type: 'number', example: 10 }
-    }
+      totalPages: { type: 'number', example: 10 },
+    },
   })
   pagination: {
     total: number;

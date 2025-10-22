@@ -9,8 +9,8 @@ export class BrandRegistrationResponseDto {
       username: 'usuario_abc123',
       firstName: 'Juan',
       lastName: 'Pérez',
-      role: 'ROOT'
-    }
+      role: 'ROOT',
+    },
   })
   user: {
     id: number;
@@ -32,8 +32,8 @@ export class BrandRegistrationResponseDto {
       features: ['online_orders', 'reservations'],
       logoUrl: '/uploads/brands/1/logo_1692123456789.png',
       isotipoUrl: '/uploads/brands/1/isotipo_1692123456789.png',
-      imagotipoUrl: '/uploads/brands/1/imagotipo_1692123456789.png'
-    }
+      imagotipoUrl: '/uploads/brands/1/imagotipo_1692123456789.png',
+    },
   })
   brand: {
     id: number;
@@ -55,8 +55,8 @@ export class BrandRegistrationResponseDto {
       secondary: '#34a853',
       accent: '#fbbc04',
       neutral: '#9aa0a6',
-      success: '#137333'
-    }
+      success: '#137333',
+    },
   })
   colorPalette: {
     id: number;
@@ -73,9 +73,13 @@ export class BrandRegistrationResponseDto {
       id: 1,
       type: 'complete',
       price: 167,
-      features: ['Gestión de pedidos online', 'Sistema de reservas', 'Panel analítico'],
-      billingPeriod: 'monthly'
-    }
+      features: [
+        'Gestión de pedidos online',
+        'Sistema de reservas',
+        'Panel analítico',
+      ],
+      billingPeriod: 'monthly',
+    },
   })
   plan: {
     id: number;
@@ -90,8 +94,8 @@ export class BrandRegistrationResponseDto {
     example: {
       status: 'completed',
       tilopayReference: 'TPAY_123456789',
-      processedAt: '2025-08-15T10:30:00.000Z'
-    }
+      processedAt: '2025-08-15T10:30:00.000Z',
+    },
   })
   payment?: {
     status: string;
@@ -101,7 +105,7 @@ export class BrandRegistrationResponseDto {
 
   @ApiProperty({
     description: 'JWT access token',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   token: string;
 }

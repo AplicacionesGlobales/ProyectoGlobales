@@ -1,19 +1,24 @@
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { AppointmentStatus, UserRole } from 'generated/prisma'; 
-import { 
+import { AppointmentStatus, UserRole } from 'generated/prisma';
+import {
   VALID_STATUS_TRANSITIONS,
   STATUS_CHANGE_REASONS_REQUIRED,
   FINAL_STATUSES,
   CANCELLATION_MIN_HOURS,
-  STATUS_TRANSITION_PERMISSIONS
+  STATUS_TRANSITION_PERMISSIONS,
 } from './appointment-status.constants';
-import { 
-  StatusTransitionDto, 
-  TransitionValidationResultDto, 
-  StatusHistoryDto, 
-  StatusStatisticsDto 
+import {
+  StatusTransitionDto,
+  TransitionValidationResultDto,
+  StatusHistoryDto,
+  StatusStatisticsDto,
 } from './dto/status-transition.dto';
 
 // Contexto para la transición de estado
@@ -34,9 +39,7 @@ export interface StatusTransitionContext {
 
 @Injectable()
 export class AppointmentStatusManagerService {
-  constructor(
-    private readonly prisma: PrismaService
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Valida si una transición de estado es válida
@@ -44,7 +47,7 @@ export class AppointmentStatusManagerService {
   async validateTransition(
     appointmentId: number,
     newStatus: AppointmentStatus,
-    userId: number
+    userId: number,
   ): Promise<TransitionValidationResultDto> {
     // Obtener la cita con toda la información necesaria
     const appointment = await this.prisma.appointment.findUnique({
@@ -52,11 +55,11 @@ export class AppointmentStatusManagerService {
       include: {
         brand: {
           include: {
-            appointmentSettings: true
-          }
+            appointmentSettings: true,
+          },
         },
-        client: true
-      }
+        client: true,
+      },
     });
 
     if (!appointment) {
@@ -67,7 +70,7 @@ export class AppointmentStatusManagerService {
     const result: TransitionValidationResultDto = {
       isValid: true,
       allowedTransitions: VALID_STATUS_TRANSITIONS[currentStatus] || [],
-      warnings: []
+      warnings: [],
     };
 
     // Verificar si es el mismo estado
@@ -75,7 +78,7 @@ export class AppointmentStatusManagerService {
       return {
         ...result,
         isValid: false,
-        errorMessage: 'La cita ya está en este estado'
+        errorMessage: 'La cita ya está en este estado',
       };
     }
 
@@ -84,7 +87,7 @@ export class AppointmentStatusManagerService {
       return {
         ...result,
         isValid: false,
-        errorMessage: `No se pueden hacer cambios desde el estado ${currentStatus}`
+        errorMessage: `No se pueden hacer cambios desde el estado ${currentStatus}`,
       };
     }
 
@@ -93,7 +96,7 @@ export class AppointmentStatusManagerService {
       return {
         ...result,
         isValid: false,
-        errorMessage: `No se puede cambiar de ${currentStatus} a ${newStatus}`
+        errorMessage: `No se puede cambiar de ${currentStatus} a ${newStatus}`,
       };
     }
 
@@ -109,7 +112,7 @@ export class AppointmentStatusManagerService {
       const hoursUntil = this.getHoursUntilAppointment(appointment.startTime);
       if (hoursUntil < CANCELLATION_MIN_HOURS && hoursUntil >= 0) {
         result.warnings?.push(
-          `Cancelación con menos de ${CANCELLATION_MIN_HOURS} horas de anticipación`
+          `Cancelación con menos de ${CANCELLATION_MIN_HOURS} horas de anticipación`,
         );
       }
     }
@@ -127,7 +130,7 @@ export class AppointmentStatusManagerService {
   async executeTransition(
     appointmentId: number,
     transitionDto: StatusTransitionDto,
-    userId: number
+    userId: number,
   ): Promise<any> {
     return await this.prisma.$transaction(async (tx) => {
       // Obtener la cita con bloqueo para evitar condiciones de carrera
@@ -137,8 +140,8 @@ export class AppointmentStatusManagerService {
           brand: true,
           client: true,
           createdBy: true,
-          serviceType: true
-        }
+          serviceType: true,
+        },
       });
 
       if (!appointment) {
@@ -150,9 +153,9 @@ export class AppointmentStatusManagerService {
         where: { id: userId },
         include: {
           userBrands: {
-            where: { brandId: appointment.brandId }
-          }
-        }
+            where: { brandId: appointment.brandId },
+          },
+        },
       });
 
       if (!user) {
@@ -174,10 +177,10 @@ export class AppointmentStatusManagerService {
         isOwner,
         reason: transitionDto.reason,
         notes: transitionDto.notes,
-        rescheduleDateTime: transitionDto.rescheduleDateTime 
-          ? new Date(transitionDto.rescheduleDateTime) 
+        rescheduleDateTime: transitionDto.rescheduleDateTime
+          ? new Date(transitionDto.rescheduleDateTime)
           : undefined,
-        notifyClient: transitionDto.notifyClient ?? true
+        notifyClient: transitionDto.notifyClient ?? true,
       };
 
       // Validar la transición
@@ -189,15 +192,20 @@ export class AppointmentStatusManagerService {
       // Actualizar el estado de la cita
       const updateData: any = {
         status: transitionDto.newStatus,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       // Si es reprogramación, actualizar fechas
-      if (transitionDto.rescheduleDateTime && transitionDto.newStatus === AppointmentStatus.PENDING) {
+      if (
+        transitionDto.rescheduleDateTime &&
+        transitionDto.newStatus === AppointmentStatus.PENDING
+      ) {
         const newStartTime = new Date(transitionDto.rescheduleDateTime);
         const duration = appointment.duration;
         updateData.startTime = newStartTime;
-        updateData.endTime = new Date(newStartTime.getTime() + duration * 60000);
+        updateData.endTime = new Date(
+          newStartTime.getTime() + duration * 60000,
+        );
       }
 
       const updatedAppointment = await tx.appointment.update({
@@ -210,15 +218,15 @@ export class AppointmentStatusManagerService {
               firstName: true,
               lastName: true,
               email: true,
-              phone: true
-            }
+              phone: true,
+            },
           },
           brand: {
             select: {
               id: true,
               name: true,
-              phone: true
-            }
+              phone: true,
+            },
           },
           serviceType: true,
           createdBy: {
@@ -226,10 +234,10 @@ export class AppointmentStatusManagerService {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
-          }
-        }
+              email: true,
+            },
+          },
+        },
       });
 
       // Registrar en el historial
@@ -245,9 +253,9 @@ export class AppointmentStatusManagerService {
             userRole,
             isOwner,
             rescheduleDateTime: transitionDto.rescheduleDateTime,
-            previousStartTime: appointment.startTime.toISOString()
-          }
-        }
+            previousStartTime: appointment.startTime.toISOString(),
+          },
+        },
       });
 
       // Emitir eventos para notificaciones y otras acciones
@@ -264,12 +272,12 @@ export class AppointmentStatusManagerService {
    */
   async getStatusHistory(
     appointmentId: number,
-    userId: number
+    userId: number,
   ): Promise<StatusHistoryDto[]> {
     // Verificar permisos
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
-      include: { brand: true }
+      include: { brand: true },
     });
 
     if (!appointment) {
@@ -279,7 +287,9 @@ export class AppointmentStatusManagerService {
     // Verificar acceso
     const hasAccess = await this.validateUserAccess(appointment, userId);
     if (!hasAccess) {
-      throw new ForbiddenException('No tiene permisos para ver el historial de esta cita');
+      throw new ForbiddenException(
+        'No tiene permisos para ver el historial de esta cita',
+      );
     }
 
     const history = await this.prisma.appointmentStatusHistory.findMany({
@@ -291,14 +301,14 @@ export class AppointmentStatusManagerService {
             firstName: true,
             lastName: true,
             email: true,
-            role: true
-          }
-        }
+            role: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
 
-    return history.map(h => ({
+    return history.map((h) => ({
       id: h.id,
       appointmentId: h.appointmentId,
       fromStatus: h.fromStatus,
@@ -310,10 +320,10 @@ export class AppointmentStatusManagerService {
         firstName: h.changedByUser.firstName,
         lastName: h.changedByUser.lastName || '',
         email: h.changedByUser.email,
-        role: h.changedByUser.role
+        role: h.changedByUser.role,
       },
       createdAt: h.createdAt.toISOString(),
-      metadata: h.metadata as Record<string, any>
+      metadata: h.metadata as Record<string, any>,
     }));
   }
 
@@ -323,21 +333,21 @@ export class AppointmentStatusManagerService {
   async getStatusStatistics(
     brandId: number,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<StatusStatisticsDto> {
     const where: any = { brandId };
 
     if (startDate && endDate) {
       where.createdAt = {
         gte: startDate,
-        lte: endDate
+        lte: endDate,
       };
     }
 
     // Obtener distribución de estados
     const appointments = await this.prisma.appointment.findMany({
       where,
-      select: { status: true }
+      select: { status: true },
     });
 
     const statusDistribution: Record<AppointmentStatus, number> = {
@@ -346,10 +356,10 @@ export class AppointmentStatusManagerService {
       [AppointmentStatus.IN_PROGRESS]: 0,
       [AppointmentStatus.COMPLETED]: 0,
       [AppointmentStatus.CANCELLED]: 0,
-      [AppointmentStatus.NO_SHOW]: 0
+      [AppointmentStatus.NO_SHOW]: 0,
     };
 
-    appointments.forEach(apt => {
+    appointments.forEach((apt) => {
       statusDistribution[apt.status]++;
     });
 
@@ -359,97 +369,104 @@ export class AppointmentStatusManagerService {
     const noShowCount = statusDistribution[AppointmentStatus.NO_SHOW];
 
     // Obtener razones de cancelación más comunes
-    const cancellationReasons = await this.prisma.appointmentStatusHistory.groupBy({
-      by: ['reason'],
-      where: {
-        toStatus: AppointmentStatus.CANCELLED,
-        appointment: where,
-        reason: { not: null }
-      },
-      _count: {
-        reason: true
-      },
-      orderBy: {
+    const cancellationReasons =
+      await this.prisma.appointmentStatusHistory.groupBy({
+        by: ['reason'],
+        where: {
+          toStatus: AppointmentStatus.CANCELLED,
+          appointment: where,
+          reason: { not: null },
+        },
         _count: {
-          reason: 'desc'
-        }
-      },
-      take: 5
-    });
+          reason: true,
+        },
+        orderBy: {
+          _count: {
+            reason: 'desc',
+          },
+        },
+        take: 5,
+      });
 
     const topCancellationReasons = cancellationReasons
-      .filter(r => r.reason)
-      .map(r => ({
+      .filter((r) => r.reason)
+      .map((r) => ({
         reason: r.reason!,
         count: r._count.reason,
-        percentage: cancelledCount > 0 ? (r._count.reason / cancelledCount) * 100 : 0
+        percentage:
+          cancelledCount > 0 ? (r._count.reason / cancelledCount) * 100 : 0,
       }));
 
     return {
       statusDistribution,
-      cancellationRate: totalAppointments > 0 
-        ? (cancelledCount / totalAppointments) * 100 
-        : 0,
-      completionRate: totalAppointments > 0 
-        ? (completedCount / totalAppointments) * 100 
-        : 0,
-      noShowRate: totalAppointments > 0 
-        ? (noShowCount / totalAppointments) * 100 
-        : 0,
+      cancellationRate:
+        totalAppointments > 0 ? (cancelledCount / totalAppointments) * 100 : 0,
+      completionRate:
+        totalAppointments > 0 ? (completedCount / totalAppointments) * 100 : 0,
+      noShowRate:
+        totalAppointments > 0 ? (noShowCount / totalAppointments) * 100 : 0,
       topCancellationReasons,
       totalAppointments,
       dateRange: {
         startDate: startDate?.toISOString() || 'N/A',
-        endDate: endDate?.toISOString() || 'N/A'
-      }
+        endDate: endDate?.toISOString() || 'N/A',
+      },
     };
   }
 
   // Métodos privados auxiliares
 
-  private async validateTransitionWithContext(context: StatusTransitionContext): Promise<void> {
+  private async validateTransitionWithContext(
+    context: StatusTransitionContext,
+  ): Promise<void> {
     const validation = await this.validateTransition(
       context.appointmentId,
       context.newStatus,
-      context.userId
+      context.userId,
     );
 
     if (!validation.isValid) {
       throw new BadRequestException({
         message: validation.errorMessage,
         requiredFields: validation.requiredFields,
-        allowedTransitions: validation.allowedTransitions
+        allowedTransitions: validation.allowedTransitions,
       });
     }
 
     // Verificar campos requeridos
     if (validation.requiredFields?.includes('reason') && !context.reason) {
       throw new BadRequestException(
-        `Se requiere una razón para cambiar al estado ${context.newStatus}`
+        `Se requiere una razón para cambiar al estado ${context.newStatus}`,
       );
     }
   }
 
   private async applyBusinessRules(
-    context: StatusTransitionContext, 
-    appointment: any
+    context: StatusTransitionContext,
+    appointment: any,
   ): Promise<void> {
     // Regla: Solo ROOT/ADMIN pueden marcar como NO_SHOW
     if (context.newStatus === AppointmentStatus.NO_SHOW) {
       if (context.userRole !== UserRole.ROOT && !context.isOwner) {
-        throw new ForbiddenException('Solo administradores pueden marcar citas como NO_SHOW');
+        throw new ForbiddenException(
+          'Solo administradores pueden marcar citas como NO_SHOW',
+        );
       }
     }
 
     // Regla: No se puede iniciar una cita no confirmada
     if (context.newStatus === AppointmentStatus.IN_PROGRESS) {
       if (appointment.status !== AppointmentStatus.CONFIRMED) {
-        throw new BadRequestException('Solo se pueden iniciar citas confirmadas');
+        throw new BadRequestException(
+          'Solo se pueden iniciar citas confirmadas',
+        );
       }
 
       // Solo ROOT/ADMIN pueden iniciar citas
       if (context.userRole !== UserRole.ROOT && !context.isOwner) {
-        throw new ForbiddenException('Solo administradores pueden iniciar citas');
+        throw new ForbiddenException(
+          'Solo administradores pueden iniciar citas',
+        );
       }
     }
 
@@ -461,7 +478,7 @@ export class AppointmentStatusManagerService {
         // Solo clientes tienen restricción de tiempo mínimo
         if (context.userRole === UserRole.CLIENT && !context.isOwner) {
           throw new BadRequestException(
-            `Las citas deben cancelarse con al menos ${CANCELLATION_MIN_HOURS} horas de anticipación`
+            `Las citas deben cancelarse con al menos ${CANCELLATION_MIN_HOURS} horas de anticipación`,
           );
         }
       }
@@ -469,12 +486,20 @@ export class AppointmentStatusManagerService {
 
     // Regla: No se puede modificar una cita que ya pasó
     const now = new Date();
-    if (appointment.endTime < now && context.newStatus !== AppointmentStatus.NO_SHOW) {
-      throw new BadRequestException('No se puede modificar una cita que ya pasó');
+    if (
+      appointment.endTime < now &&
+      context.newStatus !== AppointmentStatus.NO_SHOW
+    ) {
+      throw new BadRequestException(
+        'No se puede modificar una cita que ya pasó',
+      );
     }
   }
 
-  private async validateUserAccess(appointment: any, userId: number): Promise<boolean> {
+  private async validateUserAccess(
+    appointment: any,
+    userId: number,
+  ): Promise<boolean> {
     // Es el cliente de la cita
     if (appointment.clientId === userId) {
       return true;
@@ -490,12 +515,15 @@ export class AppointmentStatusManagerService {
       where: {
         brandId: appointment.brandId,
         userId,
-        isActive: true
+        isActive: true,
       },
-      include: { user: true }
+      include: { user: true },
     });
 
-    return userBrand?.user.role === UserRole.ROOT || userBrand?.user.role === UserRole.ADMIN;
+    return (
+      userBrand?.user.role === UserRole.ROOT ||
+      userBrand?.user.role === UserRole.ADMIN
+    );
   }
 
   private getHoursUntilAppointment(appointmentTime: Date): number {
@@ -504,14 +532,17 @@ export class AppointmentStatusManagerService {
     return diffMs / (1000 * 60 * 60);
   }
 
-  private emitStatusChangeEvents(appointment: any, context: StatusTransitionContext): void {
+  private emitStatusChangeEvents(
+    appointment: any,
+    context: StatusTransitionContext,
+  ): void {
     // Registrar el cambio para futuras implementaciones de notificaciones
     console.log('Status changed:', {
       appointmentId: appointment.id,
       from: context.currentStatus,
       to: context.newStatus,
       changedBy: context.userId,
-      reason: context.reason
+      reason: context.reason,
     });
 
     // TODO: Implementar notificaciones cuando se configure el sistema de eventos
@@ -523,7 +554,7 @@ export class AppointmentStatusManagerService {
       [AppointmentStatus.CANCELLED]: 'appointment.cancelled',
       [AppointmentStatus.COMPLETED]: 'appointment.completed',
       [AppointmentStatus.NO_SHOW]: 'appointment.no_show',
-      [AppointmentStatus.IN_PROGRESS]: 'appointment.started'
+      [AppointmentStatus.IN_PROGRESS]: 'appointment.started',
     };
 
     const specificEvent = eventMap[context.newStatus];
@@ -532,5 +563,5 @@ export class AppointmentStatusManagerService {
       // TODO: Aquí podrías llamar a un servicio de notificaciones
       // this.notificationService.send(specificEvent, { appointment, context });
     }
-}
+  }
 }

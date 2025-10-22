@@ -2,7 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LandingDataService } from './landing-data.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
-import { BusinessTypeDto, FeatureDto, PlanDto, LandingConfigDto } from './types';
+import {
+  BusinessTypeDto,
+  FeatureDto,
+  PlanDto,
+  LandingConfigDto,
+} from './types';
 
 // Mock data
 const mockBusinessTypes = [
@@ -186,7 +191,9 @@ describe('LandingDataService', () => {
 
     it('should handle errors when fetching business types', async () => {
       // Arrange
-      prismaService.businessType.findMany.mockRejectedValue(new Error('Query failed'));
+      prismaService.businessType.findMany.mockRejectedValue(
+        new Error('Query failed'),
+      );
 
       // Act
       const result = await service.getBusinessTypes();
@@ -213,11 +220,7 @@ describe('LandingDataService', () => {
       expect(result.data![1].subtitle).toBeUndefined();
       expect(prismaService.feature.findMany).toHaveBeenCalledWith({
         where: { isActive: true },
-        orderBy: [
-          { category: 'asc' },
-          { order: 'asc' },
-          { title: 'asc' },
-        ],
+        orderBy: [{ category: 'asc' }, { order: 'asc' }, { title: 'asc' }],
       });
     });
   });
@@ -242,11 +245,7 @@ describe('LandingDataService', () => {
             has: 'restaurant',
           },
         },
-        orderBy: [
-          { category: 'asc' },
-          { order: 'asc' },
-          { title: 'asc' },
-        ],
+        orderBy: [{ category: 'asc' }, { order: 'asc' }, { title: 'asc' }],
       });
     });
   });
@@ -287,7 +286,9 @@ describe('LandingDataService', () => {
       expect(result.success).toBe(true);
       expect(result.data!.key).toBe('restaurant');
       expect(result.data!.recommendedFeatures).toHaveLength(1);
-      expect(result.data!.recommendedFeatures![0].businessTypes).toContain('restaurant');
+      expect(result.data!.recommendedFeatures![0].businessTypes).toContain(
+        'restaurant',
+      );
       expect(prismaService.businessType.findUnique).toHaveBeenCalledWith({
         where: { key: 'restaurant', isActive: true },
       });
@@ -308,7 +309,9 @@ describe('LandingDataService', () => {
 
     it('should handle database errors when fetching business type with features', async () => {
       // Arrange
-      prismaService.businessType.findUnique.mockRejectedValue(new Error('Database error'));
+      prismaService.businessType.findUnique.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       // Act
       const result = await service.getBusinessTypeWithFeatures('restaurant');
@@ -342,7 +345,9 @@ describe('LandingDataService', () => {
         ...mockBusinessTypes[0],
         subtitle: null,
       };
-      prismaService.businessType.findMany.mockResolvedValue([businessTypeWithNulls]);
+      prismaService.businessType.findMany.mockResolvedValue([
+        businessTypeWithNulls,
+      ]);
 
       // Act
       const result = await service.getBusinessTypes();

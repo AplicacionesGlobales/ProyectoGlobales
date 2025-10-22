@@ -50,7 +50,8 @@ export class PaymentProcessingService {
     this.baseUrl = this.configService.get<string>('TILOPAY_BASE_URL') || '';
     this.apiKey = this.configService.get<string>('TILOPAY_API_KEY') || '';
     this.apiUser = this.configService.get<string>('TILOPAY_API_USER') || '';
-    this.apiPassword = this.configService.get<string>('TILOPAY_API_PASSWORD') || '';
+    this.apiPassword =
+      this.configService.get<string>('TILOPAY_API_PASSWORD') || '';
   }
 
   async verifyAndSavePayment(orderNumber: string, returnData?: string) {
@@ -67,7 +68,7 @@ export class PaymentProcessingService {
 
     // 2. Verificar si el pago ya existe en nuestra DB
     const existingPayment = await this.prisma.payment.findFirst({
-      where: { tilopayReference: orderNumber }
+      where: { tilopayReference: orderNumber },
     });
 
     if (existingPayment) {
@@ -81,7 +82,7 @@ export class PaymentProcessingService {
       return {
         saved: false,
         message: 'Transacción no aprobada',
-        transaction
+        transaction,
       };
     }
 
@@ -90,7 +91,10 @@ export class PaymentProcessingService {
 
     if (returnData) {
       try {
-        const decoded = Buffer.from(decodeURIComponent(returnData), 'base64').toString();
+        const decoded = Buffer.from(
+          decodeURIComponent(returnData),
+          'base64',
+        ).toString();
         const parsed = JSON.parse(decoded);
         brandData = parsed.brandData || parsed;
         console.log('📦 Brand data decodificado:', brandData);
@@ -106,7 +110,7 @@ export class PaymentProcessingService {
         email: transaction.email,
         name: '', // Se obtendrá del brand
         planType: 'app', // Por defecto
-        billingCycle: 'monthly' // Por defecto
+        billingCycle: 'monthly', // Por defecto
       };
     }
 
@@ -118,10 +122,16 @@ export class PaymentProcessingService {
     let brand = await this.findBrandByEmail(brandData.email);
 
     if (!brand) {
-      throw new NotFoundException(`Brand no encontrado con email: ${brandData.email}`);
+      throw new NotFoundException(
+        `Brand no encontrado con email: ${brandData.email}`,
+      );
     }
 
-    console.log('🏢 Brand encontrado:', { id: brand.id, name: brand.name, plansCount: brand.brandPlans.length });
+    console.log('🏢 Brand encontrado:', {
+      id: brand.id,
+      name: brand.name,
+      plansCount: brand.brandPlans.length,
+    });
 
     // Si el brand no tiene planes activos, crear uno
     let brandPlanId: number;
@@ -142,15 +152,18 @@ export class PaymentProcessingService {
       }
 
       const plan = await this.prisma.plan.findFirst({
-        where: { type: normalizedPlanType }
+        where: { type: normalizedPlanType },
       });
 
       if (!plan) {
-        throw new NotFoundException(`Plan no encontrado: ${normalizedPlanType}`);
+        throw new NotFoundException(
+          `Plan no encontrado: ${normalizedPlanType}`,
+        );
       }
 
       // Crear brandPlan
-      const billingPeriod = brandData.billingCycle === 'annual' ? 'annual' : 'monthly';
+      const billingPeriod =
+        brandData.billingCycle === 'annual' ? 'annual' : 'monthly';
       const daysToAdd = billingPeriod === 'annual' ? 365 : 30;
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + daysToAdd);
@@ -163,13 +176,17 @@ export class PaymentProcessingService {
           startDate: new Date(),
           endDate,
           isActive: true,
-          price: parseFloat(transaction.amount)
+          price: parseFloat(transaction.amount),
         },
-        include: { plan: true }
+        include: { plan: true },
       });
 
       brandPlanId = newBrandPlan.id;
-      console.log('✅ BrandPlan creado:', { id: brandPlanId, plan: plan.type, endDate });
+      console.log('✅ BrandPlan creado:', {
+        id: brandPlanId,
+        plan: plan.type,
+        endDate,
+      });
     } else {
       brandPlanId = brand.brandPlans[0].id;
       console.log('✅ Usando BrandPlan existente:', brandPlanId);
@@ -180,7 +197,7 @@ export class PaymentProcessingService {
       brand.id,
       brandPlanId,
       transaction,
-      brandData
+      brandData,
     );
 
     // 7. Extender el brandPlan
@@ -191,7 +208,9 @@ export class PaymentProcessingService {
     return this.getPaymentStatus(payment.id);
   }
 
-  private async consultTilopayTransaction(orderNumber: string): Promise<TilopayTransaction | null> {
+  private async consultTilopayTransaction(
+    orderNumber: string,
+  ): Promise<TilopayTransaction | null> {
     try {
       // Obtener token
       const token = await this.getAuthToken();
@@ -209,15 +228,15 @@ export class PaymentProcessingService {
             startDate: this.formatDate(startDate),
             endDate: this.formatDate(endDate),
             onlyAproved: 0,
-            orderNumber: orderNumber
+            orderNumber: orderNumber,
           },
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        )
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
       );
 
       const transactions = response.data.response;
@@ -237,7 +256,7 @@ export class PaymentProcessingService {
     brandId: number,
     brandPlanId: number,
     transaction: TilopayTransaction,
-    brandData: BrandData
+    brandData: BrandData,
   ) {
     return await this.prisma.payment.create({
       data: {
@@ -256,9 +275,9 @@ export class PaymentProcessingService {
           tilopayResponse: transaction.response,
           brandData: brandData,
           transactionType: transaction.type,
-          environment: transaction.environment
-        } as any
-      }
+          environment: transaction.environment,
+        } as any,
+      },
     });
   }
 
@@ -267,36 +286,38 @@ export class PaymentProcessingService {
       where: {
         userBrands: {
           some: {
-            user: { email }
-          }
-        }
+            user: { email },
+          },
+        },
       },
       include: {
         brandPlans: {
           where: { isActive: true },
-          include: { plan: true }
-        }
-      }
+          include: { plan: true },
+        },
+      },
     });
   }
 
   private async extendBrandPlanEndDate(brandPlanId: number): Promise<void> {
     const brandPlan = await this.prisma.brandPlan.findUnique({
-      where: { id: brandPlanId }
+      where: { id: brandPlanId },
     });
 
     if (!brandPlan) return;
 
     const daysToAdd = brandPlan.billingPeriod === 'annual' ? 365 : 30;
     const currentEndDate = brandPlan.endDate || new Date();
-    const newEndDate = new Date(currentEndDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+    const newEndDate = new Date(
+      currentEndDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000,
+    );
 
     await this.prisma.brandPlan.update({
       where: { id: brandPlanId },
       data: {
         endDate: newEndDate,
-        isActive: true
-      }
+        isActive: true,
+      },
     });
 
     console.log('✅ BrandPlan extendido hasta:', newEndDate);
@@ -311,15 +332,15 @@ export class PaymentProcessingService {
             id: true,
             name: true,
             address: true,
-            phone: true
-          }
+            phone: true,
+          },
         },
         brandPlan: {
           include: {
-            plan: true
-          }
-        }
-      }
+            plan: true,
+          },
+        },
+      },
     });
 
     if (!payment) {
@@ -337,7 +358,7 @@ export class PaymentProcessingService {
       createdAt: payment.createdAt,
       brand: payment.brand,
       plan: payment.brandPlan?.plan || null,
-      metadata: payment.metadata
+      metadata: payment.metadata,
     };
   }
 
@@ -350,15 +371,15 @@ export class PaymentProcessingService {
             id: true,
             name: true,
             address: true,
-            phone: true
-          }
+            phone: true,
+          },
         },
         brandPlan: {
           include: {
-            plan: true
-          }
-        }
-      }
+            plan: true,
+          },
+        },
+      },
     });
 
     if (!payment) {
@@ -376,7 +397,7 @@ export class PaymentProcessingService {
       createdAt: payment.createdAt,
       brand: payment.brand,
       plan: payment.brandPlan?.plan || null,
-      metadata: payment.metadata
+      metadata: payment.metadata,
     };
   }
 
@@ -387,14 +408,14 @@ export class PaymentProcessingService {
           `${this.baseUrl}/login`,
           {
             apiuser: this.apiUser,
-            password: this.apiPassword
+            password: this.apiPassword,
           },
           {
             headers: {
-              'Content-Type': 'application/json'
-            }
-          }
-        )
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
       );
 
       return response.data.access_token;
@@ -421,7 +442,7 @@ export class PaymentProcessingService {
     try {
       // Verificar que el brand existe
       const brand = await this.prisma.brand.findUnique({
-        where: { id: brandId }
+        where: { id: brandId },
       });
 
       if (!brand) {
@@ -442,11 +463,11 @@ export class PaymentProcessingService {
           createdAt: true,
           processedAt: true,
           description: true,
-          paymentType: true
-        }
+          paymentType: true,
+        },
       });
 
-      return payments.map(payment => ({
+      return payments.map((payment) => ({
         id: payment.id,
         date: payment.createdAt.toISOString(),
         amount: parseFloat(payment.amount.toString()),
@@ -456,7 +477,7 @@ export class PaymentProcessingService {
         reference: payment.tilopayReference,
         description: payment.description,
         type: payment.paymentType,
-        processedAt: payment.processedAt?.toISOString()
+        processedAt: payment.processedAt?.toISOString(),
       }));
     } catch (error) {
       if (error instanceof NotFoundException) {

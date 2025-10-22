@@ -1,4 +1,10 @@
-import { IsOptional, IsString, IsBoolean, IsNumber, IsEnum } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsNumber,
+  IsEnum,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum SortBy {
@@ -6,12 +12,12 @@ export enum SortBy {
   FIRST_NAME = 'firstName',
   EMAIL = 'email',
   LAST_VISIT = 'lastVisit',
-  TOTAL_APPOINTMENTS = 'totalAppointments'
+  TOTAL_APPOINTMENTS = 'totalAppointments',
 }
 
 export enum SortOrder {
   ASC = 'asc',
-  DESC = 'desc'
+  DESC = 'desc',
 }
 
 export class ClientFilters {

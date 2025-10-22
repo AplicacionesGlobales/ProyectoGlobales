@@ -1,11 +1,17 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsBoolean,
+  IsEnum,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum EntityType {
   BRAND = 'brand',
   USER = 'user',
   PLAN = 'plan',
-  FEATURE = 'feature'
+  FEATURE = 'feature',
 }
 
 export enum FileType {
@@ -16,7 +22,7 @@ export enum FileType {
   PROFILE_IMAGE = 'profile_image',
   DOCUMENT = 'document',
   ATTACHMENT = 'attachment',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 export class CreateFileDto {
@@ -53,7 +59,10 @@ export class FileResponseDto {
   @ApiProperty({ example: 'logo.jpg' })
   name: string;
 
-  @ApiProperty({ example: 'http://localhost:9000/brand-assets/brands/123/images/logo-uuid.jpg' })
+  @ApiProperty({
+    example:
+      'http://localhost:9000/brand-assets/brands/123/images/logo-uuid.jpg',
+  })
   url: string;
 
   @ApiProperty({ example: 'brands/123/images/logo-uuid.jpg' })

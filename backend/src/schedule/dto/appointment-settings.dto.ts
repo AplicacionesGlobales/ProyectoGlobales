@@ -9,7 +9,10 @@ export class AppointmentSettingsDto {
   @ApiProperty({ example: 30, description: 'Duración por defecto en minutos' })
   defaultDuration: number;
 
-  @ApiProperty({ example: 5, description: 'Tiempo de buffer entre citas en minutos' })
+  @ApiProperty({
+    example: 5,
+    description: 'Tiempo de buffer entre citas en minutos',
+  })
   bufferTime: number;
 
   @ApiProperty({ example: 30, description: 'Máximo días de anticipación' })
@@ -18,7 +21,10 @@ export class AppointmentSettingsDto {
   @ApiProperty({ example: 2, description: 'Mínimo horas de anticipación' })
   minAdvanceBookingHours: number;
 
-  @ApiProperty({ example: true, description: 'Permitir reservas para el mismo día' })
+  @ApiProperty({
+    example: true,
+    description: 'Permitir reservas para el mismo día',
+  })
   allowSameDayBooking: boolean;
 
   @ApiProperty({ example: '2024-01-15T10:30:00Z' })
@@ -33,7 +39,10 @@ export class UpdateAppointmentSettingsDto {
   @IsNumber()
   defaultDuration: number;
 
-  @ApiProperty({ example: 5, description: 'Tiempo de buffer entre citas en minutos' })
+  @ApiProperty({
+    example: 5,
+    description: 'Tiempo de buffer entre citas en minutos',
+  })
   @IsNumber()
   bufferTime: number;
 
@@ -45,7 +54,10 @@ export class UpdateAppointmentSettingsDto {
   @IsNumber()
   minAdvanceBookingHours: number;
 
-  @ApiProperty({ example: true, description: 'Permitir reservas para el mismo día' })
+  @ApiProperty({
+    example: true,
+    description: 'Permitir reservas para el mismo día',
+  })
   @IsBoolean()
   allowSameDayBooking: boolean;
 }

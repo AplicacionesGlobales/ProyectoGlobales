@@ -1,10 +1,16 @@
-import { IsString, IsEmail, IsOptional, IsBoolean, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsBoolean,
+  IsEnum,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum UserRole {
   ROOT = 'ROOT',
   CLIENT = 'CLIENT',
-  ADMIN = 'ADMIN'
+  ADMIN = 'ADMIN',
 }
 
 export class CreateBrandUserDto {

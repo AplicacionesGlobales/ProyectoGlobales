@@ -10,6 +10,6 @@ import { PaymentProcessingModule } from './payment-processing/payment-processing
   imports: [HttpModule, ConfigModule, CommonModule, PaymentProcessingModule],
   controllers: [PaymentController],
   providers: [TilopayService],
-  exports: [TilopayService, ],
+  exports: [TilopayService],
 })
 export class PaymentModule {}

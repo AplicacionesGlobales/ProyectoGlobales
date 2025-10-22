@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -19,15 +24,15 @@ export class BrandOwnerGuard implements CanActivate {
       where: {
         brandId,
         userId: user.userId,
-        isActive: true
+        isActive: true,
       },
       include: {
         user: {
           select: {
-            role: true
-          }
-        }
-      }
+            role: true,
+          },
+        },
+      },
     });
 
     // Solo ROOT y ADMIN pueden acceder a la administración del brand

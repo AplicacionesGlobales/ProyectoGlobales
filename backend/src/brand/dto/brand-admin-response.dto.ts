@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AppointmentSettingsDto, ServiceTypeResponseDto } from './service-type.dto';
+import {
+  AppointmentSettingsDto,
+  ServiceTypeResponseDto,
+} from './service-type.dto';
 
 export class BrandUserDto {
   @ApiProperty({ example: 123 })
@@ -40,7 +43,9 @@ export class BrandFeatureDto {
   @ApiProperty({ example: 'Sistema de Citas' })
   title: string;
 
-  @ApiProperty({ example: 'Sistema completo de reservas con tipos de citas personalizables' })
+  @ApiProperty({
+    example: 'Sistema completo de reservas con tipos de citas personalizables',
+  })
   description: string;
 
   @ApiProperty({ example: 20 })
@@ -130,7 +135,7 @@ export class BrandPaymentDto {
   @ApiProperty({ example: 111 })
   id: number;
 
-  @ApiProperty({ example: 167.50 })
+  @ApiProperty({ example: 167.5 })
   amount: number;
 
   @ApiProperty({ example: 'CRC' })
@@ -165,7 +170,7 @@ export class BrandStatsDto {
   @ApiProperty({ example: 1250.75 })
   totalRevenue: number;
 
-  @ApiProperty({ example: 167.50 })
+  @ApiProperty({ example: 167.5 })
   monthlyRevenue: number;
 
   @ApiProperty({ example: 30 })
@@ -174,7 +179,10 @@ export class BrandStatsDto {
   @ApiProperty({ example: true })
   isSubscriptionActive: boolean;
 
-  @ApiProperty({ example: 4, description: 'Total de tipos de servicio configurados' })
+  @ApiProperty({
+    example: 4,
+    description: 'Total de tipos de servicio configurados',
+  })
   totalServiceTypes: number;
 
   @ApiProperty({ example: 3, description: 'Tipos de servicio activos' })
@@ -200,7 +208,10 @@ export class BrandBusinessTypeDto {
   @ApiProperty({ example: 'Video Profesional' })
   subtitle: string;
 
-  @ApiProperty({ example: 'Servicios de videografía profesional, eventos, comerciales y documentales' })
+  @ApiProperty({
+    example:
+      'Servicios de videografía profesional, eventos, comerciales y documentales',
+  })
   description: string;
 
   @ApiProperty({ example: 'Video' })
@@ -214,7 +225,9 @@ export class BrandAdminResponseDto {
   @ApiProperty({ example: 'Mi Empresa Profesional' })
   name: string;
 
-  @ApiPropertyOptional({ example: 'Servicios de fotografía y video profesional' })
+  @ApiPropertyOptional({
+    example: 'Servicios de fotografía y video profesional',
+  })
   description?: string;
 
   @ApiPropertyOptional({ example: 'Calle 123, Ciudad' })
@@ -247,7 +260,7 @@ export class BrandAdminResponseDto {
   @ApiProperty({ type: BrandColorPaletteDto })
   colorPalette: BrandColorPaletteDto;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     type: AppointmentSettingsDto,
     description: 'Configuración de citas del brand',
     example: {
@@ -260,12 +273,12 @@ export class BrandAdminResponseDto {
       minAdvanceBookingHours: 2,
       allowSameDayBooking: true,
       createdAt: '2024-01-15T10:30:00Z',
-      updatedAt: '2024-01-15T10:30:00Z'
-    }
+      updatedAt: '2024-01-15T10:30:00Z',
+    },
   })
   appointmentSettings?: AppointmentSettingsDto;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     type: [ServiceTypeResponseDto],
     description: 'Tipos de servicio configurados para el brand',
     example: [
@@ -283,7 +296,7 @@ export class BrandAdminResponseDto {
         createdAt: '2024-01-15T10:30:00Z',
         updatedAt: '2024-01-15T10:30:00Z',
         appointmentCount: 25,
-        hasFutureAppointments: true
+        hasFutureAppointments: true,
       },
       {
         id: 2,
@@ -299,9 +312,9 @@ export class BrandAdminResponseDto {
         createdAt: '2024-01-15T10:30:00Z',
         updatedAt: '2024-01-15T10:30:00Z',
         appointmentCount: 15,
-        hasFutureAppointments: false
-      }
-    ]
+        hasFutureAppointments: false,
+      },
+    ],
   })
   serviceTypes?: ServiceTypeResponseDto[];
 

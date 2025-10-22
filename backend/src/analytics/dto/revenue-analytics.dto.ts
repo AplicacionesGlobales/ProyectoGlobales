@@ -6,7 +6,8 @@ import { IsOptional, IsDateString } from 'class-validator';
  */
 export class RevenueAnalyticsQueryDto {
   @ApiProperty({
-    description: 'Fecha de referencia para calcular métricas (ISO 8601). Si no se proporciona, usa la fecha actual',
+    description:
+      'Fecha de referencia para calcular métricas (ISO 8601). Si no se proporciona, usa la fecha actual',
     example: '2025-10-20T00:00:00Z',
     required: false,
   })
@@ -39,7 +40,9 @@ export class RevenueBreakdownDto {
   @ApiProperty({ description: 'Ingresos de citas (Appointment.price)' })
   appointments: number;
 
-  @ApiProperty({ description: 'Ingresos de servicios walk-in (Payment tipo SERVICE)' })
+  @ApiProperty({
+    description: 'Ingresos de servicios walk-in (Payment tipo SERVICE)',
+  })
   services: number;
 
   @ApiProperty({ description: 'Ingresos de productos (Payment tipo PRODUCT)' })
@@ -53,7 +56,10 @@ export class RevenueBreakdownDto {
  * DTO para costos operativos del brand
  */
 export class OperatingCostsDto {
-  @ApiProperty({ description: 'Costo de suscripción a la plataforma (prorrateado según período)' })
+  @ApiProperty({
+    description:
+      'Costo de suscripción a la plataforma (prorrateado según período)',
+  })
   subscription: number;
 }
 
@@ -67,7 +73,9 @@ export class FinancialMetricsDto {
   @ApiProperty({ description: 'Costos operativos' })
   costs: OperatingCostsDto;
 
-  @ApiProperty({ description: 'Ganancia neta (revenue.total - costs.subscription)' })
+  @ApiProperty({
+    description: 'Ganancia neta (revenue.total - costs.subscription)',
+  })
   netRevenue: number;
 }
 
@@ -175,7 +183,9 @@ export class RevenueAnalyticsResponseDto {
   @ApiProperty({ description: 'Moneda (código ISO)' })
   currency: string;
 
-  @ApiProperty({ description: 'Timestamp de generación del reporte (ISO 8601)' })
+  @ApiProperty({
+    description: 'Timestamp de generación del reporte (ISO 8601)',
+  })
   generatedAt: string;
 
   @ApiProperty({ description: 'Métricas diarias' })

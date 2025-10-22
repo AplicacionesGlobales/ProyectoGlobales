@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
-import { 
-  ColorPaletteDto, 
-  CreateColorPaletteDto, 
+import {
+  ColorPaletteDto,
+  CreateColorPaletteDto,
   UpdateColorPaletteDto,
-  ColorPaletteValidationDto 
+  ColorPaletteValidationDto,
 } from './types';
 
 @Injectable()
@@ -25,23 +25,23 @@ export class ColorPaletteService {
    */
   private validateColorPalette(palette: ColorPaletteValidationDto): string[] {
     const errors: string[] = [];
-    
+
     if (!this.isValidHexColor(palette.primary)) {
       errors.push('Primary color must be a valid hex color (e.g., #FF5733)');
     }
-    
+
     if (!this.isValidHexColor(palette.secondary)) {
       errors.push('Secondary color must be a valid hex color (e.g., #FF5733)');
     }
-    
+
     if (!this.isValidHexColor(palette.accent)) {
       errors.push('Accent color must be a valid hex color (e.g., #FF5733)');
     }
-    
+
     if (!this.isValidHexColor(palette.neutral)) {
       errors.push('Neutral color must be a valid hex color (e.g., #FF5733)');
     }
-    
+
     if (!this.isValidHexColor(palette.success)) {
       errors.push('Success color must be a valid hex color (e.g., #FF5733)');
     }
@@ -69,7 +69,9 @@ export class ColorPaletteService {
   /**
    * Create a new color palette for a brand
    */
-  async createColorPalette(createDto: CreateColorPaletteDto): Promise<BaseResponseDto<ColorPaletteDto>> {
+  async createColorPalette(
+    createDto: CreateColorPaletteDto,
+  ): Promise<BaseResponseDto<ColorPaletteDto>> {
     try {
       // Validate colors
       const validationErrors = this.validateColorPalette(createDto);
@@ -79,20 +81,26 @@ export class ColorPaletteService {
 
       // Check if brand exists
       const brand = await this.prisma.brand.findUnique({
-        where: { id: createDto.brandId }
+        where: { id: createDto.brandId },
       });
 
       if (!brand) {
-        return BaseResponseDto.singleError(404, `Brand with id ${createDto.brandId} not found`);
+        return BaseResponseDto.singleError(
+          404,
+          `Brand with id ${createDto.brandId} not found`,
+        );
       }
 
       // Check if brand already has a color palette
       const existingPalette = await this.prisma.colorPalette.findUnique({
-        where: { brandId: createDto.brandId }
+        where: { brandId: createDto.brandId },
       });
 
       if (existingPalette) {
-        return BaseResponseDto.singleError(409, 'Brand already has a color palette. Use update instead.');
+        return BaseResponseDto.singleError(
+          409,
+          'Brand already has a color palette. Use update instead.',
+        );
       }
 
       // Create color palette
@@ -103,62 +111,87 @@ export class ColorPaletteService {
       return BaseResponseDto.success(this.transformToDto(colorPalette));
     } catch (error) {
       console.error('Error creating color palette:', error);
-      return BaseResponseDto.singleError(500, error instanceof Error ? error.message : 'Unknown error');
+      return BaseResponseDto.singleError(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
   }
 
   /**
    * Get color palette by brand ID
    */
-  async getColorPaletteByBrandId(brandId: number): Promise<BaseResponseDto<ColorPaletteDto>> {
+  async getColorPaletteByBrandId(
+    brandId: number,
+  ): Promise<BaseResponseDto<ColorPaletteDto>> {
     try {
       const colorPalette = await this.prisma.colorPalette.findUnique({
         where: { brandId },
       });
 
       if (!colorPalette) {
-        return BaseResponseDto.singleError(404, `Color palette for brand ${brandId} not found`);
+        return BaseResponseDto.singleError(
+          404,
+          `Color palette for brand ${brandId} not found`,
+        );
       }
 
       return BaseResponseDto.success(this.transformToDto(colorPalette));
     } catch (error) {
       console.error('Error getting color palette:', error);
-      return BaseResponseDto.singleError(500, error instanceof Error ? error.message : 'Unknown error');
+      return BaseResponseDto.singleError(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
   }
 
   /**
    * Get color palette by ID
    */
-  async getColorPaletteById(id: number): Promise<BaseResponseDto<ColorPaletteDto>> {
+  async getColorPaletteById(
+    id: number,
+  ): Promise<BaseResponseDto<ColorPaletteDto>> {
     try {
       const colorPalette = await this.prisma.colorPalette.findUnique({
         where: { id },
       });
 
       if (!colorPalette) {
-        return BaseResponseDto.singleError(404, `Color palette with id ${id} not found`);
+        return BaseResponseDto.singleError(
+          404,
+          `Color palette with id ${id} not found`,
+        );
       }
 
       return BaseResponseDto.success(this.transformToDto(colorPalette));
     } catch (error) {
       console.error('Error getting color palette:', error);
-      return BaseResponseDto.singleError(500, error instanceof Error ? error.message : 'Unknown error');
+      return BaseResponseDto.singleError(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
   }
 
   /**
    * Update color palette
    */
-  async updateColorPalette(id: number, updateDto: UpdateColorPaletteDto): Promise<BaseResponseDto<ColorPaletteDto>> {
+  async updateColorPalette(
+    id: number,
+    updateDto: UpdateColorPaletteDto,
+  ): Promise<BaseResponseDto<ColorPaletteDto>> {
     try {
       // Check if color palette exists
       const existingPalette = await this.prisma.colorPalette.findUnique({
-        where: { id }
+        where: { id },
       });
 
       if (!existingPalette) {
-        return BaseResponseDto.singleError(404, `Color palette with id ${id} not found`);
+        return BaseResponseDto.singleError(
+          404,
+          `Color palette with id ${id} not found`,
+        );
       }
 
       // Create validation object with existing values and new updates
@@ -185,79 +218,107 @@ export class ColorPaletteService {
       return BaseResponseDto.success(this.transformToDto(updatedPalette));
     } catch (error) {
       console.error('Error updating color palette:', error);
-      return BaseResponseDto.singleError(500, error instanceof Error ? error.message : 'Unknown error');
+      return BaseResponseDto.singleError(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
   }
 
   /**
    * Update color palette by brand ID
    */
-  async updateColorPaletteByBrandId(brandId: number, updateDto: UpdateColorPaletteDto): Promise<BaseResponseDto<ColorPaletteDto>> {
+  async updateColorPaletteByBrandId(
+    brandId: number,
+    updateDto: UpdateColorPaletteDto,
+  ): Promise<BaseResponseDto<ColorPaletteDto>> {
     try {
       // Check if color palette exists for this brand
       const existingPalette = await this.prisma.colorPalette.findUnique({
-        where: { brandId }
+        where: { brandId },
       });
 
       if (!existingPalette) {
-        return BaseResponseDto.singleError(404, `Color palette for brand ${brandId} not found`);
+        return BaseResponseDto.singleError(
+          404,
+          `Color palette for brand ${brandId} not found`,
+        );
       }
 
       // Use the existing update method
       return this.updateColorPalette(existingPalette.id, updateDto);
     } catch (error) {
       console.error('Error updating color palette by brand ID:', error);
-      return BaseResponseDto.singleError(500, error instanceof Error ? error.message : 'Unknown error');
+      return BaseResponseDto.singleError(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
   }
 
   /**
    * Delete color palette
    */
-  async deleteColorPalette(id: number): Promise<BaseResponseDto<{ message: string }>> {
+  async deleteColorPalette(
+    id: number,
+  ): Promise<BaseResponseDto<{ message: string }>> {
     try {
       const existingPalette = await this.prisma.colorPalette.findUnique({
-        where: { id }
+        where: { id },
       });
 
       if (!existingPalette) {
-        return BaseResponseDto.singleError(404, `Color palette with id ${id} not found`);
+        return BaseResponseDto.singleError(
+          404,
+          `Color palette with id ${id} not found`,
+        );
       }
 
       await this.prisma.colorPalette.delete({
-        where: { id }
+        where: { id },
       });
 
       return BaseResponseDto.success({
-        message: 'Color palette deleted successfully'
+        message: 'Color palette deleted successfully',
       });
     } catch (error) {
       console.error('Error deleting color palette:', error);
-      return BaseResponseDto.singleError(500, error instanceof Error ? error.message : 'Unknown error');
+      return BaseResponseDto.singleError(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
   }
 
   /**
    * Validate color palette without saving (useful for frontend validation)
    */
-  async validateColorPaletteColors(palette: ColorPaletteValidationDto): Promise<BaseResponseDto<{ isValid: boolean; errors: string[] }>> {
+  async validateColorPaletteColors(
+    palette: ColorPaletteValidationDto,
+  ): Promise<BaseResponseDto<{ isValid: boolean; errors: string[] }>> {
     try {
       const errors = this.validateColorPalette(palette);
-      
+
       return BaseResponseDto.success({
         isValid: errors.length === 0,
-        errors
+        errors,
       });
     } catch (error) {
       console.error('Error validating color palette:', error);
-      return BaseResponseDto.singleError(500, error instanceof Error ? error.message : 'Unknown error');
+      return BaseResponseDto.singleError(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
   }
 
   /**
    * Create or update color palette (upsert)
    */
-  async upsertColorPalette(brandId: number, paletteData: Omit<CreateColorPaletteDto, 'brandId'>): Promise<BaseResponseDto<ColorPaletteDto>> {
+  async upsertColorPalette(
+    brandId: number,
+    paletteData: Omit<CreateColorPaletteDto, 'brandId'>,
+  ): Promise<BaseResponseDto<ColorPaletteDto>> {
     try {
       // Validate colors
       const validationErrors = this.validateColorPalette(paletteData);
@@ -267,11 +328,14 @@ export class ColorPaletteService {
 
       // Check if brand exists
       const brand = await this.prisma.brand.findUnique({
-        where: { id: brandId }
+        where: { id: brandId },
       });
 
       if (!brand) {
-        return BaseResponseDto.singleError(404, `Brand with id ${brandId} not found`);
+        return BaseResponseDto.singleError(
+          404,
+          `Brand with id ${brandId} not found`,
+        );
       }
 
       // Upsert color palette
@@ -280,14 +344,17 @@ export class ColorPaletteService {
         update: paletteData,
         create: {
           ...paletteData,
-          brandId
+          brandId,
         },
       });
 
       return BaseResponseDto.success(this.transformToDto(colorPalette));
     } catch (error) {
       console.error('Error upserting color palette:', error);
-      return BaseResponseDto.singleError(500, error instanceof Error ? error.message : 'Unknown error');
+      return BaseResponseDto.singleError(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
     }
   }
 }

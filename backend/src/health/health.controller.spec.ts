@@ -13,7 +13,9 @@ describe('HealthController', () => {
         {
           provide: HealthService,
           useValue: {
-            getHealth: jest.fn().mockReturnValue({ status: 'ok', timestamp: new Date() }),
+            getHealth: jest
+              .fn()
+              .mockReturnValue({ status: 'ok', timestamp: new Date() }),
           },
         },
       ],

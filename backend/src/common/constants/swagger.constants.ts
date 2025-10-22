@@ -22,7 +22,8 @@ export const SWAGGER_NUMBERS = {
 export const ERROR_MESSAGES = {
   USERNAME_EXISTS: 'El username ya está en uso',
   BRANCH_NOT_EXISTS: 'La sucursal no existe',
-  EMAIL_EXISTS_IN_BRANCH: 'Ya existe una cuenta con este email en esta sucursal',
+  EMAIL_EXISTS_IN_BRANCH:
+    'Ya existe una cuenta con este email en esta sucursal',
   INTERNAL_ERROR: 'Error interno del servidor',
   EMAIL_ALREADY_EXISTS: 'El email ya está registrado',
   USERNAME_ALREADY_EXISTS: 'El username ya está en uso',

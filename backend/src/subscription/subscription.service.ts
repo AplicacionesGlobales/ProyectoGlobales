@@ -1,16 +1,21 @@
 // src/subscription/subscription.service.ts
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResponseDto } from '../common/dto';
 import {
   SubscriptionFeaturesResponseDto,
   ActiveFeatureDto,
   PricingBreakdownDto,
-  CostSummaryDto
+  CostSummaryDto,
 } from './dto/subscription-features.dto';
 import {
   ActivateFeatureRequestDto,
-  ActivateFeatureResponseDto
+  ActivateFeatureResponseDto,
 } from './dto/activate-feature.dto';
 import { TilopayService } from '../payment/payment-tilopay/tilopay.service';
 
@@ -18,18 +23,18 @@ import { TilopayService } from '../payment/payment-tilopay/tilopay.service';
 export class SubscriptionService {
   constructor(
     private prisma: PrismaService,
-    private tilopayService: TilopayService
-  ) { }
+    private tilopayService: TilopayService,
+  ) {}
 
   async getUserSubscriptionFeatures(
-    userId: number
+    userId: number,
   ): Promise<BaseResponseDto<SubscriptionFeaturesResponseDto>> {
     try {
       // Obtener el brand activo del usuario
       const userBrand = await this.prisma.userBrand.findFirst({
         where: {
           userId,
-          isActive: true
+          isActive: true,
         },
         include: {
           brand: {
@@ -38,8 +43,8 @@ export class SubscriptionService {
               brandFeatures: {
                 where: { isActive: true },
                 include: {
-                  feature: true
-                }
+                  feature: true,
+                },
               },
               // Plan actual
               brandPlans: {
@@ -47,56 +52,68 @@ export class SubscriptionService {
                 orderBy: { createdAt: 'desc' },
                 take: 1,
                 include: {
-                  plan: true
-                }
-              }
-            }
-          }
-        }
+                  plan: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!userBrand) {
-        throw new NotFoundException('No se encontró suscripción activa para el usuario');
+        throw new NotFoundException(
+          'No se encontró suscripción activa para el usuario',
+        );
       }
 
       const brand = userBrand.brand;
       const currentPlan = brand.brandPlans[0];
 
       // Mapear las features activas
-      const activeFeatures: ActiveFeatureDto[] = brand.brandFeatures.map(bf => ({
-        id: bf.feature.id,
-        key: bf.feature.key,
-        title: bf.feature.title,
-        description: bf.feature.description,
-        category: bf.feature.category,
-        price: Number(bf.feature.price),
-        isActive: bf.isActive,
-        activatedAt: bf.createdAt.toISOString(),
-        expiresAt: this.calculateFeatureExpiration(bf, currentPlan)
-      }));
+      const activeFeatures: ActiveFeatureDto[] = brand.brandFeatures.map(
+        (bf) => ({
+          id: bf.feature.id,
+          key: bf.feature.key,
+          title: bf.feature.title,
+          description: bf.feature.description,
+          category: bf.feature.category,
+          price: Number(bf.feature.price),
+          isActive: bf.isActive,
+          activatedAt: bf.createdAt.toISOString(),
+          expiresAt: this.calculateFeatureExpiration(bf, currentPlan),
+        }),
+      );
 
       // Agrupar features por categoría
-      const featuresByCategory = activeFeatures.reduce((acc, feature) => {
-        if (!acc[feature.category]) {
-          acc[feature.category] = [];
-        }
-        acc[feature.category].push(feature);
-        return acc;
-      }, {} as Record<string, ActiveFeatureDto[]>);
+      const featuresByCategory = activeFeatures.reduce(
+        (acc, feature) => {
+          if (!acc[feature.category]) {
+            acc[feature.category] = [];
+          }
+          acc[feature.category].push(feature);
+          return acc;
+        },
+        {} as Record<string, ActiveFeatureDto[]>,
+      );
 
       // Crear desglose de precios ordenado de mayor a menor
       const pricingBreakdown: PricingBreakdownDto[] = activeFeatures
         .sort((a, b) => b.price - a.price)
-        .map(feature => ({
+        .map((feature) => ({
           featureName: feature.title,
           featureKey: feature.key,
           price: feature.price,
-          billingPeriod: currentPlan?.billingPeriod || 'monthly'
+          billingPeriod: currentPlan?.billingPeriod || 'monthly',
         }));
 
       // Calcular totales
-      const subtotalFeatures = activeFeatures.reduce((sum, f) => sum + f.price, 0);
-      const basePlanPrice = currentPlan ? Number(currentPlan.plan.basePrice) : 0;
+      const subtotalFeatures = activeFeatures.reduce(
+        (sum, f) => sum + f.price,
+        0,
+      );
+      const basePlanPrice = currentPlan
+        ? Number(currentPlan.plan.basePrice)
+        : 0;
       const totalMonthlyPrice = basePlanPrice + subtotalFeatures;
 
       // Calcular impuestos si aplica (ejemplo: 13% en Costa Rica)
@@ -104,7 +121,9 @@ export class SubscriptionService {
       const taxes = totalMonthlyPrice * taxRate;
       const totalWithTaxes = totalMonthlyPrice + taxes;
 
-      const nextBillingDate = currentPlan ? this.calculateNextBillingDate(currentPlan) : new Date().toISOString();
+      const nextBillingDate = currentPlan
+        ? this.calculateNextBillingDate(currentPlan)
+        : new Date().toISOString();
 
       // Crear resumen de costos
       const costSummary: CostSummaryDto = {
@@ -114,24 +133,26 @@ export class SubscriptionService {
           features: subtotalFeatures,
           discounts: 0, // Implementar si tienes descuentos
           taxes: Number(taxes.toFixed(2)),
-          total: Number(totalWithTaxes.toFixed(2))
+          total: Number(totalWithTaxes.toFixed(2)),
         },
         nextBillingAmount: Number(totalWithTaxes.toFixed(2)),
-        nextBillingDate
+        nextBillingDate,
       };
 
       const response: SubscriptionFeaturesResponseDto = {
         brandId: brand.id,
         brandName: brand.name,
         subscriptionStatus: currentPlan ? 'active' : 'inactive',
-        plan: currentPlan ? {
-          id: currentPlan.plan.id,
-          name: currentPlan.plan.name,
-          type: currentPlan.plan.type,
-          billingPeriod: currentPlan.billingPeriod,
-          nextBillingDate,
-          basePrice: basePlanPrice
-        } : undefined,
+        plan: currentPlan
+          ? {
+              id: currentPlan.plan.id,
+              name: currentPlan.plan.name,
+              type: currentPlan.plan.type,
+              billingPeriod: currentPlan.billingPeriod,
+              nextBillingDate,
+              basePrice: basePlanPrice,
+            }
+          : undefined,
         activeFeatures,
         featuresByCategory,
         totalFeatures: activeFeatures.length,
@@ -143,14 +164,16 @@ export class SubscriptionService {
         monthlyFeaturesPrice: subtotalFeatures, // Mantener por compatibilidad
         limits: {
           maxUsers: this.getFeatureLimit(activeFeatures, 'max_users'),
-          maxAppointments: this.getFeatureLimit(activeFeatures, 'max_appointments'),
+          maxAppointments: this.getFeatureLimit(
+            activeFeatures,
+            'max_appointments',
+          ),
           maxBranches: this.getFeatureLimit(activeFeatures, 'max_branches'),
-          storageGB: this.getFeatureLimit(activeFeatures, 'storage_gb')
-        }
+          storageGB: this.getFeatureLimit(activeFeatures, 'storage_gb'),
+        },
       };
 
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('Error getting subscription features:', error);
       if (error instanceof NotFoundException) {
@@ -160,7 +183,10 @@ export class SubscriptionService {
     }
   }
 
-  private calculateFeatureExpiration(brandFeature: any, currentPlan: any): string | undefined {
+  private calculateFeatureExpiration(
+    brandFeature: any,
+    currentPlan: any,
+  ): string | undefined {
     if (!currentPlan || !currentPlan.endDate) {
       return undefined;
     }
@@ -195,46 +221,50 @@ export class SubscriptionService {
    */
   async activateFeature(
     userId: number,
-    activateFeatureDto: ActivateFeatureRequestDto
+    activateFeatureDto: ActivateFeatureRequestDto,
   ): Promise<BaseResponseDto<ActivateFeatureResponseDto>> {
     try {
       // 1. Validar que el usuario tenga una marca activa
       const brand = await this.prisma.brand.findFirst({
         where: {
           ownerId: userId,
-          isActive: true
+          isActive: true,
         },
         include: {
           brandFeatures: {
             include: {
-              feature: true
-            }
+              feature: true,
+            },
           },
           brandPlans: {
             where: {
-              isActive: true
+              isActive: true,
             },
             include: {
-              plan: true
-            }
-          }
-        }
+              plan: true,
+            },
+          },
+        },
       });
 
       if (!brand) {
-        throw new NotFoundException('No se encontró una marca activa para el usuario');
+        throw new NotFoundException(
+          'No se encontró una marca activa para el usuario',
+        );
       }
 
       // 2. Verificar que la feature existe y está disponible
       const feature = await this.prisma.feature.findUnique({
         where: {
           id: activateFeatureDto.featureId,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
 
       if (!feature) {
-        throw new NotFoundException('La funcionalidad solicitada no existe o no está disponible');
+        throw new NotFoundException(
+          'La funcionalidad solicitada no existe o no está disponible',
+        );
       }
 
       // 3. Verificar que la feature no esté ya activa
@@ -242,19 +272,22 @@ export class SubscriptionService {
         where: {
           brandId_featureId: {
             brandId: brand.id,
-            featureId: feature.id
-          }
-        }
+            featureId: feature.id,
+          },
+        },
       });
 
       if (existingBrandFeature && existingBrandFeature.isActive) {
-        throw new ConflictException('La funcionalidad ya está activa en tu suscripción');
+        throw new ConflictException(
+          'La funcionalidad ya está activa en tu suscripción',
+        );
       }
 
       // 4. Calcular precio según período de facturación
       const billingPeriod = activateFeatureDto.billingPeriod || 'monthly';
       const featurePrice = Number(feature.price);
-      const finalAmount = billingPeriod === 'annual' ? featurePrice * 10 : featurePrice; // 10x para anual (descuento de 2 meses)
+      const finalAmount =
+        billingPeriod === 'annual' ? featurePrice * 10 : featurePrice; // 10x para anual (descuento de 2 meses)
 
       // 5. Procesar pago con Tilopay
       const paymentResult = await this.processFeaturePayment({
@@ -263,11 +296,13 @@ export class SubscriptionService {
         amount: finalAmount,
         currency: 'USD',
         description: `Activación de ${feature.title} - Plan ${billingPeriod}`,
-        paymentMethod: activateFeatureDto.paymentMethod
+        paymentMethod: activateFeatureDto.paymentMethod,
       });
 
       if (paymentResult.status !== 'completed') {
-        throw new BadRequestException('Error procesando el pago. Intenta nuevamente.');
+        throw new BadRequestException(
+          'Error procesando el pago. Intenta nuevamente.',
+        );
       }
 
       // 6. Activar feature en la base de datos
@@ -275,25 +310,26 @@ export class SubscriptionService {
         where: {
           brandId_featureId: {
             brandId: brand.id,
-            featureId: feature.id
-          }
+            featureId: feature.id,
+          },
         },
         update: {
           isActive: true,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         create: {
           brandId: brand.id,
           featureId: feature.id,
-          isActive: true
+          isActive: true,
         },
         include: {
-          feature: true
-        }
+          feature: true,
+        },
       });
 
       // 7. Obtener suscripción actualizada
-      const updatedSubscription = await this.getUserSubscriptionFeatures(userId);
+      const updatedSubscription =
+        await this.getUserSubscriptionFeatures(userId);
 
       if (!updatedSubscription.success || !updatedSubscription.data) {
         throw new Error('Error actualizando información de suscripción');
@@ -308,30 +344,33 @@ export class SubscriptionService {
           description: feature.description,
           category: feature.category,
           price: featurePrice,
-          activatedAt: brandFeature.createdAt.toISOString()
+          activatedAt: brandFeature.createdAt.toISOString(),
         },
         updatedSubscription: {
           totalMonthlyPrice: updatedSubscription.data.totalMonthlyPrice,
           subtotalFeatures: updatedSubscription.data.subtotalFeatures,
           basePlanPrice: updatedSubscription.data.basePlanPrice,
-          totalFeatures: updatedSubscription.data.totalFeatures
+          totalFeatures: updatedSubscription.data.totalFeatures,
         },
         payment: {
           status: paymentResult.status,
           tilopayReference: paymentResult.tilopayReference,
           amount: finalAmount,
           currency: 'USD',
-          processedAt: paymentResult.processedAt
+          processedAt: paymentResult.processedAt,
         },
-        message: `Funcionalidad "${feature.title}" activada exitosamente`
+        message: `Funcionalidad "${feature.title}" activada exitosamente`,
       };
 
       return BaseResponseDto.success(response);
-
     } catch (error) {
       console.error('Error activating feature:', error);
 
-      if (error instanceof NotFoundException || error instanceof ConflictException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
 
@@ -355,34 +394,37 @@ export class SubscriptionService {
     return {
       status: 'completed',
       tilopayReference: `FEAT_${Date.now()}_${paymentData.featureId}`,
-      processedAt: new Date().toISOString()
+      processedAt: new Date().toISOString(),
     };
   }
 
-  private getFeatureLimit(features: ActiveFeatureDto[], limitKey: string): number | undefined {
+  private getFeatureLimit(
+    features: ActiveFeatureDto[],
+    limitKey: string,
+  ): number | undefined {
     // Definir límites por feature
     const featureLimits: Record<string, Record<string, number>> = {
-      'citas': {
+      citas: {
         max_appointments: 1000,
-        max_users: 50
+        max_users: 50,
       },
-      'clientes': {
-        max_users: 100
+      clientes: {
+        max_users: 100,
       },
-      'pagos': {
-        max_transactions: 5000
+      pagos: {
+        max_transactions: 5000,
       },
-      'analytics': {
-        max_reports: 100
+      analytics: {
+        max_reports: 100,
       },
-      'multi_branch': {
-        max_branches: 10
-      }
+      multi_branch: {
+        max_branches: 10,
+      },
     };
 
     // Buscar el límite más alto entre las features activas
     let maxLimit = 0;
-    features.forEach(feature => {
+    features.forEach((feature) => {
       const limits = featureLimits[feature.key];
       if (limits && limits[limitKey]) {
         maxLimit = Math.max(maxLimit, limits[limitKey]);

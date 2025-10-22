@@ -5,7 +5,7 @@ import {
   ForbiddenException,
   BadRequestException,
   ConflictException,
-  InternalServerErrorException
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../common/services/email/email.service';
@@ -23,26 +23,26 @@ import {
   CalculateAvailabilityDto,
   AvailabilityCalculationResultDto,
   TimeSlotDto,
-  AppointmentStatus
+  AppointmentStatus,
 } from './dto/appointment.dto';
 import {
   GetCalendarMonthDto,
   CalendarMonthResponseDto,
   DayOccupancyDto,
-  MonthSummaryDto
+  MonthSummaryDto,
 } from './dto/calendar-month.dto';
 import {
   GetRealTimeSlotsDto,
   RealTimeSlotsResponseDto,
   ServiceTypeSlotDto,
-  RealTimeSlotDto
+  RealTimeSlotDto,
 } from './dto/real-time-slots.dto';
 import {
   DayAgendaDto,
   GetDayAgendaQueryDto,
   AgendaSlotDto,
   AgendaSlotType,
-  BusinessHoursDto
+  BusinessHoursDto,
 } from './dto/day-agenda.dto';
 import { AppointmentUtils } from './utils/appointment.utils';
 import { APPOINTMENT_CONSTANTS } from './utils/appointment.constants';
@@ -52,15 +52,18 @@ export class AppointmentsService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
-    private statusManager: AppointmentStatusManagerService 
+    private statusManager: AppointmentStatusManagerService,
   ) {}
 
   // Validación de acceso al brand - incluye dueños y clientes
-  private async validateBrandAccess(brandId: number, userId: number): Promise<boolean> {
+  private async validateBrandAccess(
+    brandId: number,
+    userId: number,
+  ): Promise<boolean> {
     // Check if user is brand owner
     const brand = await this.prisma.brand.findUnique({
       where: { id: brandId },
-      select: { ownerId: true }
+      select: { ownerId: true },
     });
 
     if (brand?.ownerId === userId) {
@@ -72,11 +75,11 @@ export class AppointmentsService {
       where: {
         brandId,
         userId,
-        isActive: true
+        isActive: true,
       },
       include: {
-        user: true
-      }
+        user: true,
+      },
     });
 
     return !!userBrand;
@@ -88,33 +91,36 @@ export class AppointmentsService {
       where: {
         brandId,
         userId,
-        isActive: true
+        isActive: true,
       },
       include: {
-        user: true
-      }
+        user: true,
+      },
     });
 
-    return userBrand?.user.role == "ROOT";
+    return userBrand?.user.role == 'ROOT';
   }
 
   // Obtener configuraciones del brand
   private async getBrandConfigurations(brandId: number) {
-    const [appointmentSettings, businessHours, specialHours] = await Promise.all([
-      this.prisma.appointmentSettings.findUnique({
-        where: { brandId }
-      }),
-      this.prisma.businessHours.findMany({
-        where: { brandId },
-        orderBy: { dayOfWeek: 'asc' }
-      }),
-      this.prisma.specialHours.findMany({
-        where: { brandId }
-      })
-    ]);
+    const [appointmentSettings, businessHours, specialHours] =
+      await Promise.all([
+        this.prisma.appointmentSettings.findUnique({
+          where: { brandId },
+        }),
+        this.prisma.businessHours.findMany({
+          where: { brandId },
+          orderBy: { dayOfWeek: 'asc' },
+        }),
+        this.prisma.specialHours.findMany({
+          where: { brandId },
+        }),
+      ]);
 
     if (!appointmentSettings) {
-      throw new NotFoundException('Configuración de citas no encontrada para este brand');
+      throw new NotFoundException(
+        'Configuración de citas no encontrada para este brand',
+      );
     }
 
     return { appointmentSettings, businessHours, specialHours };
@@ -125,7 +131,7 @@ export class AppointmentsService {
     brandId: number,
     startTime: Date,
     endTime: Date,
-    excludeAppointmentId?: number
+    excludeAppointmentId?: number,
   ): Promise<void> {
     const { appointmentSettings, businessHours, specialHours } =
       await this.getBrandConfigurations(brandId);
@@ -133,7 +139,11 @@ export class AppointmentsService {
     // 1. Validar horarios usando la misma lógica que getDayAgenda
     const dayOfWeek = startTime.getUTCDay(); // Use UTC to match database timezone
     const dateStr = startTime.toISOString().split('T')[0];
-    const businessHoursForDay = await this.getBusinessHoursForDay(brandId, dayOfWeek, dateStr);
+    const businessHoursForDay = await this.getBusinessHoursForDay(
+      brandId,
+      dayOfWeek,
+      dateStr,
+    );
 
     if (businessHoursForDay.isClosed) {
       throw new BadRequestException('El negocio está cerrado este día');
@@ -147,29 +157,36 @@ export class AppointmentsService {
     const operationEnd = businessHoursForDay.end;
 
     if (!operationStart || !operationEnd) {
-      throw new BadRequestException('No se pudo determinar el horario de operación para este día');
+      throw new BadRequestException(
+        'No se pudo determinar el horario de operación para este día',
+      );
     }
 
     if (startTimeStr < operationStart || endTimeStr > operationEnd) {
       throw new BadRequestException(
-        `La cita debe estar entre ${operationStart} y ${operationEnd}`
+        `La cita debe estar entre ${operationStart} y ${operationEnd}`,
       );
     }
 
     // 3. Validar restricciones de tiempo
     const now = new Date();
-    const timeDiffHours = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const timeDiffHours =
+      (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
     const daysDiff = Math.ceil(timeDiffHours / 24);
     if (daysDiff > appointmentSettings.maxAdvanceBookingDays) {
       throw new BadRequestException(
-        `No puede reservar con más de ${appointmentSettings.maxAdvanceBookingDays} días de anticipación`
+        `No puede reservar con más de ${appointmentSettings.maxAdvanceBookingDays} días de anticipación`,
       );
     }
 
-    if (!appointmentSettings.allowSameDayBooking &&
-      startTime.toDateString() === now.toDateString()) {
-      throw new BadRequestException('No se permiten reservas para el mismo día');
+    if (
+      !appointmentSettings.allowSameDayBooking &&
+      startTime.toDateString() === now.toDateString()
+    ) {
+      throw new BadRequestException(
+        'No se permiten reservas para el mismo día',
+      );
     }
 
     // 5. Validar conflictos con otras citas
@@ -178,33 +195,35 @@ export class AppointmentsService {
         brandId,
         id: excludeAppointmentId ? { not: excludeAppointmentId } : undefined,
         status: {
-          notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW]
+          notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW],
         },
         OR: [
           {
             AND: [
               { startTime: { lte: startTime } },
-              { endTime: { gt: startTime } }
-            ]
+              { endTime: { gt: startTime } },
+            ],
           },
           {
             AND: [
               { startTime: { lt: endTime } },
-              { endTime: { gte: endTime } }
-            ]
+              { endTime: { gte: endTime } },
+            ],
           },
           {
             AND: [
               { startTime: { gte: startTime } },
-              { endTime: { lte: endTime } }
-            ]
-          }
-        ]
-      }
+              { endTime: { lte: endTime } },
+            ],
+          },
+        ],
+      },
     });
 
     if (conflictingAppointment) {
-      throw new ConflictException('Ya existe una cita programada en este horario');
+      throw new ConflictException(
+        'Ya existe una cita programada en este horario',
+      );
     }
   }
 
@@ -213,12 +232,12 @@ export class AppointmentsService {
     return this.prisma.serviceType.findFirst({
       where: {
         brandId,
-        isActive: true
+        isActive: true,
       },
       orderBy: [
-        { order: 'asc' },  // El servicio con order: 0 será el primero (por defecto)
-        { createdAt: 'asc' }  // En caso de empate, el más antiguo
-      ]
+        { order: 'asc' }, // El servicio con order: 0 será el primero (por defecto)
+        { createdAt: 'asc' }, // En caso de empate, el más antiguo
+      ],
     });
   }
 
@@ -226,10 +245,11 @@ export class AppointmentsService {
   async createAppointment(
     brandId: number,
     createData: CreateAppointmentDto,
-    clientId: number
+    clientId: number,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     try {
-      const { appointmentSettings } = await this.getBrandConfigurations(brandId);
+      const { appointmentSettings } =
+        await this.getBrandConfigurations(brandId);
 
       let duration: number;
       let serviceTypeId: number | undefined = createData.serviceTypeId;
@@ -242,7 +262,7 @@ export class AppointmentsService {
           const defaultService = await this.getDefaultServiceType(brandId);
           if (!defaultService) {
             throw new NotFoundException(
-              'No se encontró un tipo de servicio por defecto para este negocio'
+              'No se encontró un tipo de servicio por defecto para este negocio',
             );
           }
           serviceTypeId = defaultService.id;
@@ -253,25 +273,24 @@ export class AppointmentsService {
             where: {
               id: serviceTypeId,
               brandId,
-              isActive: true
-            }
+              isActive: true,
+            },
           });
 
           if (!serviceType) {
             throw new NotFoundException(
-              'El tipo de servicio seleccionado no existe o no está disponible'
+              'El tipo de servicio seleccionado no existe o no está disponible',
             );
           }
 
           // Usar la duración del tipo de servicio
           duration = serviceType.duration;
         }
-
       } else {
         // El negocio NO usa tipos de servicio - no debe haber serviceTypeId
         if (serviceTypeId) {
           throw new BadRequestException(
-            'Este negocio no maneja tipos de servicio específicos'
+            'Este negocio no maneja tipos de servicio específicos',
           );
         }
 
@@ -295,7 +314,7 @@ export class AppointmentsService {
           endTime,
           duration,
           notes: createData.notes,
-          status: AppointmentStatus.PENDING
+          status: AppointmentStatus.PENDING,
         },
         include: {
           client: {
@@ -303,29 +322,31 @@ export class AppointmentsService {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
+              email: true,
+            },
           },
           createdBy: {
             select: {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
+              email: true,
+            },
           },
-          serviceType: serviceTypeId ? {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              duration: true,
-              price: true,
-              color: true,
-              icon: true
-            }
-          } : false
-        }
+          serviceType: serviceTypeId
+            ? {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  duration: true,
+                  price: true,
+                  color: true,
+                  icon: true,
+                },
+              }
+            : false,
+        },
       });
 
       return BaseResponseDto.success(this.mapToDto(appointment));
@@ -339,14 +360,17 @@ export class AppointmentsService {
   async createAppointmentByRoot(
     brandId: number,
     createData: CreateAppointmentByRootDto,
-    rootUserId: number
+    rootUserId: number,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     try {
       if (!(await this.isRootUser(brandId, rootUserId))) {
-        throw new ForbiddenException('Solo el ROOT puede crear citas para otros usuarios');
+        throw new ForbiddenException(
+          'Solo el ROOT puede crear citas para otros usuarios',
+        );
       }
 
-      const { appointmentSettings } = await this.getBrandConfigurations(brandId);
+      const { appointmentSettings } =
+        await this.getBrandConfigurations(brandId);
 
       let duration: number;
       let serviceTypeId: number | undefined = createData.serviceTypeId;
@@ -359,7 +383,7 @@ export class AppointmentsService {
           const defaultService = await this.getDefaultServiceType(brandId);
           if (!defaultService) {
             throw new NotFoundException(
-              'No se encontró un tipo de servicio por defecto para este negocio'
+              'No se encontró un tipo de servicio por defecto para este negocio',
             );
           }
           serviceTypeId = defaultService.id;
@@ -370,25 +394,24 @@ export class AppointmentsService {
             where: {
               id: serviceTypeId,
               brandId,
-              isActive: true
-            }
+              isActive: true,
+            },
           });
 
           if (!serviceType) {
             throw new NotFoundException(
-              'El tipo de servicio seleccionado no existe o no está disponible'
+              'El tipo de servicio seleccionado no existe o no está disponible',
             );
           }
 
           // Usar la duración del tipo de servicio
           duration = serviceType.duration;
         }
-
       } else {
         // El negocio NO usa tipos de servicio - no debe haber serviceTypeId
         if (serviceTypeId) {
           throw new BadRequestException(
-            'Este negocio no maneja tipos de servicio específicos'
+            'Este negocio no maneja tipos de servicio específicos',
           );
         }
 
@@ -405,7 +428,7 @@ export class AppointmentsService {
       // Validar que el cliente existe si se proporciona
       if (createData.clientId) {
         const client = await this.prisma.user.findUnique({
-          where: { id: createData.clientId }
+          where: { id: createData.clientId },
         });
 
         if (!client) {
@@ -423,37 +446,41 @@ export class AppointmentsService {
           endTime,
           duration,
           notes: createData.notes,
-          status: AppointmentStatus.PENDING
+          status: AppointmentStatus.PENDING,
         },
         include: {
-          client: createData.clientId ? {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          } : false,
+          client: createData.clientId
+            ? {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              }
+            : false,
           createdBy: {
             select: {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
+              email: true,
+            },
           },
-          serviceType: serviceTypeId ? {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              duration: true,
-              price: true,
-              color: true,
-              icon: true
-            }
-          } : false
-        }
+          serviceType: serviceTypeId
+            ? {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  duration: true,
+                  price: true,
+                  color: true,
+                  icon: true,
+                },
+              }
+            : false,
+        },
       });
 
       return BaseResponseDto.success(this.mapToDto(appointment));
@@ -467,19 +494,27 @@ export class AppointmentsService {
   async getAppointments(
     brandId: number,
     userId: number,
-    query: GetAppointmentsQueryDto
-  ): Promise<BaseResponseDto<{ appointments: AppointmentDto[], total: number, pages: number }>> {
+    query: GetAppointmentsQueryDto,
+  ): Promise<
+    BaseResponseDto<{
+      appointments: AppointmentDto[];
+      total: number;
+      pages: number;
+    }>
+  > {
     try {
       const isRoot = await this.isRootUser(brandId, userId);
 
       if (!isRoot) {
         // Si no es ROOT, verificar que sea cliente con citas
         const hasAppointments = await this.prisma.appointment.findFirst({
-          where: { brandId, clientId: userId }
+          where: { brandId, clientId: userId },
         });
 
         if (!hasAppointments) {
-          throw new ForbiddenException('No tiene acceso a las citas de este brand');
+          throw new ForbiddenException(
+            'No tiene acceso a las citas de este brand',
+          );
         }
       }
 
@@ -494,7 +529,7 @@ export class AppointmentsService {
       if (query.startDate && query.endDate) {
         where.startTime = {
           gte: new Date(query.startDate),
-          lte: new Date(`${query.endDate}T23:59:59.999Z`)
+          lte: new Date(`${query.endDate}T23:59:59.999Z`),
         };
       } else if (query.startDate) {
         where.startTime = { gte: new Date(query.startDate) };
@@ -528,16 +563,16 @@ export class AppointmentsService {
                 id: true,
                 firstName: true,
                 lastName: true,
-                email: true
-              }
+                email: true,
+              },
             },
             createdBy: {
               select: {
                 id: true,
                 firstName: true,
                 lastName: true,
-                email: true
-              }
+                email: true,
+              },
             },
             serviceType: {
               select: {
@@ -547,15 +582,15 @@ export class AppointmentsService {
                 duration: true,
                 price: true,
                 color: true,
-                icon: true
-              }
-            }
+                icon: true,
+              },
+            },
           },
           orderBy: { startTime: 'asc' },
           skip,
-          take: limit
+          take: limit,
         }),
-        this.prisma.appointment.count({ where })
+        this.prisma.appointment.count({ where }),
       ]);
 
       const pages = Math.ceil(total / limit);
@@ -563,7 +598,7 @@ export class AppointmentsService {
       return BaseResponseDto.success({
         appointments: appointments.map(this.mapToDto),
         total,
-        pages
+        pages,
       });
     } catch (error) {
       console.error('Error getting appointments:', error);
@@ -575,7 +610,7 @@ export class AppointmentsService {
   async getAppointmentById(
     brandId: number,
     appointmentId: number,
-    userId: number
+    userId: number,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     try {
       // Validar que appointmentId sea un número válido
@@ -593,16 +628,16 @@ export class AppointmentsService {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
+              email: true,
+            },
           },
           createdBy: {
             select: {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
+              email: true,
+            },
           },
           serviceType: {
             select: {
@@ -612,10 +647,10 @@ export class AppointmentsService {
               duration: true,
               price: true,
               color: true,
-              icon: true
-            }
-          }
-        }
+              icon: true,
+            },
+          },
+        },
       });
 
       if (!appointment || appointment.brandId !== brandId) {
@@ -639,11 +674,11 @@ export class AppointmentsService {
     brandId: number,
     appointmentId: number,
     updateData: UpdateAppointmentDto,
-    userId: number
+    userId: number,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     try {
       const appointment = await this.prisma.appointment.findUnique({
-        where: { id: appointmentId }
+        where: { id: appointmentId },
       });
 
       if (!appointment || appointment.brandId !== brandId) {
@@ -654,13 +689,16 @@ export class AppointmentsService {
 
       // Solo el ROOT o el cliente dueño de la cita pueden actualizarla
       if (!isRoot && appointment.clientId !== userId) {
-        throw new ForbiddenException('No tiene permisos para actualizar esta cita');
+        throw new ForbiddenException(
+          'No tiene permisos para actualizar esta cita',
+        );
       }
 
       // Si se cambia la fecha/hora, validar disponibilidad
       if (updateData.startTime || updateData.duration) {
-        const startTime = updateData.startTime ?
-          new Date(updateData.startTime) : appointment.startTime;
+        const startTime = updateData.startTime
+          ? new Date(updateData.startTime)
+          : appointment.startTime;
         const duration = updateData.duration || appointment.duration;
         const endTime = new Date(startTime.getTime() + duration * 60000);
 
@@ -668,24 +706,30 @@ export class AppointmentsService {
           brandId,
           startTime,
           endTime,
-          appointmentId
+          appointmentId,
         );
       }
 
       const updated = await this.prisma.appointment.update({
         where: { id: appointmentId },
         data: {
-          ...(updateData.startTime && { startTime: new Date(updateData.startTime) }),
+          ...(updateData.startTime && {
+            startTime: new Date(updateData.startTime),
+          }),
           ...(updateData.duration && {
             duration: updateData.duration,
             endTime: new Date(
-              (updateData.startTime ? new Date(updateData.startTime) : appointment.startTime)
-                .getTime() + updateData.duration * 60000
-            )
+              (updateData.startTime
+                ? new Date(updateData.startTime)
+                : appointment.startTime
+              ).getTime() +
+                updateData.duration * 60000,
+            ),
           }),
           ...(updateData.status && { status: updateData.status }),
           ...(updateData.notes !== undefined && { notes: updateData.notes }),
-          ...(updateData.clientId !== undefined && isRoot && { clientId: updateData.clientId })
+          ...(updateData.clientId !== undefined &&
+            isRoot && { clientId: updateData.clientId }),
         },
         include: {
           client: {
@@ -693,18 +737,18 @@ export class AppointmentsService {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
+              email: true,
+            },
           },
           createdBy: {
             select: {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
-          }
-        }
+              email: true,
+            },
+          },
+        },
       });
 
       return BaseResponseDto.success(this.mapToDto(updated));
@@ -719,13 +763,15 @@ export class AppointmentsService {
     brandId: number,
     appointmentId: number,
     updateData: UpdateAppointmentDto,
-    userId: number
+    userId: number,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     try {
       // Verificar que sea ROOT/ADMIN
       const isRoot = await this.isRootUser(brandId, userId);
       if (!isRoot) {
-        throw new ForbiddenException('Solo ROOT/ADMIN puede editar completamente las citas');
+        throw new ForbiddenException(
+          'Solo ROOT/ADMIN puede editar completamente las citas',
+        );
       }
 
       // Obtener la cita actual
@@ -733,8 +779,8 @@ export class AppointmentsService {
         where: { id: appointmentId },
         include: {
           serviceType: true,
-          client: true
-        }
+          client: true,
+        },
       });
 
       if (!appointment || appointment.brandId !== brandId) {
@@ -744,7 +790,7 @@ export class AppointmentsService {
       // Validar cliente si se está cambiando
       if (updateData.clientId && updateData.clientId !== appointment.clientId) {
         const client = await this.prisma.user.findUnique({
-          where: { id: updateData.clientId }
+          where: { id: updateData.clientId },
         });
         if (!client) {
           throw new NotFoundException('Cliente no encontrado');
@@ -753,16 +799,21 @@ export class AppointmentsService {
 
       // Validar serviceType si se está cambiando y obtener duración por defecto
       let newDuration = updateData.duration || appointment.duration;
-      if (updateData.serviceTypeId && updateData.serviceTypeId !== appointment.serviceTypeId) {
+      if (
+        updateData.serviceTypeId &&
+        updateData.serviceTypeId !== appointment.serviceTypeId
+      ) {
         const serviceType = await this.prisma.serviceType.findFirst({
           where: {
             id: updateData.serviceTypeId,
             brandId,
-            isActive: true
-          }
+            isActive: true,
+          },
         });
         if (!serviceType) {
-          throw new NotFoundException('Tipo de servicio no encontrado o inactivo');
+          throw new NotFoundException(
+            'Tipo de servicio no encontrado o inactivo',
+          );
         }
         // Si no se especifica duración, usar la del nuevo servicio
         if (!updateData.duration) {
@@ -771,29 +822,38 @@ export class AppointmentsService {
       }
 
       // Validar disponibilidad si se cambia fecha/hora/duración/servicio
-      if (updateData.startTime || updateData.duration || updateData.serviceTypeId) {
-        const startTime = updateData.startTime ? 
-          new Date(updateData.startTime) : appointment.startTime;
+      if (
+        updateData.startTime ||
+        updateData.duration ||
+        updateData.serviceTypeId
+      ) {
+        const startTime = updateData.startTime
+          ? new Date(updateData.startTime)
+          : appointment.startTime;
         const endTime = new Date(startTime.getTime() + newDuration * 60000);
 
         // Verificar disponibilidad excluyendo la cita actual
         await this.validateAppointmentAvailability(
-          brandId, 
-          startTime, 
-          endTime, 
-          appointmentId // Excluir esta cita de la validación
+          brandId,
+          startTime,
+          endTime,
+          appointmentId, // Excluir esta cita de la validación
         );
       }
 
       // Preparar datos para actualización
       const updatePayload: any = {};
-      
+
       if (updateData.startTime) {
         updatePayload.startTime = new Date(updateData.startTime);
-        updatePayload.endTime = new Date(updatePayload.startTime.getTime() + newDuration * 60000);
+        updatePayload.endTime = new Date(
+          updatePayload.startTime.getTime() + newDuration * 60000,
+        );
       } else if (newDuration !== appointment.duration) {
         // Si solo cambia duración, recalcular endTime
-        updatePayload.endTime = new Date(appointment.startTime.getTime() + newDuration * 60000);
+        updatePayload.endTime = new Date(
+          appointment.startTime.getTime() + newDuration * 60000,
+        );
       }
 
       if (newDuration !== appointment.duration) {
@@ -804,7 +864,10 @@ export class AppointmentsService {
         updatePayload.clientId = updateData.clientId;
       }
 
-      if (updateData.serviceTypeId && updateData.serviceTypeId !== appointment.serviceTypeId) {
+      if (
+        updateData.serviceTypeId &&
+        updateData.serviceTypeId !== appointment.serviceTypeId
+      ) {
         updatePayload.serviceTypeId = updateData.serviceTypeId;
       }
 
@@ -824,16 +887,16 @@ export class AppointmentsService {
               firstName: true,
               lastName: true,
               email: true,
-              phone: true
-            }
+              phone: true,
+            },
           },
           createdBy: {
             select: {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
+              email: true,
+            },
           },
           serviceType: {
             select: {
@@ -843,71 +906,70 @@ export class AppointmentsService {
               duration: true,
               price: true,
               color: true,
-              icon: true
-            }
-          }
-        }
+              icon: true,
+            },
+          },
+        },
       });
 
-      return BaseResponseDto.success(
-        this.mapToDto(updatedAppointment)
-      );
-
+      return BaseResponseDto.success(this.mapToDto(updatedAppointment));
     } catch (error) {
       console.error('Error updating appointment (admin):', error);
-      if (error instanceof NotFoundException || 
-          error instanceof ForbiddenException || 
-          error instanceof ConflictException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
-      throw new InternalServerErrorException('Error interno del servidor al actualizar la cita');
+      throw new InternalServerErrorException(
+        'Error interno del servidor al actualizar la cita',
+      );
     }
   }
 
   // Actualizar solo el estado de una cita
   // Actualizar solo el estado de una cita
-async updateAppointmentStatus(
-  brandId: number,
-  appointmentId: number,
-  updateData: UpdateAppointmentStatusDto,
-  userId: number
-): Promise<BaseResponseDto<AppointmentDto>> {
-  try {
-    // Verificar que la cita pertenece al brand
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { id: appointmentId }
-    });
+  async updateAppointmentStatus(
+    brandId: number,
+    appointmentId: number,
+    updateData: UpdateAppointmentStatusDto,
+    userId: number,
+  ): Promise<BaseResponseDto<AppointmentDto>> {
+    try {
+      // Verificar que la cita pertenece al brand
+      const appointment = await this.prisma.appointment.findUnique({
+        where: { id: appointmentId },
+      });
 
-    if (!appointment || appointment.brandId !== brandId) {
-      throw new NotFoundException('Cita no encontrada');
+      if (!appointment || appointment.brandId !== brandId) {
+        throw new NotFoundException('Cita no encontrada');
+      }
+
+      // Usar el StatusManager para ejecutar la transición con todas las validaciones
+      const updatedAppointment = await this.statusManager.executeTransition(
+        appointmentId,
+        {
+          newStatus: updateData.status,
+          reason: updateData.reason,
+          notes: updateData.notes,
+          notifyClient: true,
+        },
+        userId,
+      );
+
+      return BaseResponseDto.success(this.mapToDto(updatedAppointment));
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      throw error;
     }
-
-    // Usar el StatusManager para ejecutar la transición con todas las validaciones
-    const updatedAppointment = await this.statusManager.executeTransition(
-      appointmentId,
-      {
-        newStatus: updateData.status,
-        reason: updateData.reason,
-        notes: updateData.notes,
-        notifyClient: true
-      },
-      userId
-    );
-
-    return BaseResponseDto.success(
-      this.mapToDto(updatedAppointment)
-    );
-  } catch (error) {
-    console.error('Error updating appointment status:', error);
-    throw error;
   }
-}
   // NUEVO: Cancelar cita con notificación automática al cliente
   async cancelAppointmentWithNotification(
     brandId: number,
     appointmentId: number,
     cancelData: CancelAppointmentDto,
-    userId: number
+    userId: number,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     try {
       // Obtener la cita completa con información del cliente y brand
@@ -920,8 +982,8 @@ async updateAppointmentStatus(
               firstName: true,
               lastName: true,
               email: true,
-              phone: true
-            }
+              phone: true,
+            },
           },
           serviceType: {
             select: {
@@ -929,17 +991,17 @@ async updateAppointmentStatus(
               name: true,
               description: true,
               duration: true,
-              price: true
-            }
+              price: true,
+            },
           },
           brand: {
             select: {
               id: true,
               name: true,
-              phone: true
-            }
-          }
-        }
+              phone: true,
+            },
+          },
+        },
       });
 
       if (!appointment || appointment.brandId !== brandId) {
@@ -949,7 +1011,9 @@ async updateAppointmentStatus(
       // Verificar que el usuario tenga permisos
       const isRoot = await this.isRootUser(brandId, userId);
       if (!isRoot && appointment.clientId !== userId) {
-        throw new ForbiddenException('No tiene permisos para cancelar esta cita');
+        throw new ForbiddenException(
+          'No tiene permisos para cancelar esta cita',
+        );
       }
 
       // Verificar que la cita no esté ya cancelada
@@ -962,7 +1026,7 @@ async updateAppointmentStatus(
         where: { id: appointmentId },
         data: {
           status: AppointmentStatus.CANCELLED,
-          notes: cancelData.reason
+          notes: cancelData.reason,
         },
         include: {
           client: {
@@ -971,16 +1035,16 @@ async updateAppointmentStatus(
               firstName: true,
               lastName: true,
               email: true,
-              phone: true
-            }
+              phone: true,
+            },
           },
           createdBy: {
             select: {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
+              email: true,
+            },
           },
           serviceType: {
             select: {
@@ -990,19 +1054,21 @@ async updateAppointmentStatus(
               duration: true,
               price: true,
               color: true,
-              icon: true
-            }
-          }
-        }
+              icon: true,
+            },
+          },
+        },
       });
 
       // Enviar notificación por email si está habilitada y el cliente tiene email
       console.log('🔍 Evaluando envío de notificación...');
       console.log('📬 sendNotification:', cancelData.sendNotification);
       console.log('📧 Email del cliente:', appointment.client?.email);
-      
+
       if (cancelData.sendNotification !== false && appointment.client?.email) {
-        console.log('✅ Condiciones cumplidas, enviando email de cancelación...');
+        console.log(
+          '✅ Condiciones cumplidas, enviando email de cancelación...',
+        );
         try {
           await this.sendCancellationEmail(appointment, cancelData.reason);
           console.log('✅ Email de cancelación procesado exitosamente');
@@ -1022,7 +1088,6 @@ async updateAppointmentStatus(
       }
 
       return BaseResponseDto.success(this.mapToDto(updatedAppointment));
-
     } catch (error) {
       console.error('Error cancelling appointment with notification:', error);
       throw error;
@@ -1030,23 +1095,31 @@ async updateAppointmentStatus(
   }
 
   // Método privado para enviar email de cancelación
-  private async sendCancellationEmail(appointment: any, reason: string): Promise<void> {
+  private async sendCancellationEmail(
+    appointment: any,
+    reason: string,
+  ): Promise<void> {
     try {
       console.log('🚀 INICIO sendCancellationEmail');
       console.log('📧 Cliente email:', appointment.client?.email);
       console.log('🏢 Marca:', appointment.brand?.name);
       console.log('📅 EmailService disponible:', !!this.emailService);
-      
-      const clientName = `${appointment.client.firstName || ''} ${appointment.client.lastName || ''}`.trim();
-      const appointmentDate = new Date(appointment.startTime).toLocaleDateString('es-ES', {
+
+      const clientName =
+        `${appointment.client.firstName || ''} ${appointment.client.lastName || ''}`.trim();
+      const appointmentDate = new Date(
+        appointment.startTime,
+      ).toLocaleDateString('es-ES', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       });
-      const appointmentTime = new Date(appointment.startTime).toLocaleTimeString('es-ES', {
+      const appointmentTime = new Date(
+        appointment.startTime,
+      ).toLocaleTimeString('es-ES', {
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
 
       // Variables para el template
@@ -1064,30 +1137,43 @@ async updateAppointmentStatus(
         bookingUrl: `${process.env.FRONTEND_URL || 'https://app.whitelabel.com'}/booking/${appointment.brandId}`,
         contactUrl: `${process.env.FRONTEND_URL || 'https://app.whitelabel.com'}/contact/${appointment.brandId}`,
         unsubscribeUrl: `${process.env.FRONTEND_URL || 'https://app.whitelabel.com'}/unsubscribe`,
-        privacyUrl: `${process.env.FRONTEND_URL || 'https://app.whitelabel.com'}/privacy`
+        privacyUrl: `${process.env.FRONTEND_URL || 'https://app.whitelabel.com'}/privacy`,
       };
 
-      console.log('📝 Variables del template preparadas:', Object.keys(templateVariables));
+      console.log(
+        '📝 Variables del template preparadas:',
+        Object.keys(templateVariables),
+      );
 
       // Cargar y procesar el template
       console.log('🔍 Cargando template appointment-cancelled...');
-      const emailHtml = this.emailService.loadTemplate('appointment-cancelled', templateVariables);
-      console.log('✅ Template cargado exitosamente, longitud HTML:', emailHtml.length);
+      const emailHtml = this.emailService.loadTemplate(
+        'appointment-cancelled',
+        templateVariables,
+      );
+      console.log(
+        '✅ Template cargado exitosamente, longitud HTML:',
+        emailHtml.length,
+      );
 
       // Enviar el email
       console.log('📮 Enviando email...');
       const emailResult = await this.emailService.sendEmail({
         to: appointment.client.email,
         subject: `🚫 Cita Cancelada - ${appointment.brand?.name || 'Su Cita'}`,
-        html: emailHtml
+        html: emailHtml,
       });
 
       console.log('📬 Resultado del envío:', emailResult);
-      
+
       if (emailResult) {
-        console.log(`✅ Email de cancelación enviado exitosamente a: ${appointment.client.email}`);
+        console.log(
+          `✅ Email de cancelación enviado exitosamente a: ${appointment.client.email}`,
+        );
       } else {
-        console.log(`❌ Falló el envío del email a: ${appointment.client.email}`);
+        console.log(
+          `❌ Falló el envío del email a: ${appointment.client.email}`,
+        );
       }
     } catch (error) {
       console.error('❌ Error en sendCancellationEmail:', error);
@@ -1097,29 +1183,32 @@ async updateAppointmentStatus(
   }
 
   // Validar transiciones de estado válidas
-  private validateStatusTransition(currentStatus: AppointmentStatus, newStatus: AppointmentStatus): void {
+  private validateStatusTransition(
+    currentStatus: AppointmentStatus,
+    newStatus: AppointmentStatus,
+  ): void {
     const validTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
       [AppointmentStatus.PENDING]: [
         AppointmentStatus.CONFIRMED,
-        AppointmentStatus.CANCELLED
+        AppointmentStatus.CANCELLED,
       ],
       [AppointmentStatus.CONFIRMED]: [
         AppointmentStatus.IN_PROGRESS,
         AppointmentStatus.CANCELLED,
-        AppointmentStatus.NO_SHOW
+        AppointmentStatus.NO_SHOW,
       ],
       [AppointmentStatus.IN_PROGRESS]: [
         AppointmentStatus.COMPLETED,
-        AppointmentStatus.CANCELLED
+        AppointmentStatus.CANCELLED,
       ],
       [AppointmentStatus.COMPLETED]: [], // Estado final
       [AppointmentStatus.CANCELLED]: [], // Estado final
-      [AppointmentStatus.NO_SHOW]: []    // Estado final
+      [AppointmentStatus.NO_SHOW]: [], // Estado final
     };
 
     if (!validTransitions[currentStatus]?.includes(newStatus)) {
       throw new BadRequestException(
-        `No se puede cambiar el estado de ${currentStatus} a ${newStatus}`
+        `No se puede cambiar el estado de ${currentStatus} a ${newStatus}`,
       );
     }
   }
@@ -1127,7 +1216,7 @@ async updateAppointmentStatus(
   // Obtener horarios disponibles
   async getAvailableTimeSlots(
     brandId: number,
-    query: AvailableTimeSlotsDto
+    query: AvailableTimeSlotsDto,
   ): Promise<BaseResponseDto<TimeSlotDto[]>> {
     try {
       const { appointmentSettings, businessHours, specialHours } =
@@ -1138,7 +1227,9 @@ async updateAppointmentStatus(
       const duration = query.duration || appointmentSettings.defaultDuration;
 
       // Verificar si el negocio está abierto ese día
-      const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
+      const businessHour = businessHours.find(
+        (bh) => bh.dayOfWeek === dayOfWeek,
+      );
       if (!businessHour || !businessHour.isOpen) {
         return BaseResponseDto.success([]);
       }
@@ -1146,7 +1237,7 @@ async updateAppointmentStatus(
       // Verificar horarios especiales
       const dateStr = requestedDate.toISOString().split('T')[0];
       const specialHour = specialHours.find(
-        sh => sh.date.toISOString().split('T')[0] === dateStr
+        (sh) => sh.date.toISOString().split('T')[0] === dateStr,
       );
 
       if (specialHour && !specialHour.isOpen) {
@@ -1168,13 +1259,13 @@ async updateAppointmentStatus(
         where: {
           brandId,
           status: {
-            notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW]
+            notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW],
           },
           startTime: {
             gte: new Date(`${dateStr}T00:00:00.000Z`),
-            lt: new Date(`${dateStr}T23:59:59.999Z`)
-          }
-        }
+            lt: new Date(`${dateStr}T23:59:59.999Z`),
+          },
+        },
       });
 
       // Generar slots de tiempo
@@ -1195,18 +1286,21 @@ async updateAppointmentStatus(
           const timeStr = currentTime.toTimeString().substring(0, 5);
 
           // Verificar disponibilidad
-          const isOccupied = existingAppointments.some(apt => {
+          const isOccupied = existingAppointments.some((apt) => {
             return currentTime < apt.endTime && slotEndTime > apt.startTime;
           });
 
           slots.push({
             time: timeStr,
             available: !isOccupied,
-            reason: isOccupied ? 'Horario ocupado' : undefined
+            reason: isOccupied ? 'Horario ocupado' : undefined,
           });
         }
 
-        currentTime.setTime(currentTime.getTime() + (duration + appointmentSettings.bufferTime) * 60000);
+        currentTime.setTime(
+          currentTime.getTime() +
+            (duration + appointmentSettings.bufferTime) * 60000,
+        );
       }
 
       return BaseResponseDto.success(slots);
@@ -1220,7 +1314,7 @@ async updateAppointmentStatus(
   async getCalendarMonth(
     brandId: number,
     month: string,
-    userId: number
+    userId: number,
   ): Promise<BaseResponseDto<CalendarMonthResponseDto>> {
     try {
       const isRoot = await this.isRootUser(brandId, userId);
@@ -1228,11 +1322,13 @@ async updateAppointmentStatus(
       if (!isRoot) {
         // Si no es ROOT, verificar que sea cliente con citas
         const hasAppointments = await this.prisma.appointment.findFirst({
-          where: { brandId, clientId: userId }
+          where: { brandId, clientId: userId },
         });
 
         if (!hasAppointments) {
-          throw new ForbiddenException('No tiene acceso a las citas de este brand');
+          throw new ForbiddenException(
+            'No tiene acceso a las citas de este brand',
+          );
         }
       }
 
@@ -1247,15 +1343,16 @@ async updateAppointmentStatus(
       const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
 
       // Obtener configuraciones del brand
-      const { businessHours, specialHours } = await this.getBrandConfigurations(brandId);
+      const { businessHours, specialHours } =
+        await this.getBrandConfigurations(brandId);
 
       // Obtener todas las citas del mes
       const where: any = {
         brandId,
         startTime: {
           gte: startDate,
-          lte: endDate
-        }
+          lte: endDate,
+        },
       };
 
       // Si no es ROOT, solo ver sus propias citas
@@ -1265,7 +1362,7 @@ async updateAppointmentStatus(
 
       const appointments = await this.prisma.appointment.findMany({
         where,
-        orderBy: { startTime: 'asc' }
+        orderBy: { startTime: 'asc' },
       });
 
       // Procesar días del mes
@@ -1279,12 +1376,16 @@ async updateAppointmentStatus(
         const dayOfWeek = currentDate.getUTCDay(); // Use UTC to match database timezone
 
         // Verificar si es día laborable
-        const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
+        const businessHour = businessHours.find(
+          (bh) => bh.dayOfWeek === dayOfWeek,
+        );
         const specialHour = specialHours.find(
-          sh => sh.date.toISOString().split('T')[0] === dateStr
+          (sh) => sh.date.toISOString().split('T')[0] === dateStr,
         );
 
-        const isOpen = specialHour ? specialHour.isOpen : (businessHour?.isOpen || false);
+        const isOpen = specialHour
+          ? specialHour.isOpen
+          : businessHour?.isOpen || false;
 
         let availableMinutes = 0;
         if (isOpen) {
@@ -1294,28 +1395,40 @@ async updateAppointmentStatus(
           if (openTime && closeTime) {
             const [openHour, openMinute] = openTime.split(':').map(Number);
             const [closeHour, closeMinute] = closeTime.split(':').map(Number);
-            availableMinutes = (closeHour * 60 + closeMinute) - (openHour * 60 + openMinute);
+            availableMinutes =
+              closeHour * 60 + closeMinute - (openHour * 60 + openMinute);
             totalBusinessMinutes += availableMinutes;
             businessDaysCount++;
           }
         }
 
         // Obtener citas del día
-        const dayAppointments = appointments.filter(apt =>
-          apt.startTime.toISOString().split('T')[0] === dateStr
+        const dayAppointments = appointments.filter(
+          (apt) => apt.startTime.toISOString().split('T')[0] === dateStr,
         );
 
         // Calcular estadísticas del día
         const totalAppointments = dayAppointments.length;
-        const confirmedAppointments = dayAppointments.filter(apt => apt.status === AppointmentStatus.CONFIRMED).length;
-        const pendingAppointments = dayAppointments.filter(apt => apt.status === AppointmentStatus.PENDING).length;
-        const completedAppointments = dayAppointments.filter(apt => apt.status === AppointmentStatus.COMPLETED).length;
-        const cancelledAppointments = dayAppointments.filter(apt => apt.status === AppointmentStatus.CANCELLED).length;
+        const confirmedAppointments = dayAppointments.filter(
+          (apt) => apt.status === AppointmentStatus.CONFIRMED,
+        ).length;
+        const pendingAppointments = dayAppointments.filter(
+          (apt) => apt.status === AppointmentStatus.PENDING,
+        ).length;
+        const completedAppointments = dayAppointments.filter(
+          (apt) => apt.status === AppointmentStatus.COMPLETED,
+        ).length;
+        const cancelledAppointments = dayAppointments.filter(
+          (apt) => apt.status === AppointmentStatus.CANCELLED,
+        ).length;
         const totalOccupiedMinutes = dayAppointments
-          .filter(apt => apt.status !== AppointmentStatus.CANCELLED)
+          .filter((apt) => apt.status !== AppointmentStatus.CANCELLED)
           .reduce((sum, apt) => sum + apt.duration, 0);
 
-        const occupancyPercentage = availableMinutes > 0 ? (totalOccupiedMinutes / availableMinutes) * 100 : 0;
+        const occupancyPercentage =
+          availableMinutes > 0
+            ? (totalOccupiedMinutes / availableMinutes) * 100
+            : 0;
 
         days.push({
           date: dateStr,
@@ -1327,24 +1440,36 @@ async updateAppointmentStatus(
           totalOccupiedMinutes,
           totalAvailableMinutes: availableMinutes,
           occupancyPercentage: Math.round(occupancyPercentage * 100) / 100,
-          isBusinessOpen: isOpen
+          isBusinessOpen: isOpen,
         });
       }
 
       // Calcular resumen del mes
       const totalAppointments = appointments.length;
-      const confirmedAppointments = appointments.filter(apt => apt.status === AppointmentStatus.CONFIRMED).length;
-      const pendingAppointments = appointments.filter(apt => apt.status === AppointmentStatus.PENDING).length;
-      const completedAppointments = appointments.filter(apt => apt.status === AppointmentStatus.COMPLETED).length;
-      const cancelledAppointments = appointments.filter(apt => apt.status === AppointmentStatus.CANCELLED).length;
+      const confirmedAppointments = appointments.filter(
+        (apt) => apt.status === AppointmentStatus.CONFIRMED,
+      ).length;
+      const pendingAppointments = appointments.filter(
+        (apt) => apt.status === AppointmentStatus.PENDING,
+      ).length;
+      const completedAppointments = appointments.filter(
+        (apt) => apt.status === AppointmentStatus.COMPLETED,
+      ).length;
+      const cancelledAppointments = appointments.filter(
+        (apt) => apt.status === AppointmentStatus.CANCELLED,
+      ).length;
       const totalOccupiedMinutes = appointments
-        .filter(apt => apt.status !== AppointmentStatus.CANCELLED)
+        .filter((apt) => apt.status !== AppointmentStatus.CANCELLED)
         .reduce((sum, apt) => sum + apt.duration, 0);
 
-      const averageOccupancyPercentage = totalBusinessMinutes > 0 ?
-        (totalOccupiedMinutes / totalBusinessMinutes) * 100 : 0;
+      const averageOccupancyPercentage =
+        totalBusinessMinutes > 0
+          ? (totalOccupiedMinutes / totalBusinessMinutes) * 100
+          : 0;
 
-      const daysWithAppointments = days.filter(day => day.totalAppointments > 0).length;
+      const daysWithAppointments = days.filter(
+        (day) => day.totalAppointments > 0,
+      ).length;
 
       const summary: MonthSummaryDto = {
         totalAppointments,
@@ -1354,15 +1479,16 @@ async updateAppointmentStatus(
         cancelledAppointments,
         totalOccupiedMinutes,
         totalAvailableMinutes: totalBusinessMinutes,
-        averageOccupancyPercentage: Math.round(averageOccupancyPercentage * 100) / 100,
+        averageOccupancyPercentage:
+          Math.round(averageOccupancyPercentage * 100) / 100,
         businessDaysInMonth: businessDaysCount,
-        daysWithAppointments
+        daysWithAppointments,
       };
 
       const response: CalendarMonthResponseDto = {
         month,
         summary,
-        days
+        days,
       };
 
       return BaseResponseDto.success(response);
@@ -1377,7 +1503,7 @@ async updateAppointmentStatus(
     brandId: number,
     date: string,
     userId: number,
-    query: GetDayAgendaQueryDto = {}
+    query: GetDayAgendaQueryDto = {},
   ): Promise<BaseResponseDto<DayAgendaDto>> {
     try {
       // Validate brand access - user must be owner or client of this brand
@@ -1389,7 +1515,9 @@ async updateAppointmentStatus(
       // Validate date format
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(date)) {
-        throw new BadRequestException('Formato de fecha inválido. Use YYYY-MM-DD');
+        throw new BadRequestException(
+          'Formato de fecha inválido. Use YYYY-MM-DD',
+        );
       }
 
       const targetDate = new Date(date + 'T00:00:00Z'); // Force UTC to match database
@@ -1398,29 +1526,36 @@ async updateAppointmentStatus(
 
       // Get brand settings for slot duration
       const brandSettings = await this.prisma.appointmentSettings.findUnique({
-        where: { brandId }
+        where: { brandId },
       });
       const slotDuration = brandSettings?.defaultDuration || 30;
 
       // Check user role for cancelled appointments access
       const brand = await this.prisma.brand.findUnique({
         where: { id: brandId },
-        select: { ownerId: true }
+        select: { ownerId: true },
       });
 
       const userBrand = await this.prisma.userBrand.findFirst({
         where: { brandId, userId, isActive: true },
-        include: { user: { select: { role: true } } }
+        include: { user: { select: { role: true } } },
       });
 
       const isOwner = brand?.ownerId === userId;
-      const isAdminOrRoot = userBrand?.user.role === 'ROOT' || userBrand?.user.role === 'ADMIN' || isOwner;
+      const isAdminOrRoot =
+        userBrand?.user.role === 'ROOT' ||
+        userBrand?.user.role === 'ADMIN' ||
+        isOwner;
 
       // Only ROOT, ADMIN or brand owner can see cancelled appointments
       const shouldIncludeCancelled = isAdminOrRoot && includeCancelled;
 
       // Get business hours for the day (including special hours check)
-      const businessHours = await this.getBusinessHoursForDay(brandId, dayOfWeek, date);
+      const businessHours = await this.getBusinessHoursForDay(
+        brandId,
+        dayOfWeek,
+        date,
+      );
 
       // If business is closed, return empty agenda
       if (businessHours.isClosed) {
@@ -1432,7 +1567,7 @@ async updateAppointmentStatus(
           totalAvailableSlots: 0,
           slotDuration,
           totalAvailableTime: 0,
-          totalBookedTime: 0
+          totalBookedTime: 0,
         };
         return BaseResponseDto.success(emptyAgenda);
       }
@@ -1444,18 +1579,20 @@ async updateAppointmentStatus(
       // Filter appointment statuses based on user permissions
       const appointmentStatuses = shouldIncludeCancelled
         ? Object.values(AppointmentStatus)
-        : Object.values(AppointmentStatus).filter(status => status !== AppointmentStatus.CANCELLED);
+        : Object.values(AppointmentStatus).filter(
+            (status) => status !== AppointmentStatus.CANCELLED,
+          );
 
       const appointments = await this.prisma.appointment.findMany({
         where: {
           brandId,
           startTime: {
             gte: startOfDay,
-            lte: endOfDay
+            lte: endOfDay,
           },
           status: {
-            in: appointmentStatuses
-          }
+            in: appointmentStatuses,
+          },
         },
         include: {
           client: {
@@ -1464,39 +1601,41 @@ async updateAppointmentStatus(
               firstName: true,
               lastName: true,
               email: true,
-              phone: true
-            }
+              phone: true,
+            },
           },
           createdBy: {
             select: {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
-          }
+              email: true,
+            },
+          },
         },
         orderBy: {
-          startTime: 'asc'
-        }
+          startTime: 'asc',
+        },
       });
 
       // Generate complete agenda
       const agenda = this.generateDayAgenda(
         businessHours,
-        appointments.map(apt => this.mapToDto(apt)),
+        appointments.map((apt) => this.mapToDto(apt)),
         date,
-        slotDuration
+        slotDuration,
       );
 
       // Calculate statistics
       const totalAppointments = appointments.length;
-      const totalAvailableSlots = agenda.filter(slot => slot.type === AgendaSlotType.AVAILABLE).length;
+      const totalAvailableSlots = agenda.filter(
+        (slot) => slot.type === AgendaSlotType.AVAILABLE,
+      ).length;
       const totalBookedTime = agenda
-        .filter(slot => slot.type === AgendaSlotType.APPOINTMENT)
+        .filter((slot) => slot.type === AgendaSlotType.APPOINTMENT)
         .reduce((total, slot) => total + slot.duration, 0);
       const totalAvailableTime = agenda
-        .filter(slot => slot.type === AgendaSlotType.AVAILABLE)
+        .filter((slot) => slot.type === AgendaSlotType.AVAILABLE)
         .reduce((total, slot) => total + slot.duration, 0);
 
       const dayAgenda: DayAgendaDto = {
@@ -1507,7 +1646,7 @@ async updateAppointmentStatus(
         totalAvailableSlots,
         slotDuration,
         totalAvailableTime,
-        totalBookedTime
+        totalBookedTime,
       };
 
       return BaseResponseDto.success(dayAgenda);
@@ -1521,7 +1660,7 @@ async updateAppointmentStatus(
   async getRealTimeSlots(
     brandId: number,
     query: GetRealTimeSlotsDto,
-    userId: number
+    userId: number,
   ): Promise<BaseResponseDto<RealTimeSlotsResponseDto>> {
     try {
       // Validar acceso al brand
@@ -1533,17 +1672,24 @@ async updateAppointmentStatus(
       // Validar formato de fecha
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!query.date || !dateRegex.test(query.date)) {
-        throw new BadRequestException('Formato de fecha inválido. Use YYYY-MM-DD');
+        throw new BadRequestException(
+          'Formato de fecha inválido. Use YYYY-MM-DD',
+        );
       }
 
       const targetDate = new Date(query.date + 'T00:00:00Z');
       const dayOfWeek = targetDate.getUTCDay();
 
       // Obtener configuraciones del brand
-      const { appointmentSettings } = await this.getBrandConfigurations(brandId);
+      const { appointmentSettings } =
+        await this.getBrandConfigurations(brandId);
 
       // Obtener horarios de negocio para el día
-      const businessHours = await this.getBusinessHoursForDay(brandId, dayOfWeek, query.date);
+      const businessHours = await this.getBusinessHoursForDay(
+        brandId,
+        dayOfWeek,
+        query.date,
+      );
 
       if (businessHours.isClosed) {
         return BaseResponseDto.success({
@@ -1555,10 +1701,13 @@ async updateAppointmentStatus(
             requestedDuration: query.duration,
             slotInterval: query.slotInterval || 15,
             onlyFullSlots: query.onlyFullSlots !== false,
-            timeRange: query.startTime && query.endTime ? {
-              start: query.startTime,
-              end: query.endTime
-            } : undefined
+            timeRange:
+              query.startTime && query.endTime
+                ? {
+                    start: query.startTime,
+                    end: query.endTime,
+                  }
+                : undefined,
           },
           serviceTypeSlots: [],
           summary: {
@@ -1566,9 +1715,9 @@ async updateAppointmentStatus(
             totalAvailableSlots: 0,
             totalOccupiedSlots: 0,
             availabilityPercentage: 0,
-            businessStatus: 'closed'
+            businessStatus: 'closed',
           },
-          existingAppointments: []
+          existingAppointments: [],
         });
       }
 
@@ -1580,8 +1729,8 @@ async updateAppointmentStatus(
           where: {
             id: query.serviceTypeId,
             brandId,
-            isActive: true
-          }
+            isActive: true,
+          },
         });
 
         if (!serviceType) {
@@ -1593,21 +1742,26 @@ async updateAppointmentStatus(
         serviceTypes = await this.prisma.serviceType.findMany({
           where: {
             brandId,
-            isActive: true
+            isActive: true,
           },
-          orderBy: { order: 'asc' }
+          orderBy: { order: 'asc' },
         });
 
         // Si no hay tipos de servicio configurados, usar configuración por defecto
-        if (serviceTypes.length === 0 && appointmentSettings.useServiceTypes === false) {
-          serviceTypes = [{
-            id: null,
-            name: 'Servicio estándar',
-            duration: query.duration || appointmentSettings.defaultDuration,
-            price: null,
-            color: '#6B7280',
-            icon: 'calendar'
-          }];
+        if (
+          serviceTypes.length === 0 &&
+          appointmentSettings.useServiceTypes === false
+        ) {
+          serviceTypes = [
+            {
+              id: null,
+              name: 'Servicio estándar',
+              duration: query.duration || appointmentSettings.defaultDuration,
+              price: null,
+              color: '#6B7280',
+              icon: 'calendar',
+            },
+          ];
         }
       }
 
@@ -1620,28 +1774,28 @@ async updateAppointmentStatus(
           brandId,
           startTime: {
             gte: startOfDay,
-            lte: endOfDay
+            lte: endOfDay,
           },
           status: {
-            notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW]
-          }
+            notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW],
+          },
         },
         include: {
           client: {
             select: {
               firstName: true,
-              lastName: true
-            }
+              lastName: true,
+            },
           },
           serviceType: {
             select: {
-              name: true
-            }
-          }
+              name: true,
+            },
+          },
         },
         orderBy: {
-          startTime: 'asc'
-        }
+          startTime: 'asc',
+        },
       });
 
       // Procesar cada tipo de servicio
@@ -1658,11 +1812,13 @@ async updateAppointmentStatus(
           query.slotInterval || 15,
           query.onlyFullSlots !== false,
           query.startTime,
-          query.endTime
+          query.endTime,
         );
 
         totalSlotsGenerated += slots.length;
-        totalAvailableSlots += slots.filter(slot => slot.available && slot.canFitService).length;
+        totalAvailableSlots += slots.filter(
+          (slot) => slot.available && slot.canFitService,
+        ).length;
 
         serviceTypeSlots.push({
           id: serviceType.id,
@@ -1671,57 +1827,65 @@ async updateAppointmentStatus(
           price: serviceType.price ? Number(serviceType.price) : undefined,
           color: serviceType.color,
           icon: serviceType.icon,
-          availableSlots: slots
+          availableSlots: slots,
         });
       }
 
       // Encontrar el próximo slot disponible
       const nextAvailableSlot = serviceTypeSlots
-        .flatMap(st => st.availableSlots)
-        .find(slot => slot.available && slot.canFitService)?.startTime;
+        .flatMap((st) => st.availableSlots)
+        .find((slot) => slot.available && slot.canFitService)?.startTime;
 
       // Formatear citas existentes para la respuesta
-      const formattedAppointments = existingAppointments.map(apt => ({
+      const formattedAppointments = existingAppointments.map((apt) => ({
         id: apt.id,
         startTime: apt.startTime.toTimeString().substring(0, 5),
         endTime: apt.endTime.toTimeString().substring(0, 5),
         duration: apt.duration,
         serviceTypeName: apt.serviceType?.name,
-        clientName: apt.client ? `${apt.client.firstName} ${apt.client.lastName || ''}`.trim() : undefined,
-        status: apt.status
+        clientName: apt.client
+          ? `${apt.client.firstName} ${apt.client.lastName || ''}`.trim()
+          : undefined,
+        status: apt.status,
       }));
 
       const totalOccupiedSlots = totalSlotsGenerated - totalAvailableSlots;
-      const availabilityPercentage = totalSlotsGenerated > 0 ?
-        (totalAvailableSlots / totalSlotsGenerated) * 100 : 0;
+      const availabilityPercentage =
+        totalSlotsGenerated > 0
+          ? (totalAvailableSlots / totalSlotsGenerated) * 100
+          : 0;
 
       const response: RealTimeSlotsResponseDto = {
         date: query.date,
         isBusinessOpen: true,
         businessHours: {
           start: businessHours.start,
-          end: businessHours.end
+          end: businessHours.end,
         },
         configuration: {
           serviceTypeId: query.serviceTypeId,
           requestedDuration: query.duration,
           slotInterval: query.slotInterval || 15,
           onlyFullSlots: query.onlyFullSlots !== false,
-          timeRange: query.startTime && query.endTime ? {
-            start: query.startTime,
-            end: query.endTime
-          } : undefined
+          timeRange:
+            query.startTime && query.endTime
+              ? {
+                  start: query.startTime,
+                  end: query.endTime,
+                }
+              : undefined,
         },
         serviceTypeSlots,
         summary: {
           totalSlotsGenerated,
           totalAvailableSlots,
           totalOccupiedSlots,
-          availabilityPercentage: Math.round(availabilityPercentage * 100) / 100,
+          availabilityPercentage:
+            Math.round(availabilityPercentage * 100) / 100,
           nextAvailableSlot,
-          businessStatus: 'open'
+          businessStatus: 'open',
         },
-        existingAppointments: formattedAppointments
+        existingAppointments: formattedAppointments,
       };
 
       return BaseResponseDto.success(response);
@@ -1739,7 +1903,7 @@ async updateAppointmentStatus(
     slotInterval: number,
     onlyFullSlots: boolean,
     startTimeFilter?: string,
-    endTimeFilter?: string
+    endTimeFilter?: string,
   ): Promise<RealTimeSlotDto[]> {
     const slots: RealTimeSlotDto[] = [];
 
@@ -1748,20 +1912,28 @@ async updateAppointmentStatus(
     let operationEnd = businessHours.end;
 
     if (startTimeFilter && this.isValidTimeFormat(startTimeFilter)) {
-      operationStart = startTimeFilter > operationStart ? startTimeFilter : operationStart;
+      operationStart =
+        startTimeFilter > operationStart ? startTimeFilter : operationStart;
     }
 
     if (endTimeFilter && this.isValidTimeFormat(endTimeFilter)) {
-      operationEnd = endTimeFilter < operationEnd ? endTimeFilter : operationEnd;
+      operationEnd =
+        endTimeFilter < operationEnd ? endTimeFilter : operationEnd;
     }
 
     const startMinutes = AppointmentUtils.timeToMinutes(operationStart);
     const endMinutes = AppointmentUtils.timeToMinutes(operationEnd);
 
     // Generar slots cada 'slotInterval' minutos
-    for (let currentMinutes = startMinutes; currentMinutes < endMinutes; currentMinutes += slotInterval) {
+    for (
+      let currentMinutes = startMinutes;
+      currentMinutes < endMinutes;
+      currentMinutes += slotInterval
+    ) {
       const slotStartTime = AppointmentUtils.minutesToTime(currentMinutes);
-      const slotEndTime = AppointmentUtils.minutesToTime(currentMinutes + serviceDuration);
+      const slotEndTime = AppointmentUtils.minutesToTime(
+        currentMinutes + serviceDuration,
+      );
 
       // Verificar si el slot completo cabe en el horario de operación
       if (currentMinutes + serviceDuration > endMinutes) {
@@ -1779,43 +1951,58 @@ async updateAppointmentStatus(
       const conflictingAppointment = this.findConflictingAppointment(
         existingAppointments,
         currentMinutes,
-        currentMinutes + serviceDuration
+        currentMinutes + serviceDuration,
       );
 
       const isAvailable = !conflictingAppointment;
-      const actualDuration = Math.min(serviceDuration, endMinutes - currentMinutes);
+      const actualDuration = Math.min(
+        serviceDuration,
+        endMinutes - currentMinutes,
+      );
       const canFitService = actualDuration >= serviceDuration;
 
       const slot: RealTimeSlotDto = {
         startTime: slotStartTime,
-        endTime: AppointmentUtils.minutesToTime(currentMinutes + actualDuration),
+        endTime: AppointmentUtils.minutesToTime(
+          currentMinutes + actualDuration,
+        ),
         available: isAvailable,
         duration: actualDuration,
         canFitService: canFitService,
-        unavailableReason: conflictingAppointment ? 'Cita existente' : undefined,
+        unavailableReason: conflictingAppointment
+          ? 'Cita existente'
+          : undefined,
         conflictingAppointmentId: conflictingAppointment?.id,
-        conflictingAppointment: conflictingAppointment ? {
-          id: conflictingAppointment.id,
-          startTime: conflictingAppointment.startTime.toTimeString().substring(0, 5),
-          endTime: conflictingAppointment.endTime.toTimeString().substring(0, 5),
-          duration: conflictingAppointment.duration,
-          clientName: conflictingAppointment.client ?
-            `${conflictingAppointment.client.firstName} ${conflictingAppointment.client.lastName || ''}`.trim() :
-            undefined,
-          serviceTypeName: conflictingAppointment.serviceType?.name,
-          status: conflictingAppointment.status
-        } : undefined
+        conflictingAppointment: conflictingAppointment
+          ? {
+              id: conflictingAppointment.id,
+              startTime: conflictingAppointment.startTime
+                .toTimeString()
+                .substring(0, 5),
+              endTime: conflictingAppointment.endTime
+                .toTimeString()
+                .substring(0, 5),
+              duration: conflictingAppointment.duration,
+              clientName: conflictingAppointment.client
+                ? `${conflictingAppointment.client.firstName} ${conflictingAppointment.client.lastName || ''}`.trim()
+                : undefined,
+              serviceTypeName: conflictingAppointment.serviceType?.name,
+              status: conflictingAppointment.status,
+            }
+          : undefined,
       };
 
       slots.push(slot);
 
       // Si encontramos un conflicto, saltar al final de la cita conflictiva
       if (conflictingAppointment) {
-        const appointmentEndMinutes = conflictingAppointment.endTime.getUTCHours() * 60 +
+        const appointmentEndMinutes =
+          conflictingAppointment.endTime.getUTCHours() * 60 +
           conflictingAppointment.endTime.getUTCMinutes();
 
         // Saltar al próximo slot después de la cita
-        const nextSlotStart = Math.ceil(appointmentEndMinutes / slotInterval) * slotInterval;
+        const nextSlotStart =
+          Math.ceil(appointmentEndMinutes / slotInterval) * slotInterval;
         currentMinutes = nextSlotStart - slotInterval; // Se incrementará en el loop
       }
     }
@@ -1827,14 +2014,18 @@ async updateAppointmentStatus(
   private findConflictingAppointment(
     appointments: any[],
     slotStartMinutes: number,
-    slotEndMinutes: number
+    slotEndMinutes: number,
   ): any | null {
-    return appointments.find(apt => {
-      const aptStartMinutes = apt.startTime.getUTCHours() * 60 + apt.startTime.getUTCMinutes();
-      const aptEndMinutes = apt.endTime.getUTCHours() * 60 + apt.endTime.getUTCMinutes();
+    return appointments.find((apt) => {
+      const aptStartMinutes =
+        apt.startTime.getUTCHours() * 60 + apt.startTime.getUTCMinutes();
+      const aptEndMinutes =
+        apt.endTime.getUTCHours() * 60 + apt.endTime.getUTCMinutes();
 
       // Verificar solapamiento
-      return slotStartMinutes < aptEndMinutes && slotEndMinutes > aptStartMinutes;
+      return (
+        slotStartMinutes < aptEndMinutes && slotEndMinutes > aptStartMinutes
+      );
     });
   }
 
@@ -1849,19 +2040,27 @@ async updateAppointmentStatus(
     const targetDate = new Date(date + 'T00:00:00Z'); // Force UTC
     const dayOfWeek = targetDate.getUTCDay(); // Use UTC to match database timezone
 
-    const businessHours = await this.getBusinessHoursForDay(brandId, dayOfWeek, date);
+    const businessHours = await this.getBusinessHoursForDay(
+      brandId,
+      dayOfWeek,
+      date,
+    );
     return !businessHours.isClosed;
   }
 
   // Get business hours for a specific date (considers special hours and regular business hours)
-  private async getBusinessHoursForDay(brandId: number, dayOfWeek: number, date?: string): Promise<BusinessHoursDto> {
+  private async getBusinessHoursForDay(
+    brandId: number,
+    dayOfWeek: number,
+    date?: string,
+  ): Promise<BusinessHoursDto> {
     // First check for special hours if date is provided
     if (date) {
       const specialHours = await this.prisma.specialHours.findFirst({
         where: {
           brandId,
-          date: new Date(`${date}T00:00:00.000Z`)
-        }
+          date: new Date(`${date}T00:00:00.000Z`),
+        },
       });
 
       // Special hours override regular business hours
@@ -1870,24 +2069,26 @@ async updateAppointmentStatus(
           return {
             start: '00:00',
             end: '00:00',
-            isClosed: true
+            isClosed: true,
           };
         }
 
         // Validate special hours configuration
         if (!specialHours.openTime || !specialHours.closeTime) {
-          console.warn(`Brand ${brandId} has incomplete special hours configuration for date ${date}`);
+          console.warn(
+            `Brand ${brandId} has incomplete special hours configuration for date ${date}`,
+          );
           return {
             start: '00:00',
             end: '00:00',
-            isClosed: true
+            isClosed: true,
           };
         }
 
         return {
           start: specialHours.openTime,
           end: specialHours.closeTime,
-          isClosed: false
+          isClosed: false,
         };
       }
     }
@@ -1896,8 +2097,8 @@ async updateAppointmentStatus(
     const businessHours = await this.prisma.businessHours.findFirst({
       where: {
         brandId,
-        dayOfWeek
-      }
+        dayOfWeek,
+      },
     });
 
     // If no business hours configured or closed, return closed
@@ -1905,24 +2106,26 @@ async updateAppointmentStatus(
       return {
         start: '00:00',
         end: '00:00',
-        isClosed: true
+        isClosed: true,
       };
     }
 
     // Validate that business hours are properly configured
     if (!businessHours.openTime || !businessHours.closeTime) {
-      console.warn(`Brand ${brandId} has incomplete business hours configuration for day ${dayOfWeek}`);
+      console.warn(
+        `Brand ${brandId} has incomplete business hours configuration for day ${dayOfWeek}`,
+      );
       return {
         start: '00:00',
         end: '00:00',
-        isClosed: true
+        isClosed: true,
       };
     }
 
     return {
       start: businessHours.openTime,
       end: businessHours.closeTime,
-      isClosed: false
+      isClosed: false,
     };
   }
 
@@ -1931,7 +2134,7 @@ async updateAppointmentStatus(
     businessHours: BusinessHoursDto,
     appointments: AppointmentDto[],
     date: string,
-    slotDuration: number
+    slotDuration: number,
   ): AgendaSlotDto[] {
     const agenda: AgendaSlotDto[] = [];
 
@@ -1943,19 +2146,21 @@ async updateAppointmentStatus(
     const allTimeSlots = AppointmentUtils.generateTimeSlots(
       businessHours.start,
       businessHours.end,
-      slotDuration
+      slotDuration,
     );
 
     // Convert appointments to a more efficient format for conflict checking
-    const appointmentBlocks = appointments.map(apt => {
-      const start = new Date(apt.startTime);
-      const end = new Date(apt.endTime);
-      return {
-        startMinutes: start.getUTCHours() * 60 + start.getUTCMinutes(),
-        endMinutes: end.getUTCHours() * 60 + end.getUTCMinutes(),
-        appointment: apt
-      };
-    }).sort((a, b) => a.startMinutes - b.startMinutes);
+    const appointmentBlocks = appointments
+      .map((apt) => {
+        const start = new Date(apt.startTime);
+        const end = new Date(apt.endTime);
+        return {
+          startMinutes: start.getUTCHours() * 60 + start.getUTCMinutes(),
+          endMinutes: end.getUTCHours() * 60 + end.getUTCMinutes(),
+          appointment: apt,
+        };
+      })
+      .sort((a, b) => a.startMinutes - b.startMinutes);
 
     // Process each time slot
     let appointmentIndex = 0;
@@ -1966,21 +2171,24 @@ async updateAppointmentStatus(
       const slotEndMinutes = slotStartMinutes + slotDuration;
 
       // Check if this slot has an appointment
-      const appointmentAtSlot = appointmentBlocks.find(apt =>
-        apt.startMinutes === slotStartMinutes
+      const appointmentAtSlot = appointmentBlocks.find(
+        (apt) => apt.startMinutes === slotStartMinutes,
       );
 
       if (appointmentAtSlot) {
         // Add appointment slot
-        const aptDuration = appointmentAtSlot.endMinutes - appointmentAtSlot.startMinutes;
+        const aptDuration =
+          appointmentAtSlot.endMinutes - appointmentAtSlot.startMinutes;
 
         agenda.push({
-          startTime: AppointmentUtils.minutesToTime(appointmentAtSlot.startMinutes),
+          startTime: AppointmentUtils.minutesToTime(
+            appointmentAtSlot.startMinutes,
+          ),
           endTime: AppointmentUtils.minutesToTime(appointmentAtSlot.endMinutes),
           type: AgendaSlotType.APPOINTMENT,
           appointment: appointmentAtSlot.appointment,
           duration: aptDuration,
-          isBookable: false
+          isBookable: false,
         });
 
         // Skip slots that overlap with this appointment
@@ -1988,13 +2196,14 @@ async updateAppointmentStatus(
         i += slotsToSkip;
       } else {
         // Check if this slot conflicts with any appointment
-        const hasConflict = appointmentBlocks.some(apt =>
-          AppointmentUtils.hasTimeConflict(
-            { startTime: new Date(), endTime: new Date() }, // Dummy dates, we use minutes
-            { startTime: new Date(), endTime: new Date() }
-          ) || (
-            apt.startMinutes < slotEndMinutes && apt.endMinutes > slotStartMinutes
-          )
+        const hasConflict = appointmentBlocks.some(
+          (apt) =>
+            AppointmentUtils.hasTimeConflict(
+              { startTime: new Date(), endTime: new Date() }, // Dummy dates, we use minutes
+              { startTime: new Date(), endTime: new Date() },
+            ) ||
+            (apt.startMinutes < slotEndMinutes &&
+              apt.endMinutes > slotStartMinutes),
         );
 
         if (!hasConflict) {
@@ -2002,13 +2211,18 @@ async updateAppointmentStatus(
           let availableEndMinutes = slotEndMinutes;
 
           // Find next appointment to determine max available time
-          const nextAppointment = appointmentBlocks.find(apt =>
-            apt.startMinutes >= slotEndMinutes
+          const nextAppointment = appointmentBlocks.find(
+            (apt) => apt.startMinutes >= slotEndMinutes,
           );
 
           if (nextAppointment) {
-            const businessEndMinutes = AppointmentUtils.timeToMinutes(businessHours.end);
-            const maxPossibleEnd = Math.min(nextAppointment.startMinutes, businessEndMinutes);
+            const businessEndMinutes = AppointmentUtils.timeToMinutes(
+              businessHours.end,
+            );
+            const maxPossibleEnd = Math.min(
+              nextAppointment.startMinutes,
+              businessEndMinutes,
+            );
 
             // Extend the slot if we have more time available
             if (maxPossibleEnd > availableEndMinutes) {
@@ -2016,7 +2230,9 @@ async updateAppointmentStatus(
             }
           } else {
             // No more appointments, extend to business hours end
-            availableEndMinutes = AppointmentUtils.timeToMinutes(businessHours.end);
+            availableEndMinutes = AppointmentUtils.timeToMinutes(
+              businessHours.end,
+            );
           }
 
           const availableDuration = availableEndMinutes - slotStartMinutes;
@@ -2028,12 +2244,13 @@ async updateAppointmentStatus(
               endTime: AppointmentUtils.minutesToTime(availableEndMinutes),
               type: AgendaSlotType.AVAILABLE,
               duration: availableDuration,
-              isBookable: availableDuration >= slotDuration
+              isBookable: availableDuration >= slotDuration,
             });
 
             // Skip overlapping slots if this is a larger block
             if (availableDuration > slotDuration) {
-              const slotsToSkip = Math.floor(availableDuration / slotDuration) - 1;
+              const slotsToSkip =
+                Math.floor(availableDuration / slotDuration) - 1;
               i += slotsToSkip;
             }
           }
@@ -2051,15 +2268,20 @@ async updateAppointmentStatus(
       brandId: appointment.brandId,
       clientId: appointment.clientId,
       serviceTypeId: appointment.serviceTypeId, // Agregar este campo
-      serviceType: appointment.serviceType ? { // Agregar información completa del servicio
-        id: appointment.serviceType.id,
-        name: appointment.serviceType.name,
-        description: appointment.serviceType.description,
-        duration: appointment.serviceType.duration,
-        price: appointment.serviceType.price ? Number(appointment.serviceType.price) : undefined,
-        color: appointment.serviceType.color,
-        icon: appointment.serviceType.icon
-      } : undefined,
+      serviceType: appointment.serviceType
+        ? {
+            // Agregar información completa del servicio
+            id: appointment.serviceType.id,
+            name: appointment.serviceType.name,
+            description: appointment.serviceType.description,
+            duration: appointment.serviceType.duration,
+            price: appointment.serviceType.price
+              ? Number(appointment.serviceType.price)
+              : undefined,
+            color: appointment.serviceType.color,
+            icon: appointment.serviceType.icon,
+          }
+        : undefined,
       startTime: appointment.startTime.toISOString(),
       endTime: appointment.endTime.toISOString(),
       duration: appointment.duration,
@@ -2069,19 +2291,19 @@ async updateAppointmentStatus(
       createdAt: appointment.createdAt.toISOString(),
       updatedAt: appointment.updatedAt.toISOString(),
       client: appointment.client,
-      creator: appointment.createdBy
+      creator: appointment.createdBy,
     };
   }
 
   // TASK-024B#: Cálculo avanzado de disponibilidad
   async calculateAvailability(
     brandId: number,
-    query: CalculateAvailabilityDto
+    query: CalculateAvailabilityDto,
   ): Promise<BaseResponseDto<AvailabilityCalculationResultDto>> {
     try {
       // Validar que la marca exista
       const brand = await this.prisma.brand.findUnique({
-        where: { id: brandId }
+        where: { id: brandId },
       });
 
       if (!brand) {
@@ -2110,13 +2332,15 @@ async updateAppointmentStatus(
       // Calcular disponibilidad usando la lógica existente mejorada
       const dayOfWeek = requestedDate.getDay();
       const dateStr = requestedDate.toISOString().split('T')[0];
-      
+
       // Verificar si el negocio está abierto ese día
-      const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
-      
+      const businessHour = businessHours.find(
+        (bh) => bh.dayOfWeek === dayOfWeek,
+      );
+
       // Verificar horarios especiales
       const specialHour = specialHours.find(
-        sh => sh.date.toISOString().split('T')[0] === dateStr
+        (sh) => sh.date.toISOString().split('T')[0] === dateStr,
       );
 
       // Determinar si está abierto y horarios
@@ -2145,7 +2369,7 @@ async updateAppointmentStatus(
         totalSlots: 0,
         usedDuration: duration,
         calculatedAt: new Date().toISOString(),
-        specialNote
+        specialNote,
       };
 
       // Si no está abierto, retornar sin slots
@@ -2158,29 +2382,29 @@ async updateAppointmentStatus(
         where: {
           brandId,
           status: {
-            notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW]
+            notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW],
           },
           startTime: {
             gte: new Date(`${dateStr}T00:00:00.000Z`),
-            lt: new Date(`${dateStr}T23:59:59.999Z`)
-          }
+            lt: new Date(`${dateStr}T23:59:59.999Z`),
+          },
         },
         include: {
           client: {
             select: {
               firstName: true,
-              lastName: true
-            }
+              lastName: true,
+            },
           },
           serviceType: {
             select: {
-              name: true
-            }
-          }
+              name: true,
+            },
+          },
         },
         orderBy: {
-          startTime: 'asc'
-        }
+          startTime: 'asc',
+        },
       });
 
       // Generar slots usando lógica similar a getAvailableTimeSlots pero mejorada
@@ -2206,13 +2430,14 @@ async updateAppointmentStatus(
             slotEndTime,
             existingAppointments,
             includeReasons,
-            requestedDate
+            requestedDate,
           );
 
           const slot: TimeSlotDto = {
             time: timeStr,
             available: availabilityCheck.available,
-            ...(includeReasons && availabilityCheck.reason && { reason: availabilityCheck.reason })
+            ...(includeReasons &&
+              availabilityCheck.reason && { reason: availabilityCheck.reason }),
           };
 
           // Incluir slot según configuración
@@ -2222,21 +2447,30 @@ async updateAppointmentStatus(
         }
 
         // Avanzar usando la lógica existente (duración + buffer)
-        currentTime.setTime(currentTime.getTime() + (duration + appointmentSettings.bufferTime) * 60000);
+        currentTime.setTime(
+          currentTime.getTime() +
+            (duration + appointmentSettings.bufferTime) * 60000,
+        );
       }
 
       result.slots = slots;
       result.totalSlots = slots.length;
-      result.totalAvailableSlots = slots.filter(slot => slot.available).length;
-      result.totalOccupiedSlots = slots.filter(slot => !slot.available).length;
+      result.totalAvailableSlots = slots.filter(
+        (slot) => slot.available,
+      ).length;
+      result.totalOccupiedSlots = slots.filter(
+        (slot) => !slot.available,
+      ).length;
 
       return BaseResponseDto.success(result);
-
     } catch (error) {
-      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
-      
+
       console.error('Error calculating availability:', error);
       throw new BadRequestException('Error calculando disponibilidad');
     }
@@ -2248,15 +2482,15 @@ async updateAppointmentStatus(
     slotEnd: Date,
     existingAppointments: any[],
     includeReasons: boolean,
-    requestedDate: Date
+    requestedDate: Date,
   ): { available: boolean; reason?: string } {
     // Verificar conflictos con citas existentes
     for (const appointment of existingAppointments) {
       if (slotStart < appointment.endTime && slotEnd > appointment.startTime) {
-        const reason = includeReasons 
+        const reason = includeReasons
           ? `Ocupado - ${appointment.serviceType?.name || 'Cita'} (${appointment.client?.firstName || 'Cliente'} ${appointment.client?.lastName || ''})`
           : 'Horario ocupado';
-        
+
         return { available: false, reason };
       }
     }
@@ -2270,13 +2504,15 @@ async updateAppointmentStatus(
     // Solo aplicar validación de "muy próximo" si la fecha consultada es hoy o futura
     if (requestedDate >= today) {
       const minimumAdvanceTime = 30; // 30 minutos de anticipación mínima
-      const earliestBooking = new Date(now.getTime() + minimumAdvanceTime * 60000);
+      const earliestBooking = new Date(
+        now.getTime() + minimumAdvanceTime * 60000,
+      );
 
       if (slotStart <= earliestBooking) {
-        const reason = includeReasons 
+        const reason = includeReasons
           ? 'Muy próximo al horario actual'
           : 'No disponible';
-        
+
         return { available: false, reason };
       }
     }
@@ -2286,7 +2522,15 @@ async updateAppointmentStatus(
 
   // Método auxiliar para obtener nombre del día
   private getDayName(dayOfWeek: number): string {
-    const days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const days = [
+      'domingo',
+      'lunes',
+      'martes',
+      'miércoles',
+      'jueves',
+      'viernes',
+      'sábado',
+    ];
     return days[dayOfWeek];
   }
 }

@@ -22,7 +22,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'default-secret-key',
       signOptions: {
-        expiresIn: '8h' // Access tokens: 8 horas
+        expiresIn: '8h', // Access tokens: 8 horas
       },
     }),
   ],
@@ -34,7 +34,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     UserCreationService,
     ColorPaletteService,
     GoogleAuthService,
-    JwtStrategy
+    JwtStrategy,
   ],
   exports: [
     AuthService,
@@ -42,7 +42,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     CryptoService,
     UserCreationService,
     ColorPaletteService,
-    GoogleAuthService
+    GoogleAuthService,
   ],
 })
-export class AuthModule { }
+export class AuthModule {}

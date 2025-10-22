@@ -7,20 +7,20 @@ const plans = [
     type: 'web' as PlanType,
     name: 'Solo Web',
     description: 'Perfecto para empezar online',
-    basePrice: 0.00,
+    basePrice: 0.0,
   },
   {
     type: 'app' as PlanType,
     name: 'Solo App Móvil',
     description: 'La experiencia móvil completa',
-    basePrice: 59.00,
+    basePrice: 59.0,
   },
   {
     type: 'complete' as PlanType,
     name: 'Web + App Completa',
     description: 'La solución completa para tu negocio',
-    basePrice: 60.00,
-  }
+    basePrice: 60.0,
+  },
 ];
 
 export async function seedPlans() {
@@ -39,7 +39,7 @@ export async function seedPlans() {
           name: plan.name,
           description: plan.description,
           basePrice: plan.basePrice,
-        }
+        },
       });
     }
 

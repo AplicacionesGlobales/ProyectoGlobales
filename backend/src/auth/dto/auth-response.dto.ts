@@ -9,8 +9,8 @@ export class AuthResponse {
       username: 'admin',
       firstName: 'John',
       lastName: 'Doe',
-      role: 'ADMIN'
-    }
+      role: 'ADMIN',
+    },
   })
   user: {
     id: number;
@@ -25,9 +25,9 @@ export class AuthResponse {
     description: 'Información de la marca (opcional)',
     example: {
       id: 1,
-      name: 'Mi Negocio'
+      name: 'Mi Negocio',
     },
-    required: false
+    required: false,
   })
   brand?: {
     id: number;
@@ -36,20 +36,20 @@ export class AuthResponse {
 
   @ApiProperty({
     description: 'Token JWT de acceso (8 horas)',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   token: string;
 
   @ApiProperty({
     description: 'Token de renovación indefinido (solo si rememberMe: true)',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    required: false
+    required: false,
   })
   refreshToken?: string;
 
   @ApiProperty({
     description: 'Indica si la sesión será recordada indefinidamente',
-    example: false
+    example: false,
   })
   rememberMe: boolean;
 }

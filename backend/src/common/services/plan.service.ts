@@ -3,13 +3,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 export enum PlanType {
   web = 'web',
-  app = 'app', 
-  complete = 'complete'
+  app = 'app',
+  complete = 'complete',
 }
 
 export enum BillingPeriod {
   monthly = 'monthly',
-  annual = 'annual'
+  annual = 'annual',
 }
 
 export interface PlanData {
@@ -57,19 +57,22 @@ export class PlanService implements OnModuleInit {
     {
       key: 'citas',
       name: 'Sistema de Citas',
-      description: 'Sistema completo de reservas con tipos de citas personalizables',
+      description:
+        'Sistema completo de reservas con tipos de citas personalizables',
       price: 20,
     },
     {
       key: 'ubicaciones',
       name: 'Ubicaciones en Mapa',
-      description: 'Permite a clientes marcar ubicaciones exactas en el mapa para servicios a domicilio',
+      description:
+        'Permite a clientes marcar ubicaciones exactas en el mapa para servicios a domicilio',
       price: 15,
     },
     {
       key: 'archivos',
       name: 'Gestión de Archivos',
-      description: 'Comparte portfolios, contratos, resultados y documentos organizados por cita',
+      description:
+        'Comparte portfolios, contratos, resultados y documentos organizados por cita',
       price: 18,
     },
     {
@@ -81,13 +84,15 @@ export class PlanService implements OnModuleInit {
     {
       key: 'tipos-citas',
       name: 'Tipos de Citas Personalizables',
-      description: 'Define diferentes tipos de servicios con precios y duraciones específicas',
+      description:
+        'Define diferentes tipos de servicios con precios y duraciones específicas',
       price: 12,
     },
     {
       key: 'reportes',
       name: 'Reportes y Análisis',
-      description: 'Genera reportes detallados de ingresos, citas y rendimiento del negocio',
+      description:
+        'Genera reportes detallados de ingresos, citas y rendimiento del negocio',
       price: 15,
     },
     {
@@ -140,7 +145,7 @@ export class PlanService implements OnModuleInit {
             isRecommended: false,
             isPopular: false,
             order: 0,
-            businessTypes: []
+            businessTypes: [],
           },
         });
       }
@@ -157,11 +162,11 @@ export class PlanService implements OnModuleInit {
   async calculateTotalPrice(
     planType: PlanType,
     selectedFeatures: string[],
-    billingPeriod: BillingPeriod = BillingPeriod.monthly
+    billingPeriod: BillingPeriod = BillingPeriod.monthly,
   ): Promise<number> {
     // Obtener plan base
     const plan = await this.prisma.plan.findUnique({
-      where: { type: planType }
+      where: { type: planType },
     });
 
     if (!plan) {
@@ -172,15 +177,18 @@ export class PlanService implements OnModuleInit {
     const features = await this.prisma.feature.findMany({
       where: {
         key: { in: selectedFeatures },
-        isActive: true
-      }
+        isActive: true,
+      },
     });
 
     // Calcular precio base
     let totalPrice = Number(plan.basePrice);
 
     // Sumar características
-    const featuresPrice = features.reduce((sum, feature) => sum + Number(feature.price), 0);
+    const featuresPrice = features.reduce(
+      (sum, feature) => sum + Number(feature.price),
+      0,
+    );
     totalPrice += featuresPrice;
 
     // Aplicar descuento anual (20%)
@@ -198,10 +206,10 @@ export class PlanService implements OnModuleInit {
     brandId: number,
     planType: PlanType,
     selectedFeatures: string[],
-    billingPeriod: BillingPeriod = BillingPeriod.monthly
+    billingPeriod: BillingPeriod = BillingPeriod.monthly,
   ) {
     const plan = await this.prisma.plan.findUnique({
-      where: { type: planType }
+      where: { type: planType },
     });
 
     if (!plan) {
@@ -209,7 +217,11 @@ export class PlanService implements OnModuleInit {
     }
 
     // Calcular precio total
-    const totalPrice = await this.calculateTotalPrice(planType, selectedFeatures, billingPeriod);
+    const totalPrice = await this.calculateTotalPrice(
+      planType,
+      selectedFeatures,
+      billingPeriod,
+    );
 
     // Crear suscripción al plan
     const brandPlan = await this.prisma.brandPlan.create({
@@ -220,8 +232,8 @@ export class PlanService implements OnModuleInit {
         price: totalPrice,
       },
       include: {
-        plan: true
-      }
+        plan: true,
+      },
     });
 
     // Asociar características seleccionadas
@@ -229,15 +241,15 @@ export class PlanService implements OnModuleInit {
       const features = await this.prisma.feature.findMany({
         where: {
           key: { in: selectedFeatures },
-          isActive: true
-        }
+          isActive: true,
+        },
       });
 
       await this.prisma.brandFeature.createMany({
-        data: features.map(feature => ({
+        data: features.map((feature) => ({
           brandId,
-          featureId: feature.id
-        }))
+          featureId: feature.id,
+        })),
       });
     }
 
@@ -251,7 +263,7 @@ export class PlanService implements OnModuleInit {
     return await this.prisma.brandPlan.findFirst({
       where: {
         brandId,
-        isActive: true
+        isActive: true,
       },
       include: {
         plan: true,
@@ -259,12 +271,12 @@ export class PlanService implements OnModuleInit {
           include: {
             brandFeatures: {
               include: {
-                feature: true
-              }
-            }
-          }
-        }
-      }
+                feature: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 }

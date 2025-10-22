@@ -1,6 +1,14 @@
 // client/dto/create-client.dto.ts
 
-import { IsString, IsEmail, IsOptional, IsBoolean, MaxLength, MinLength, Matches } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsBoolean,
+  MaxLength,
+  MinLength,
+  Matches,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateClientDto {
@@ -22,11 +30,13 @@ export class CreateClientDto {
 
   @ApiPropertyOptional({ example: '+50688887777' })
   @IsString()
-  @IsOptional()  // 🔧 Agregado IsOptional
+  @IsOptional() // 🔧 Agregado IsOptional
   @Matches(/^\+?[1-9]\d{1,14}$/, { message: 'Formato de teléfono inválido' })
-  phone?: string;  // 🔧 Agregado ? para hacerlo opcional
+  phone?: string; // 🔧 Agregado ? para hacerlo opcional
 
-  @ApiPropertyOptional({ example: 'Cliente preferencial, alérgico a ciertos productos' })
+  @ApiPropertyOptional({
+    example: 'Cliente preferencial, alérgico a ciertos productos',
+  })
   @IsString()
   @IsOptional()
   @MaxLength(500)

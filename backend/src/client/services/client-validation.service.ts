@@ -15,7 +15,11 @@ export class ClientValidationService {
    * @param excludeUserId ID del usuario a excluir de la validación
    * @returns Promise<{ isAvailable: boolean, existingClient?: any }>
    */
-  async validateEmailForBrand(email: string, brandId: number, excludeUserId?: number): Promise<{
+  async validateEmailForBrand(
+    email: string,
+    brandId: number,
+    excludeUserId?: number,
+  ): Promise<{
     isAvailable: boolean;
     existingClient?: any;
   }> {
@@ -32,9 +36,9 @@ export class ClientValidationService {
           select: {
             id: true,
             isActive: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     if (!existingUser) {
@@ -48,9 +52,9 @@ export class ClientValidationService {
 
     // Si existe el usuario pero no está asociado a este brand
     if (existingUser.userBrands.length === 0) {
-      return { 
+      return {
         isAvailable: true,
-        existingClient: existingUser 
+        existingClient: existingUser,
       };
     }
 
@@ -59,8 +63,8 @@ export class ClientValidationService {
       isAvailable: false,
       existingClient: {
         ...existingUser,
-        isActive: existingUser.userBrands[0].isActive
-      }
+        isActive: existingUser.userBrands[0].isActive,
+      },
     };
   }
 
@@ -70,13 +74,16 @@ export class ClientValidationService {
    * @param brandId ID del brand
    * @returns Promise<boolean>
    */
-  async validateBrandOwnership(userId: number, brandId: number): Promise<boolean> {
+  async validateBrandOwnership(
+    userId: number,
+    brandId: number,
+  ): Promise<boolean> {
     // Verificar si es dueño del brand
     const brand = await this.prisma.brand.findFirst({
       where: {
         id: brandId,
-        ownerId: userId
-      }
+        ownerId: userId,
+      },
     });
 
     if (brand) {
@@ -88,15 +95,15 @@ export class ClientValidationService {
       where: {
         userId,
         brandId,
-        isActive: true
+        isActive: true,
       },
       include: {
         user: {
           select: {
-            role: true
-          }
-        }
-      }
+            role: true,
+          },
+        },
+      },
     });
 
     return userBrand?.user.role === 'ADMIN';
@@ -118,7 +125,10 @@ export class ClientValidationService {
    * @returns Promise<string>
    */
   async generateUniqueUsername(email: string): Promise<string> {
-    const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    const baseUsername = email
+      .split('@')[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
     let username = baseUsername;
     let suffix = 0;
     let isUnique = false;
@@ -126,9 +136,9 @@ export class ClientValidationService {
     while (!isUnique) {
       const checkUsername = suffix === 0 ? username : `${username}${suffix}`;
       const existing = await this.prisma.user.findUnique({
-        where: { username: checkUsername }
+        where: { username: checkUsername },
       });
-      
+
       if (!existing) {
         username = checkUsername;
         isUnique = true;

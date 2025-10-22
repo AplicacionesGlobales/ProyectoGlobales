@@ -15,16 +15,16 @@ async function runAllSeeds() {
     // Run all seeds in order
     await seedBusinessTypes();
     console.log('');
-    
+
     await seedFeatures();
     console.log('');
-    
+
     await seedPlans();
     console.log('');
-    
+
     await seedUsers();
     console.log('');
-  
+
     await seedAppointmentSettings();
     console.log('');
 
@@ -35,15 +35,20 @@ async function runAllSeeds() {
     console.log('\n🧪 Example API test:');
     console.log('POST /auth/register/client');
     console.log('Body:');
-    console.log(JSON.stringify({
-      email: 'nuevo@gmail.com',
-      username: 'nuevo_usuario',
-      password: 'password123',
-      firstName: 'Nuevo',
-      lastName: 'Usuario',
-      branchId: 1 // Use the created brand ID
-    }, null, 2));
-
+    console.log(
+      JSON.stringify(
+        {
+          email: 'nuevo@gmail.com',
+          username: 'nuevo_usuario',
+          password: 'password123',
+          firstName: 'Nuevo',
+          lastName: 'Usuario',
+          branchId: 1, // Use the created brand ID
+        },
+        null,
+        2,
+      ),
+    );
   } catch (error) {
     console.error('❌ Seed process failed:', error);
     throw error;

@@ -14,22 +14,25 @@ export class UserCreationService {
    * @param username Username a validar
    * @returns Promise<{ emailExists: boolean, usernameExists: boolean }>
    */
-  async validateUserUniqueness(email: string, username: string): Promise<{
+  async validateUserUniqueness(
+    email: string,
+    username: string,
+  ): Promise<{
     emailExists: boolean;
     usernameExists: boolean;
   }> {
     const [existingEmail, existingUsername] = await Promise.all([
       this.prisma.user.findFirst({
-        where: { email: email.toLowerCase() }
+        where: { email: email.toLowerCase() },
       }),
       this.prisma.user.findFirst({
-        where: { username }
-      })
+        where: { username },
+      }),
     ]);
 
     return {
       emailExists: !!existingEmail,
-      usernameExists: !!existingUsername
+      usernameExists: !!existingUsername,
     };
   }
 
@@ -53,10 +56,10 @@ export class UserCreationService {
       data: {
         email: userData.email.toLowerCase(),
         username: userData.username,
-        firstName: userData.firstName || '', 
-        lastName: userData.lastName || null, 
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || null,
         role: UserRole.ROOT,
-        isActive: true
+        isActive: true,
       },
       select: {
         id: true,
@@ -65,8 +68,8 @@ export class UserCreationService {
         firstName: true,
         lastName: true,
         role: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
   }
 
@@ -78,7 +81,7 @@ export class UserCreationService {
   async isUserRoot(userId: number): Promise<boolean> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true }
+      select: { role: true },
     });
 
     return user?.role === UserRole.ROOT;

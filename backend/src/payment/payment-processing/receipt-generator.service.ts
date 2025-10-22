@@ -5,9 +5,11 @@ import * as PDFDocument from 'pdfkit';
 
 @Injectable()
 export class ReceiptGeneratorService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  async generateReceipt(paymentId: number): Promise<{ buffer: Buffer; filename: string }> {
+  async generateReceipt(
+    paymentId: number,
+  ): Promise<{ buffer: Buffer; filename: string }> {
     const payment = await this.getPaymentDetails(paymentId);
 
     if (!payment) {
@@ -40,10 +42,10 @@ export class ReceiptGeneratorService {
               select: {
                 firstName: true,
                 lastName: true,
-                email: true
-              }
-            }
-          }
+                email: true,
+              },
+            },
+          },
         },
         brandPlan: {
           include: {
@@ -53,12 +55,12 @@ export class ReceiptGeneratorService {
                 name: true,
                 type: true,
                 description: true,
-                basePrice: true
-              }
-            }
-          }
-        }
-      }
+                basePrice: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
@@ -66,7 +68,7 @@ export class ReceiptGeneratorService {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({
         margin: 45,
-        size: 'LETTER'
+        size: 'LETTER',
       });
       const chunks: Buffer[] = [];
 
@@ -77,10 +79,19 @@ export class ReceiptGeneratorService {
       // ========================================
       // HEADER - White Label
       // ========================================
-      doc.fontSize(24).font('Helvetica-Bold').text('WHITE LABEL', { align: 'center' });
-      doc.fontSize(10).font('Helvetica').text('Sistema de Gestión Empresarial', { align: 'center' });
+      doc
+        .fontSize(24)
+        .font('Helvetica-Bold')
+        .text('WHITE LABEL', { align: 'center' });
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .text('Sistema de Gestión Empresarial', { align: 'center' });
       doc.moveDown(0.2);
-      doc.fontSize(8).fillColor('#666666').text('www.whitelabel.com', { align: 'center' });
+      doc
+        .fontSize(8)
+        .fillColor('#666666')
+        .text('www.whitelabel.com', { align: 'center' });
       doc.fillColor('#000000');
       doc.moveDown(1);
 
@@ -92,10 +103,18 @@ export class ReceiptGeneratorService {
       // ========================================
       // TÍTULO
       // ========================================
-      doc.fontSize(18).font('Helvetica-Bold').text('COMPROBANTE DE PAGO', { align: 'center' });
+      doc
+        .fontSize(18)
+        .font('Helvetica-Bold')
+        .text('COMPROBANTE DE PAGO', { align: 'center' });
       doc.moveDown(0.3);
-      doc.fontSize(9).font('Helvetica').fillColor('#666666')
-        .text(`Recibo No. ${payment.tilopayReference || payment.id}`, { align: 'center' });
+      doc
+        .fontSize(9)
+        .font('Helvetica')
+        .fillColor('#666666')
+        .text(`Recibo No. ${payment.tilopayReference || payment.id}`, {
+          align: 'center',
+        });
       doc.fillColor('#000000');
       doc.moveDown(1);
 
@@ -107,12 +126,21 @@ export class ReceiptGeneratorService {
 
       doc.rect(45, boxY, 510, boxHeight).fillAndStroke('#f8f9fa', '#dee2e6');
 
-      doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
+      doc
+        .fillColor('#000000')
+        .fontSize(10)
+        .font('Helvetica-Bold')
         .text('FACTURADO A:', 55, boxY + 8);
 
-      doc.fontSize(9).font('Helvetica')
+      doc
+        .fontSize(9)
+        .font('Helvetica')
         .text(`${payment.brand.name}`, 55, boxY + 24)
-        .text(`${payment.brand.owner.firstName} ${payment.brand.owner.lastName}`, 55, boxY + 37)
+        .text(
+          `${payment.brand.owner.firstName} ${payment.brand.owner.lastName}`,
+          55,
+          boxY + 37,
+        )
         .text(`${payment.brand.owner.email}`, 55, boxY + 50);
 
       if (payment.brand.phone) {
@@ -128,7 +156,9 @@ export class ReceiptGeneratorService {
       const col1X = 55;
       const col2X = 340;
 
-      doc.fontSize(10).font('Helvetica-Bold')
+      doc
+        .fontSize(10)
+        .font('Helvetica-Bold')
         .text('DETALLES DE LA TRANSACCIÓN', col1X, tableTop);
 
       doc.moveDown(0.4);
@@ -139,7 +169,9 @@ export class ReceiptGeneratorService {
 
       const addRow = (label: string, value: string, bold = false) => {
         doc.fontSize(9).font('Helvetica').text(label, col1X, currentY);
-        doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').text(value, col2X, currentY);
+        doc
+          .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+          .text(value, col2X, currentY);
         currentY += 16;
       };
 
@@ -148,17 +180,17 @@ export class ReceiptGeneratorService {
         'Fecha de Pago:',
         payment.processedAt
           ? new Date(payment.processedAt).toLocaleDateString('es-CR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
           : new Date(payment.createdAt).toLocaleDateString('es-CR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
       );
 
       addRow('Método de Pago:', 'Tarjeta de crédito/débito');
@@ -179,7 +211,10 @@ export class ReceiptGeneratorService {
       // DETALLE DEL SERVICIO
       // ========================================
       doc.y = currentY;
-      doc.fontSize(10).font('Helvetica-Bold').text('SERVICIO CONTRATADO', col1X);
+      doc
+        .fontSize(10)
+        .font('Helvetica-Bold')
+        .text('SERVICIO CONTRATADO', col1X);
       doc.moveDown(0.4);
 
       currentY = doc.y;
@@ -187,26 +222,35 @@ export class ReceiptGeneratorService {
       if (payment.brandPlan && payment.brandPlan.plan) {
         addRow('Plan:', payment.brandPlan.plan.name, true);
 
-        const planTypeText = {
-          'app': 'Aplicación Móvil',
-          'web': 'Sitio Web',
-          'complete': 'Paquete Completo'
-        }[payment.brandPlan.plan.type] || payment.brandPlan.plan.type;
+        const planTypeText =
+          {
+            app: 'Aplicación Móvil',
+            web: 'Sitio Web',
+            complete: 'Paquete Completo',
+          }[payment.brandPlan.plan.type] || payment.brandPlan.plan.type;
 
         addRow('Tipo:', planTypeText);
 
-        const periodText = payment.brandPlan.billingPeriod === 'annual'
-          ? 'Anual (12 meses)'
-          : 'Mensual (1 mes)';
+        const periodText =
+          payment.brandPlan.billingPeriod === 'annual'
+            ? 'Anual (12 meses)'
+            : 'Mensual (1 mes)';
         addRow('Período:', periodText);
 
         if (payment.brandPlan.startDate && payment.brandPlan.endDate) {
-          const startDate = new Date(payment.brandPlan.startDate).toLocaleDateString('es-CR');
-          const endDate = new Date(payment.brandPlan.endDate).toLocaleDateString('es-CR');
+          const startDate = new Date(
+            payment.brandPlan.startDate,
+          ).toLocaleDateString('es-CR');
+          const endDate = new Date(
+            payment.brandPlan.endDate,
+          ).toLocaleDateString('es-CR');
           addRow('Vigencia:', `${startDate} - ${endDate}`);
         }
       } else {
-        addRow('Descripción:', payment.description || 'Servicio de suscripción');
+        addRow(
+          'Descripción:',
+          payment.description || 'Servicio de suscripción',
+        );
       }
 
       currentY += 6;
@@ -223,7 +267,11 @@ export class ReceiptGeneratorService {
       if (payment.brandPlan?.plan?.basePrice) {
         const basePrice = Number(payment.brandPlan.plan.basePrice);
         doc.fontSize(9).font('Helvetica').text('Subtotal:', col1X, currentY);
-        doc.text(`${payment.currency} $${basePrice.toFixed(2)}`, col2X, currentY);
+        doc.text(
+          `${payment.currency} $${basePrice.toFixed(2)}`,
+          col2X,
+          currentY,
+        );
         currentY += 16;
 
         const totalAmount = Number(payment.amount);
@@ -231,7 +279,11 @@ export class ReceiptGeneratorService {
 
         if (additionalServices > 0) {
           doc.text('Servicios Adicionales:', col1X, currentY);
-          doc.text(`${payment.currency} $${additionalServices.toFixed(2)}`, col2X, currentY);
+          doc.text(
+            `${payment.currency} $${additionalServices.toFixed(2)}`,
+            col2X,
+            currentY,
+          );
           currentY += 16;
         }
 
@@ -241,10 +293,17 @@ export class ReceiptGeneratorService {
       }
 
       // TOTAL
-      doc.fontSize(13).font('Helvetica-Bold')
+      doc
+        .fontSize(13)
+        .font('Helvetica-Bold')
         .text('TOTAL PAGADO:', col1X, currentY);
-      doc.fontSize(15)
-        .text(`${payment.currency} $${Number(payment.amount).toFixed(2)}`, col2X, currentY);
+      doc
+        .fontSize(15)
+        .text(
+          `${payment.currency} $${Number(payment.amount).toFixed(2)}`,
+          col2X,
+          currentY,
+        );
 
       // ========================================
       // FOOTER - Ajustado para que no se pase
@@ -257,22 +316,24 @@ export class ReceiptGeneratorService {
         'Este documento certifica el pago recibido por los servicios contratados.',
         45,
         footerStartY,
-        { align: 'center', width: 510 }
+        { align: 'center', width: 510 },
       );
 
       doc.text(
         'Soporte: soporte@whitelabel.com | Tel: +506 2222-3333',
         45,
         footerStartY + 12,
-        { align: 'center', width: 510 }
+        { align: 'center', width: 510 },
       );
 
-      doc.fontSize(6).text(
-        `Generado el ${new Date().toLocaleDateString('es-CR')} ${new Date().toLocaleTimeString('es-CR')}`,
-        45,
-        footerStartY + 24,
-        { align: 'center', width: 510 }
-      );
+      doc
+        .fontSize(6)
+        .text(
+          `Generado el ${new Date().toLocaleDateString('es-CR')} ${new Date().toLocaleTimeString('es-CR')}`,
+          45,
+          footerStartY + 24,
+          { align: 'center', width: 510 },
+        );
 
       doc.end();
     });

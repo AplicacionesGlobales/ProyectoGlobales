@@ -11,7 +11,7 @@ import {
   ClientSegmentationDto,
   ClientRetentionDto,
   AppointmentStatsDto,
-  RevenueStatsDto
+  RevenueStatsDto,
 } from '../dto';
 
 @Injectable()
@@ -21,19 +21,22 @@ export class ClientStatsService {
   /**
    * Obtener estadísticas básicas del cliente
    */
-  async getClientStats(clientId: number, brandId: number): Promise<ClientStatsDto> {
+  async getClientStats(
+    clientId: number,
+    brandId: number,
+  ): Promise<ClientStatsDto> {
     console.log('📊 Obteniendo estadísticas básicas del cliente:', clientId);
-    
+
     // TODO: Implementar cuando esté el módulo de appointments
     const stats: ClientStatsDto = {
       totalAppointments: 0,
-      lastVisit: undefined
+      lastVisit: undefined,
     };
 
     // Aquí iría la lógica real para obtener:
     // - Total de citas del cliente
     // - Fecha de última visita
-    
+
     return stats;
   }
 
@@ -41,21 +44,26 @@ export class ClientStatsService {
    * Obtener estadísticas detalladas del cliente con período específico
    */
   async getClientStatsDetailed(
-    clientId: number, 
-    brandId: number, 
-    period: string
+    clientId: number,
+    brandId: number,
+    period: string,
   ): Promise<ClientStatsResponseDto> {
-    console.log('📊 Obteniendo estadísticas detalladas del cliente:', clientId, 'período:', period);
-    
+    console.log(
+      '📊 Obteniendo estadísticas detalladas del cliente:',
+      clientId,
+      'período:',
+      period,
+    );
+
     // Obtener información del cliente
     const userBrand = await this.prisma.userBrand.findFirst({
       where: {
         userId: clientId,
-        brandId: brandId
+        brandId: brandId,
       },
       include: {
-        user: true
-      }
+        user: true,
+      },
     });
 
     if (!userBrand) {
@@ -70,13 +78,13 @@ export class ClientStatsService {
       total: 0,
       completed: 0,
       cancelled: 0,
-      noShow: 0
+      noShow: 0,
     };
 
     const revenueStats: RevenueStatsDto = {
       total: 0,
       average: 0,
-      lastPayment: 0
+      lastPayment: 0,
     };
 
     // Determinar tipo de cliente basado en frecuencia
@@ -93,7 +101,7 @@ export class ClientStatsService {
       clientType: clientType,
       averageRating: 0, // TODO: Obtener de ratings/reviews
       favoriteServices: [], // TODO: Obtener de appointments/services
-      period: period
+      period: period,
     };
 
     return response;
@@ -103,28 +111,35 @@ export class ClientStatsService {
    * Obtener los mejores clientes del brand
    */
   async getTopClients(
-    brandId: number, 
-    limit: number, 
-    period: string
+    brandId: number,
+    limit: number,
+    period: string,
   ): Promise<TopClientDto[]> {
-    console.log('📊 Obteniendo top', limit, 'clientes del brand:', brandId, 'período:', period);
-    
+    console.log(
+      '📊 Obteniendo top',
+      limit,
+      'clientes del brand:',
+      brandId,
+      'período:',
+      period,
+    );
+
     // Obtener todos los clientes del brand
     const userBrands = await this.prisma.userBrand.findMany({
       where: {
         brandId: brandId,
         user: {
           role: 'CLIENT',
-          isActive: true
-        }
+          isActive: true,
+        },
       },
       include: {
-        user: true
+        user: true,
       },
       take: limit,
       orderBy: {
-        createdAt: 'desc' // TODO: Ordenar por total de citas o revenue cuando esté disponible
-      }
+        createdAt: 'desc', // TODO: Ordenar por total de citas o revenue cuando esté disponible
+      },
     });
 
     // Mapear a TopClientDto
@@ -140,9 +155,9 @@ export class ClientStatsService {
           totalRevenue: 0, // TODO: Obtener de payments
           lastVisit: undefined, // TODO: Obtener de appointments
           averageRating: 0, // TODO: Obtener de ratings
-          clientType: 'new' as const // TODO: Calcular basado en frecuencia
+          clientType: 'new' as const, // TODO: Calcular basado en frecuencia
         };
-      })
+      }),
     );
 
     return topClients;
@@ -152,11 +167,16 @@ export class ClientStatsService {
    * Obtener resumen general de clientes del brand
    */
   async getClientsSummary(
-    brandId: number, 
-    period: string
+    brandId: number,
+    period: string,
   ): Promise<ClientsSummaryResponseDto> {
-    console.log('📊 Obteniendo resumen de clientes del brand:', brandId, 'período:', period);
-    
+    console.log(
+      '📊 Obteniendo resumen de clientes del brand:',
+      brandId,
+      'período:',
+      period,
+    );
+
     const dateRange = this.getDateRangeFromPeriod(period);
 
     // Obtener conteos básicos
@@ -164,9 +184,9 @@ export class ClientStatsService {
       where: {
         brandId: brandId,
         user: {
-          role: 'CLIENT'
-        }
-      }
+          role: 'CLIENT',
+        },
+      },
     });
 
     const activeClients = await this.prisma.userBrand.count({
@@ -174,9 +194,9 @@ export class ClientStatsService {
         brandId: brandId,
         user: {
           role: 'CLIENT',
-          isActive: true
-        }
-      }
+          isActive: true,
+        },
+      },
     });
 
     const inactiveClients = totalClients - activeClients;
@@ -186,13 +206,13 @@ export class ClientStatsService {
       where: {
         brandId: brandId,
         user: {
-          role: 'CLIENT'
+          role: 'CLIENT',
         },
         createdAt: {
           gte: dateRange.startDate,
-          lte: dateRange.endDate
-        }
-      }
+          lte: dateRange.endDate,
+        },
+      },
     });
 
     // TODO: Calcular métricas más complejas cuando estén los módulos
@@ -200,7 +220,7 @@ export class ClientStatsService {
       newClients: newClientsCount,
       returningClients: 0, // TODO: Calcular de appointments
       lostClients: 0, // TODO: Calcular basado en inactividad
-      growthRate: 0 // TODO: Calcular tasa de crecimiento
+      growthRate: 0, // TODO: Calcular tasa de crecimiento
     };
 
     const segmentation: ClientSegmentationDto = {
@@ -208,13 +228,13 @@ export class ClientStatsService {
       regular: 0, // TODO: Clientes con 3-10 visitas
       frequent: 0, // TODO: Clientes con 11-20 visitas
       vip: 0, // TODO: Clientes con > 20 visitas
-      inactive: inactiveClients
+      inactive: inactiveClients,
     };
 
     const retention: ClientRetentionDto = {
       rate: 0, // TODO: Calcular tasa de retención
       averageVisitsPerClient: 0, // TODO: Calcular de appointments
-      averageDaysBetweenVisits: 0 // TODO: Calcular de appointments
+      averageDaysBetweenVisits: 0, // TODO: Calcular de appointments
     };
 
     const response: ClientsSummaryResponseDto = {
@@ -227,7 +247,7 @@ export class ClientStatsService {
       averageClientValue: 0, // TODO: Calcular de payments
       averageSatisfaction: 0, // TODO: Calcular de ratings
       period,
-      generatedAt: new Date()
+      generatedAt: new Date(),
     };
 
     return response;
@@ -238,7 +258,10 @@ export class ClientStatsService {
   /**
    * Obtener rango de fechas basado en el período
    */
-  private getDateRangeFromPeriod(period: string): { startDate: Date; endDate: Date } {
+  private getDateRangeFromPeriod(period: string): {
+    startDate: Date;
+    endDate: Date;
+  } {
     const endDate = new Date();
     let startDate = new Date();
 
@@ -269,7 +292,9 @@ export class ClientStatsService {
   /**
    * Determinar tipo de cliente basado en número de citas
    */
-  private determineClientType(totalAppointments: number): 'new' | 'regular' | 'frequent' | 'vip' {
+  private determineClientType(
+    totalAppointments: number,
+  ): 'new' | 'regular' | 'frequent' | 'vip' {
     if (totalAppointments === 0) return 'new';
     if (totalAppointments <= 3) return 'new';
     if (totalAppointments <= 10) return 'regular';

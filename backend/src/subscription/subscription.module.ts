@@ -9,6 +9,6 @@ import { PaymentModule } from '../payment/payment.module';
   imports: [PrismaModule, PaymentModule],
   controllers: [SubscriptionController],
   providers: [SubscriptionService],
-  exports: [SubscriptionService]
+  exports: [SubscriptionService],
 })
-export class SubscriptionModule { }
+export class SubscriptionModule {}

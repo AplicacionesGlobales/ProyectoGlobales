@@ -47,14 +47,18 @@ export class AppointmentUtils {
     startTime: string,
     endTime: string,
     slotDuration: number,
-    bufferTime: number = 0
+    bufferTime: number = 0,
   ): string[] {
     const slots: string[] = [];
     const startMinutes = this.timeToMinutes(startTime);
     const endMinutes = this.timeToMinutes(endTime);
     const totalSlotTime = slotDuration + bufferTime;
 
-    for (let current = startMinutes; current + slotDuration <= endMinutes; current += totalSlotTime) {
+    for (
+      let current = startMinutes;
+      current + slotDuration <= endMinutes;
+      current += totalSlotTime
+    ) {
       slots.push(this.minutesToTime(current));
     }
 
@@ -68,16 +72,17 @@ export class AppointmentUtils {
     appointmentDate: Date,
     minAdvanceHours: number,
     maxAdvanceDays: number,
-    allowSameDay: boolean = true
+    allowSameDay: boolean = true,
   ): { isValid: boolean; reason?: string } {
     const now = new Date();
-    const timeDiffHours = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const timeDiffHours =
+      (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
     // Verificar tiempo mínimo de anticipación
     if (timeDiffHours < minAdvanceHours) {
       return {
         isValid: false,
-        reason: `Debe reservar con al menos ${minAdvanceHours} horas de anticipación`
+        reason: `Debe reservar con al menos ${minAdvanceHours} horas de anticipación`,
       };
     }
 
@@ -86,15 +91,18 @@ export class AppointmentUtils {
     if (daysDiff > maxAdvanceDays) {
       return {
         isValid: false,
-        reason: `No puede reservar con más de ${maxAdvanceDays} días de anticipación`
+        reason: `No puede reservar con más de ${maxAdvanceDays} días de anticipación`,
       };
     }
 
     // Verificar reservas del mismo día
-    if (!allowSameDay && appointmentDate.toDateString() === now.toDateString()) {
+    if (
+      !allowSameDay &&
+      appointmentDate.toDateString() === now.toDateString()
+    ) {
       return {
         isValid: false,
-        reason: 'No se permiten reservas para el mismo día'
+        reason: 'No se permiten reservas para el mismo día',
       };
     }
 
@@ -104,12 +112,15 @@ export class AppointmentUtils {
   /**
    * Formatea una fecha para mostrar en la interfaz
    */
-  static formatAppointmentDate(date: Date, includeTime: boolean = true): string {
+  static formatAppointmentDate(
+    date: Date,
+    includeTime: boolean = true,
+  ): string {
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      weekday: 'long'
+      weekday: 'long',
     };
 
     if (includeTime) {
@@ -123,7 +134,11 @@ export class AppointmentUtils {
   /**
    * Calcula el número de días hábiles entre dos fechas
    */
-  static getBusinessDaysBetween(startDate: Date, endDate: Date, excludeWeekends: boolean = true): number {
+  static getBusinessDaysBetween(
+    startDate: Date,
+    endDate: Date,
+    excludeWeekends: boolean = true,
+  ): number {
     let count = 0;
     const current = new Date(startDate);
 
@@ -142,7 +157,15 @@ export class AppointmentUtils {
    * Obtiene el nombre del día de la semana en español
    */
   static getDayName(dayOfWeek: number): string {
-    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const days = [
+      'Domingo',
+      'Lunes',
+      'Martes',
+      'Miércoles',
+      'Jueves',
+      'Viernes',
+      'Sábado',
+    ];
     return days[dayOfWeek];
   }
 
@@ -162,19 +185,25 @@ export class AppointmentUtils {
 
     // Validar que la fecha no sea en el pasado
     if (startTime <= new Date()) {
-      throw new BadRequestException('La fecha de la cita debe ser en el futuro');
+      throw new BadRequestException(
+        'La fecha de la cita debe ser en el futuro',
+      );
     }
 
     // Validar duración si se proporciona
     if (data.duration !== undefined) {
       if (data.duration < 15 || data.duration > 480) {
-        throw new BadRequestException('La duración debe estar entre 15 y 480 minutos');
+        throw new BadRequestException(
+          'La duración debe estar entre 15 y 480 minutos',
+        );
       }
     }
 
     // Validar descripción si se proporciona
     if (data.description !== undefined && data.description.length > 500) {
-      throw new BadRequestException('La descripción no puede exceder 500 caracteres');
+      throw new BadRequestException(
+        'La descripción no puede exceder 500 caracteres',
+      );
     }
   }
 
@@ -183,7 +212,7 @@ export class AppointmentUtils {
    */
   static hasTimeConflict(
     appointment1: { startTime: Date; endTime: Date },
-    appointment2: { startTime: Date; endTime: Date }
+    appointment2: { startTime: Date; endTime: Date },
   ): boolean {
     return (
       appointment1.startTime < appointment2.endTime &&
@@ -195,70 +224,95 @@ export class AppointmentUtils {
    * Genera un resumen de disponibilidad para una semana
    */
   static generateWeeklyAvailability(
-    businessHours: Array<{ dayOfWeek: number; isOpen: boolean; openTime?: string; closeTime?: string }>,
-    specialHours: Array<{ date: Date; isOpen: boolean; openTime?: string; closeTime?: string }>,
+    businessHours: Array<{
+      dayOfWeek: number;
+      isOpen: boolean;
+      openTime?: string;
+      closeTime?: string;
+    }>,
+    specialHours: Array<{
+      date: Date;
+      isOpen: boolean;
+      openTime?: string;
+      closeTime?: string;
+    }>,
     existingAppointments: Array<{ startTime: Date; endTime: Date }>,
     startDate: Date,
     slotDuration: number = 30,
-    bufferTime: number = 5
-  ): Array<{ date: string; dayName: string; slots: Array<{ time: string; available: boolean }> }> {
-    const weeklyAvailability: Array<{ date: string; dayName: string; slots: Array<{ time: string; available: boolean }> }> = [];
-    
+    bufferTime: number = 5,
+  ): Array<{
+    date: string;
+    dayName: string;
+    slots: Array<{ time: string; available: boolean }>;
+  }> {
+    const weeklyAvailability: Array<{
+      date: string;
+      dayName: string;
+      slots: Array<{ time: string; available: boolean }>;
+    }> = [];
+
     for (let i = 0; i < 7; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
-      
+
       const dayOfWeek = currentDate.getDay();
       const dateStr = currentDate.toISOString().split('T')[0];
-      
+
       // Buscar configuración de horario
-      const businessHour = businessHours.find(bh => bh.dayOfWeek === dayOfWeek);
-      const specialHour = specialHours.find(sh => 
-        sh.date.toISOString().split('T')[0] === dateStr
+      const businessHour = businessHours.find(
+        (bh) => bh.dayOfWeek === dayOfWeek,
       );
-      
+      const specialHour = specialHours.find(
+        (sh) => sh.date.toISOString().split('T')[0] === dateStr,
+      );
+
       // Determinar si está abierto y horarios
       let isOpen = businessHour?.isOpen || false;
       let openTime = businessHour?.openTime;
       let closeTime = businessHour?.closeTime;
-      
+
       if (specialHour) {
         isOpen = specialHour.isOpen;
         openTime = specialHour.openTime || openTime;
         closeTime = specialHour.closeTime || closeTime;
       }
-      
+
       const slots: Array<{ time: string; available: boolean }> = [];
-      
+
       if (isOpen && openTime && closeTime) {
-        const timeSlots = this.generateTimeSlots(openTime, closeTime, slotDuration, bufferTime);
-        
+        const timeSlots = this.generateTimeSlots(
+          openTime,
+          closeTime,
+          slotDuration,
+          bufferTime,
+        );
+
         for (const time of timeSlots) {
           const slotStart = new Date(`${dateStr}T${time}:00`);
           const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);
-          
+
           // Verificar conflictos con citas existentes
-          const hasConflict = existingAppointments.some(apt =>
+          const hasConflict = existingAppointments.some((apt) =>
             this.hasTimeConflict(
               { startTime: slotStart, endTime: slotEnd },
-              { startTime: apt.startTime, endTime: apt.endTime }
-            )
+              { startTime: apt.startTime, endTime: apt.endTime },
+            ),
           );
-          
+
           slots.push({
             time,
-            available: !hasConflict
+            available: !hasConflict,
           });
         }
       }
-      
+
       weeklyAvailability.push({
         date: dateStr,
         dayName: this.getDayName(dayOfWeek),
-        slots
+        slots,
       });
     }
-    
+
     return weeklyAvailability;
   }
 }

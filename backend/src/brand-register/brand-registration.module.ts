@@ -6,15 +6,9 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { FilesModule } from '../files/files.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    PrismaModule,
-    FilesModule,
-  ],
+  imports: [ConfigModule, PrismaModule, FilesModule],
   controllers: [BrandRegistrationController],
-  providers: [
-    BrandRegistrationService,
-  ],
+  providers: [BrandRegistrationService],
   exports: [BrandRegistrationService],
 })
 export class BrandRegistrationModule {}

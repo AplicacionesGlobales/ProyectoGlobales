@@ -3,7 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum BillingPeriod {
   MONTHLY = 'monthly',
-  ANNUAL = 'annual'
+  ANNUAL = 'annual',
 }
 
 export class UpdateBrandPlanDto {
@@ -16,9 +16,9 @@ export class UpdateBrandPlanDto {
   @IsOptional()
   billingPeriod?: BillingPeriod;
 
-  @ApiPropertyOptional({ 
-    example: [236, 237, 240], 
-    description: 'IDs de features adicionales' 
+  @ApiPropertyOptional({
+    example: [236, 237, 240],
+    description: 'IDs de features adicionales',
   })
   @IsArray()
   @IsNumber({}, { each: true })
@@ -39,7 +39,7 @@ export class BrandPlanHistoryDto {
   @ApiProperty({ example: 'Plan Completo' })
   planName: string;
 
-  @ApiProperty({ example: 167.50 })
+  @ApiProperty({ example: 167.5 })
   price: number;
 
   @ApiProperty({ example: 'monthly' })
@@ -74,10 +74,12 @@ export class PlanComparisonDto {
   @ApiProperty({ example: 59 })
   basePrice: number;
 
-  @ApiProperty({ example: 142.50 })
+  @ApiProperty({ example: 142.5 })
   totalPriceWithFeatures: number;
 
-  @ApiProperty({ example: ['App nativa', 'Notificaciones push', 'Soporte prioritario'] })
+  @ApiProperty({
+    example: ['App nativa', 'Notificaciones push', 'Soporte prioritario'],
+  })
   includedFeatures: string[];
 
   @ApiProperty({ example: true })
@@ -106,7 +108,7 @@ export class BrandPlanResponseDto {
   @ApiProperty({ example: 99 })
   basePrice: number;
 
-  @ApiProperty({ example: 167.50 })
+  @ApiProperty({ example: 167.5 })
   currentPrice: number;
 
   @ApiProperty({ example: 'monthly' })

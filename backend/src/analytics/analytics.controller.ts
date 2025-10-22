@@ -1,18 +1,37 @@
-import { Controller, Get, Param, Query, UseGuards, HttpCode, HttpStatus, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  ParseIntPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { BaseResponseDto } from '../common/dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BrandOwnerGuard } from '../common/guards/brand-owner.guard';
-import { RevenueAnalyticsQueryDto, RevenueAnalyticsResponseDto } from './dto/revenue-analytics.dto';
+import {
+  RevenueAnalyticsQueryDto,
+  RevenueAnalyticsResponseDto,
+} from './dto/revenue-analytics.dto';
 import { KpisQueryDto, KpisResponseDto } from './dto/kpis.dto';
 
 @ApiTags('Analytics')
-@Controller('api/analytics')
+@Controller('analytics')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AnalyticsController {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(private readonly analyticsService: AnalyticsService) { }
 
   @Get('revenue/:brandId')
   @UseGuards(BrandOwnerGuard)
@@ -43,7 +62,8 @@ export class AnalyticsController {
   })
   @ApiQuery({
     name: 'referenceDate',
-    description: 'Optional reference date (ISO 8601 format) to calculate metrics from. Defaults to current date/time.',
+    description:
+      'Optional reference date (ISO 8601 format) to calculate metrics from. Defaults to current date/time.',
     required: false,
     example: '2025-10-20T00:00:00Z',
     type: 'string',
@@ -59,7 +79,8 @@ export class AnalyticsController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - User does not have ROOT/ADMIN permissions for this brand',
+    description:
+      'Forbidden - User does not have ROOT/ADMIN permissions for this brand',
   })
   @ApiResponse({
     status: 404,
@@ -73,7 +94,9 @@ export class AnalyticsController {
     @Param('brandId', ParseIntPipe) brandId: number,
     @Query() query: RevenueAnalyticsQueryDto,
   ): Promise<BaseResponseDto<RevenueAnalyticsResponseDto>> {
-    const referenceDate = query.referenceDate ? new Date(query.referenceDate) : undefined;
+    const referenceDate = query.referenceDate
+      ? new Date(query.referenceDate)
+      : undefined;
     return this.analyticsService.getRevenueMetrics(brandId, referenceDate);
   }
 

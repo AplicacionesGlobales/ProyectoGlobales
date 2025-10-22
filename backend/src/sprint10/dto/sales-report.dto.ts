@@ -5,14 +5,14 @@ import { IsInt, IsEnum, IsPositive } from 'class-validator';
 export enum ReportPeriod {
   WEEKLY = 'weekly',
   MONTHLY = 'monthly',
-  ALL = 'all'
+  ALL = 'all',
 }
 
 export class SalesReportRequestDto {
   @ApiProperty({
     description: 'ID de la marca para generar el reporte',
     example: 1,
-    type: 'number'
+    type: 'number',
   })
   @IsInt()
   @IsPositive()
@@ -29,22 +29,23 @@ export class SalesReportRequestDto {
       semanal: {
         value: ReportPeriod.WEEKLY,
         summary: 'Última Semana',
-        description: 'Genera reporte de los últimos 7 días'
+        description: 'Genera reporte de los últimos 7 días',
       },
       mensual: {
         value: ReportPeriod.MONTHLY,
         summary: 'Último Mes',
-        description: 'Genera reporte de los últimos 30 días'
+        description: 'Genera reporte de los últimos 30 días',
       },
       historico: {
         value: ReportPeriod.ALL,
         summary: 'Todo el Histórico',
-        description: 'Genera reporte de todos los registros disponibles'
-      }
-    }
+        description: 'Genera reporte de todos los registros disponibles',
+      },
+    },
   })
   @IsEnum(ReportPeriod, {
-    message: 'El período debe ser: weekly (última semana), monthly (último mes) o all (todo el histórico)'
+    message:
+      'El período debe ser: weekly (última semana), monthly (último mes) o all (todo el histórico)',
   })
   period: ReportPeriod;
 }

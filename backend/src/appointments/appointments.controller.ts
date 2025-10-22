@@ -14,7 +14,7 @@ import {
   UseGuards,
   Request,
   BadRequestException,
-  ParseIntPipe
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -23,7 +23,7 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
-  ApiBody
+  ApiBody,
 } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
 import { BaseResponseDto } from '../common/dto';
@@ -42,31 +42,31 @@ import {
   CalculateAvailabilityDto,
   AvailabilityCalculationResultDto,
   TimeSlotDto,
-  AppointmentStatus
+  AppointmentStatus,
 } from './dto/appointment.dto';
 import {
   GetCalendarMonthDto,
-  CalendarMonthResponseDto
+  CalendarMonthResponseDto,
 } from './dto/calendar-month.dto';
-import {
-  DayAgendaDto,
-  GetDayAgendaQueryDto
-} from './dto/day-agenda.dto';
+import { DayAgendaDto, GetDayAgendaQueryDto } from './dto/day-agenda.dto';
 import {
   GetRealTimeSlotsDto,
-  RealTimeSlotsResponseDto
+  RealTimeSlotsResponseDto,
 } from './dto/real-time-slots.dto';
 import { AppointmentStatusManagerService } from './appointment-status-manager.service';
-import { StatusTransitionDto, StatusHistoryDto } from './dto/status-transition.dto';
+import {
+  StatusTransitionDto,
+  StatusHistoryDto,
+} from './dto/status-transition.dto';
 
 @ApiTags('Appointments Management')
 @Controller('brand/:brandId')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AppointmentsController {
-    constructor(
+  constructor(
     private readonly appointmentsService: AppointmentsService,
-    private readonly statusManager: AppointmentStatusManagerService
+    private readonly statusManager: AppointmentStatusManagerService,
   ) {}
 
   // Endpoint para que clientes creen sus propias citas
@@ -74,32 +74,32 @@ export class AppointmentsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Crear cita como cliente',
-    description: 'Permite a un cliente crear una cita para sí mismo'
+    description: 'Permite a un cliente crear una cita para sí mismo',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiBody({ type: CreateAppointmentDto })
   @ApiResponse({
     status: 201,
     description: 'Cita creada exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos inválidos o horario no disponible'
+    description: 'Datos inválidos o horario no disponible',
   })
   @ApiResponse({
     status: 409,
-    description: 'Conflicto con cita existente'
+    description: 'Conflicto con cita existente',
   })
   async createAppointment(
     @Param('brandId') brandId: string,
     @Body(ValidationPipe) createData: CreateAppointmentDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     return this.appointmentsService.createAppointment(
       parseInt(brandId),
       createData,
-      req.user.userId
+      req.user.userId,
     );
   }
 
@@ -109,28 +109,29 @@ export class AppointmentsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Crear cita como ROOT',
-    description: 'Permite al ROOT crear citas y asignarlas a clientes específicos o dejarlas sin asignar'
+    description:
+      'Permite al ROOT crear citas y asignarlas a clientes específicos o dejarlas sin asignar',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiBody({ type: CreateAppointmentByRootDto })
   @ApiResponse({
     status: 201,
     description: 'Cita creada exitosamente por ROOT',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 403,
-    description: 'Solo ROOT puede usar este endpoint'
+    description: 'Solo ROOT puede usar este endpoint',
   })
   async createAppointmentByRoot(
     @Param('brandId') brandId: string,
     @Body(ValidationPipe) createData: CreateAppointmentByRootDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     return this.appointmentsService.createAppointmentByRoot(
       parseInt(brandId),
       createData,
-      req.user.userId
+      req.user.userId,
     );
   }
 
@@ -139,51 +140,58 @@ export class AppointmentsController {
   //@UseGuards(BrandOwnerGuard)
   @ApiOperation({
     summary: 'Obtener citas',
-    description: 'ROOT ve todas las citas del brand, clientes solo ven sus propias citas'
+    description:
+      'ROOT ve todas las citas del brand, clientes solo ven sus propias citas',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiQuery({
     name: 'startDate',
     required: false,
-    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)'
+    description: 'Fecha de inicio para filtrar (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'endDate',
     required: false,
-    description: 'Fecha de fin para filtrar (YYYY-MM-DD)'
+    description: 'Fecha de fin para filtrar (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'status',
     required: false,
-    description: 'Filtrar por estado de la cita'
+    description: 'Filtrar por estado de la cita',
   })
   @ApiQuery({
     name: 'clientId',
     required: false,
-    description: 'Filtrar por cliente (solo ROOT)'
+    description: 'Filtrar por cliente (solo ROOT)',
   })
   @ApiQuery({
     name: 'page',
     required: false,
     description: 'Número de página',
-    example: 1
+    example: 1,
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     description: 'Elementos por página',
-    example: 20
+    example: 20,
   })
   @ApiResponse({
     status: 200,
     description: 'Citas obtenidas exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async getAppointments(
     @Param('brandId') brandId: string,
     @Query() query: any, // Use any to avoid strict validation
-    @Request() req: any
-  ): Promise<BaseResponseDto<{ appointments: AppointmentDto[], total: number, pages: number }>> {
+    @Request() req: any,
+  ): Promise<
+    BaseResponseDto<{
+      appointments: AppointmentDto[];
+      total: number;
+      pages: number;
+    }>
+  > {
     // Transform query parameters manually
     const queryDto: GetAppointmentsQueryDto = {
       startDate: query.startDate,
@@ -191,51 +199,54 @@ export class AppointmentsController {
       status: query.status,
       clientId: query.clientId ? parseInt(query.clientId) : undefined,
       page: query.page ? parseInt(query.page) : 1,
-      limit: query.limit ? parseInt(query.limit) : 20
+      limit: query.limit ? parseInt(query.limit) : 20,
     };
 
     return this.appointmentsService.getAppointments(
       parseInt(brandId),
       req.user.userId,
-      queryDto
+      queryDto,
     );
   }
-
-
 
   // Actualizar estado de cita
   @Put('appointments/:appointmentId/status')
   @ApiOperation({
     summary: 'Actualizar estado de cita',
-    description: 'Actualiza únicamente el estado de una cita existente. ROOT puede actualizar cualquier cita, clientes solo las suyas'
+    description:
+      'Actualiza únicamente el estado de una cita existente. ROOT puede actualizar cualquier cita, clientes solo las suyas',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+  @ApiParam({
+    name: 'appointmentId',
+    description: 'ID de la cita',
+    example: 789,
+  })
   @ApiBody({ type: UpdateAppointmentStatusDto })
   @ApiResponse({
     status: 200,
     description: 'Estado de cita actualizado exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 403,
-    description: 'No tiene permisos para actualizar esta cita'
+    description: 'No tiene permisos para actualizar esta cita',
   })
   @ApiResponse({
     status: 404,
-    description: 'Cita no encontrada'
+    description: 'Cita no encontrada',
   })
   async updateAppointmentStatus(
     @Param('brandId') brandId: string,
     @Param('appointmentId') appointmentId: string,
     @Body(ValidationPipe) updateData: UpdateAppointmentStatusDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     return this.appointmentsService.updateAppointmentStatus(
       parseInt(brandId),
       parseInt(appointmentId),
       updateData,
-      req.user.userId
+      req.user.userId,
     );
   }
 
@@ -244,25 +255,29 @@ export class AppointmentsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cancelar cita',
-    description: 'Cancela una cita cambiando su estado a CANCELLED'
+    description: 'Cancela una cita cambiando su estado a CANCELLED',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+  @ApiParam({
+    name: 'appointmentId',
+    description: 'ID de la cita',
+    example: 789,
+  })
   @ApiResponse({
     status: 200,
     description: 'Cita cancelada exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async cancelAppointment(
     @Param('brandId') brandId: string,
     @Param('appointmentId') appointmentId: string,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     return this.appointmentsService.updateAppointmentStatus(
       parseInt(brandId),
       parseInt(appointmentId),
       { status: 'CANCELLED' as any, notes: 'Cita cancelada' },
-      req.user.userId
+      req.user.userId,
     );
   }
 
@@ -271,39 +286,44 @@ export class AppointmentsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cancelar cita con notificación',
-    description: 'Cancela una cita con motivo específico y envía notificación automática por email al cliente'
+    description:
+      'Cancela una cita con motivo específico y envía notificación automática por email al cliente',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+  @ApiParam({
+    name: 'appointmentId',
+    description: 'ID de la cita',
+    example: 789,
+  })
   @ApiBody({ type: CancelAppointmentDto })
   @ApiResponse({
     status: 200,
     description: 'Cita cancelada exitosamente y notificación enviada',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'La cita ya está cancelada o datos inválidos'
+    description: 'La cita ya está cancelada o datos inválidos',
   })
   @ApiResponse({
     status: 403,
-    description: 'No tiene permisos para cancelar esta cita'
+    description: 'No tiene permisos para cancelar esta cita',
   })
   @ApiResponse({
     status: 404,
-    description: 'Cita no encontrada'
+    description: 'Cita no encontrada',
   })
   async cancelAppointmentWithNotification(
     @Param('brandId') brandId: string,
     @Param('appointmentId') appointmentId: string,
     @Body(ValidationPipe) cancelData: CancelAppointmentDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     return this.appointmentsService.cancelAppointmentWithNotification(
       parseInt(brandId),
       parseInt(appointmentId),
       cancelData,
-      req.user.userId
+      req.user.userId,
     );
   }
 
@@ -311,33 +331,33 @@ export class AppointmentsController {
   @Get('appointments/availability/slots')
   @ApiOperation({
     summary: 'Obtener horarios disponibles',
-    description: 'Retorna los horarios disponibles para una fecha específica'
+    description: 'Retorna los horarios disponibles para una fecha específica',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiQuery({
     name: 'date',
     required: true,
     description: 'Fecha para consultar disponibilidad (YYYY-MM-DD)',
-    example: '2024-08-20'
+    example: '2024-08-20',
   })
   @ApiQuery({
     name: 'duration',
     required: false,
     description: 'Duración deseada en minutos',
-    example: 30
+    example: 30,
   })
   @ApiResponse({
     status: 200,
     description: 'Horarios disponibles obtenidos exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async getAvailableTimeSlots(
     @Param('brandId') brandId: string,
-    @Query(ValidationPipe) query: AvailableTimeSlotsDto
+    @Query(ValidationPipe) query: AvailableTimeSlotsDto,
   ): Promise<BaseResponseDto<TimeSlotDto[]>> {
     return this.appointmentsService.getAvailableTimeSlots(
       parseInt(brandId),
-      query
+      query,
     );
   }
 
@@ -346,35 +366,35 @@ export class AppointmentsController {
   @UseGuards(BrandOwnerGuard)
   @ApiOperation({
     summary: 'Obtener estadísticas de citas (solo ROOT)',
-    description: 'Retorna un resumen estadístico de las citas del brand'
+    description: 'Retorna un resumen estadístico de las citas del brand',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiQuery({
     name: 'startDate',
     required: false,
-    description: 'Fecha de inicio para el reporte (YYYY-MM-DD)'
+    description: 'Fecha de inicio para el reporte (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'endDate',
     required: false,
-    description: 'Fecha de fin para el reporte (YYYY-MM-DD)'
+    description: 'Fecha de fin para el reporte (YYYY-MM-DD)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Estadísticas obtenidas exitosamente'
+    description: 'Estadísticas obtenidas exitosamente',
   })
   async getAppointmentStatistics(
     @Param('brandId') brandId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @Request() req?: any
+    @Request() req?: any,
   ): Promise<BaseResponseDto<any>> {
     // Esta funcionalidad se puede implementar posteriormente
     return BaseResponseDto.success({
       message: 'Estadísticas no implementadas aún',
       totalAppointments: 0,
       byStatus: {},
-      byMonth: {}
+      byMonth: {},
     });
   }
 
@@ -382,31 +402,35 @@ export class AppointmentsController {
   @Get('appointments/date/:date')
   @ApiOperation({
     summary: 'Obtener citas por fecha',
-    description: 'Obtiene todas las citas de una fecha específica'
+    description: 'Obtiene todas las citas de una fecha específica',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiParam({ name: 'date', description: 'Fecha en formato YYYY-MM-DD', example: '2025-08-19' })
+  @ApiParam({
+    name: 'date',
+    description: 'Fecha en formato YYYY-MM-DD',
+    example: '2025-08-19',
+  })
   @ApiResponse({
     status: 200,
     description: 'Citas obtenidas exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async getAppointmentsByDate(
     @Param('brandId') brandId: string,
     @Param('date') date: string,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<AppointmentDto[]>> {
     const query: GetAppointmentsQueryDto = {
       startDate: date,
       endDate: date,
       page: 1,
-      limit: 100
+      limit: 100,
     };
 
     const result = await this.appointmentsService.getAppointments(
       parseInt(brandId),
       req.user.userId,
-      query
+      query,
     );
 
     return BaseResponseDto.success(result.data?.appointments || []);
@@ -416,24 +440,29 @@ export class AppointmentsController {
   @Get('calendar/month/:month')
   @ApiOperation({
     summary: 'Obtener resumen de ocupación mensual',
-    description: 'Retorna un resumen de ocupación y citas para un mes completo con estadísticas diarias y mensuales'
+    description:
+      'Retorna un resumen de ocupación y citas para un mes completo con estadísticas diarias y mensuales',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiParam({ name: 'month', description: 'Mes en formato YYYY-MM', example: '2024-08' })
+  @ApiParam({
+    name: 'month',
+    description: 'Mes en formato YYYY-MM',
+    example: '2024-08',
+  })
   @ApiResponse({
     status: 200,
     description: 'Resumen mensual obtenido exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async getCalendarMonth(
     @Param('brandId') brandId: string,
     @Param('month') month: string,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<CalendarMonthResponseDto>> {
     return this.appointmentsService.getCalendarMonth(
       parseInt(brandId),
       month,
-      req.user.userId
+      req.user.userId,
     );
   }
 
@@ -441,41 +470,42 @@ export class AppointmentsController {
   @Get('appointments/calendar')
   @ApiOperation({
     summary: 'Obtener citas para calendario',
-    description: 'Obtiene todas las citas en un rango de fechas para mostrar en el calendario'
+    description:
+      'Obtiene todas las citas en un rango de fechas para mostrar en el calendario',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiQuery({
     name: 'startDate',
     required: true,
-    description: 'Fecha de inicio (YYYY-MM-DD)'
+    description: 'Fecha de inicio (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'endDate',
     required: true,
-    description: 'Fecha de fin (YYYY-MM-DD)'
+    description: 'Fecha de fin (YYYY-MM-DD)',
   })
   @ApiResponse({
     status: 200,
     description: 'Citas del calendario obtenidas exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async getCalendarAppointments(
     @Param('brandId') brandId: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<AppointmentDto[]>> {
     const query: GetAppointmentsQueryDto = {
       startDate,
       endDate,
       page: 1,
-      limit: 1000 // Allow more appointments for calendar view
+      limit: 1000, // Allow more appointments for calendar view
     };
 
     const result = await this.appointmentsService.getAppointments(
       parseInt(brandId),
       req.user.userId,
-      query
+      query,
     );
 
     // El servicio ya devuelve BaseResponseDto, extraemos los appointments
@@ -491,24 +521,25 @@ export class AppointmentsController {
   @UseGuards(JwtAuthGuard) // Requiere autenticación
   @ApiOperation({
     summary: 'Obtener agenda completa del día actual',
-    description: 'Retorna la agenda del día actual con citas programadas y espacios disponibles. Solo accesible para miembros del brand.'
+    description:
+      'Retorna la agenda del día actual con citas programadas y espacios disponibles. Solo accesible para miembros del brand.',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiQuery({
     name: 'includeCancelled',
     required: false,
     description: 'Incluir citas canceladas (solo para dueños)',
-    example: false
+    example: false,
   })
   @ApiResponse({
     status: 200,
     description: 'Agenda del día obtenida exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async getTodayAgenda(
     @Param('brandId') brandId: string,
     @Query(ValidationPipe) query: GetDayAgendaQueryDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<DayAgendaDto>> {
     // Always use current date
     const today = new Date().toISOString().split('T')[0];
@@ -517,7 +548,7 @@ export class AppointmentsController {
       parseInt(brandId),
       today,
       userId,
-      query
+      query,
     );
   }
 
@@ -526,31 +557,38 @@ export class AppointmentsController {
   @UseGuards(JwtAuthGuard) // Requiere autenticación
   @ApiOperation({
     summary: 'Obtener agenda completa para una fecha específica',
-    description: 'Retorna la agenda de una fecha específica con citas programadas y espacios disponibles. Solo accesible para miembros del brand.'
+    description:
+      'Retorna la agenda de una fecha específica con citas programadas y espacios disponibles. Solo accesible para miembros del brand.',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiParam({ name: 'date', description: 'Fecha en formato YYYY-MM-DD', example: '2024-08-20' })
+  @ApiParam({
+    name: 'date',
+    description: 'Fecha en formato YYYY-MM-DD',
+    example: '2024-08-20',
+  })
   @ApiQuery({
     name: 'includeCancelled',
     required: false,
     description: 'Incluir citas canceladas (solo para dueños)',
-    example: false
+    example: false,
   })
   @ApiResponse({
     status: 200,
     description: 'Agenda de la fecha específica obtenida exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   async getDateAgenda(
     @Param('brandId') brandId: string,
     @Param('date') date: string,
     @Query(ValidationPipe) query: GetDayAgendaQueryDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<DayAgendaDto>> {
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date)) {
-      throw new BadRequestException('Formato de fecha inválido. Use YYYY-MM-DD');
+      throw new BadRequestException(
+        'Formato de fecha inválido. Use YYYY-MM-DD',
+      );
     }
 
     const userId = req.user?.sub || req.user?.userId;
@@ -558,7 +596,7 @@ export class AppointmentsController {
       parseInt(brandId),
       date,
       userId,
-      query
+      query,
     );
   }
 
@@ -567,39 +605,44 @@ export class AppointmentsController {
   @UseGuards(BrandOwnerGuard) // Solo ROOT/ADMIN
   @ApiOperation({
     summary: 'Editar cita completa',
-    description: 'Permite al ROOT/ADMIN modificar fecha, hora, cliente, servicio y duración de una cita.'
+    description:
+      'Permite al ROOT/ADMIN modificar fecha, hora, cliente, servicio y duración de una cita.',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+  @ApiParam({
+    name: 'appointmentId',
+    description: 'ID de la cita',
+    example: 789,
+  })
   @ApiBody({ type: UpdateAppointmentDto })
   @ApiResponse({
     status: 200,
     description: 'Cita actualizada exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 403,
-    description: 'Solo ROOT/ADMIN puede usar este endpoint'
+    description: 'Solo ROOT/ADMIN puede usar este endpoint',
   })
   @ApiResponse({
     status: 404,
-    description: 'Cita no encontrada'
+    description: 'Cita no encontrada',
   })
   @ApiResponse({
     status: 409,
-    description: 'Conflicto con horario existente o fuera de horario laboral'
+    description: 'Conflicto con horario existente o fuera de horario laboral',
   })
   async updateAppointmentAdmin(
     @Param('brandId') brandId: string,
     @Param('appointmentId') appointmentId: string,
     @Body(ValidationPipe) updateData: UpdateAppointmentDto,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     return this.appointmentsService.updateAppointmentAdmin(
       parseInt(brandId),
       parseInt(appointmentId),
       updateData,
-      req.user.userId
+      req.user.userId,
     );
   }
 
@@ -608,78 +651,84 @@ export class AppointmentsController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Obtener slots disponibles en tiempo real',
-    description: 'Retorna los slots disponibles para una fecha específica con soporte para tipos de servicio específicos y configuraciones personalizables. Ideal para sistemas de booking en tiempo real.'
+    description:
+      'Retorna los slots disponibles para una fecha específica con soporte para tipos de servicio específicos y configuraciones personalizables. Ideal para sistemas de booking en tiempo real.',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
   @ApiQuery({
     name: 'date',
     required: true,
     description: 'Fecha para consultar disponibilidad (YYYY-MM-DD)',
-    example: '2024-08-20'
+    example: '2024-08-20',
   })
   @ApiQuery({
     name: 'serviceTypeId',
     required: false,
-    description: 'ID del tipo de servicio específico. Si no se proporciona, se muestran todos los tipos activos',
-    example: 123
+    description:
+      'ID del tipo de servicio específico. Si no se proporciona, se muestran todos los tipos activos',
+    example: 123,
   })
   @ApiQuery({
     name: 'duration',
     required: false,
-    description: 'Duración personalizada en minutos. Sobrescribe la duración del tipo de servicio',
-    example: 45
+    description:
+      'Duración personalizada en minutos. Sobrescribe la duración del tipo de servicio',
+    example: 45,
   })
   @ApiQuery({
     name: 'slotInterval',
     required: false,
     description: 'Intervalo entre slots en minutos (default: 15)',
-    example: 15
+    example: 15,
   })
   @ApiQuery({
     name: 'onlyFullSlots',
     required: false,
-    description: 'Solo mostrar slots que puedan acomodar completamente el servicio (default: true)',
-    example: true
+    description:
+      'Solo mostrar slots que puedan acomodar completamente el servicio (default: true)',
+    example: true,
   })
   @ApiQuery({
     name: 'startTime',
     required: false,
     description: 'Hora de inicio para filtrar slots (HH:mm)',
-    example: '09:00'
+    example: '09:00',
   })
   @ApiQuery({
     name: 'endTime',
     required: false,
     description: 'Hora de fin para filtrar slots (HH:mm)',
-    example: '17:00'
+    example: '17:00',
   })
   @ApiResponse({
     status: 200,
     description: 'Slots en tiempo real obtenidos exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Parámetros de consulta inválidos'
+    description: 'Parámetros de consulta inválidos',
   })
   @ApiResponse({
     status: 404,
-    description: 'Tipo de servicio no encontrado'
+    description: 'Tipo de servicio no encontrado',
   })
   async getRealTimeSlots(
     @Param('brandId') brandId: string,
     @Query() query: any,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<RealTimeSlotsResponseDto>> {
     // Transform and validate query parameters
     const realTimeSlotsQuery: GetRealTimeSlotsDto = {
       date: query.date,
-      serviceTypeId: query.serviceTypeId ? parseInt(query.serviceTypeId) : undefined,
+      serviceTypeId: query.serviceTypeId
+        ? parseInt(query.serviceTypeId)
+        : undefined,
       duration: query.duration ? parseInt(query.duration) : undefined,
       slotInterval: query.slotInterval ? parseInt(query.slotInterval) : 15,
       onlyFullSlots: query.onlyFullSlots !== 'false', // Default to true unless explicitly false
       startTime: query.startTime,
-      endTime: query.endTime
+      endTime: query.endTime,
     };
 
     // Basic validation
@@ -691,7 +740,7 @@ export class AppointmentsController {
     return this.appointmentsService.getRealTimeSlots(
       parseInt(brandId),
       realTimeSlotsQuery,
-      userId
+      userId,
     );
   }
 
@@ -699,216 +748,232 @@ export class AppointmentsController {
   @Get('appointments/:appointmentId')
   @ApiOperation({
     summary: 'Obtener cita específica',
-    description: 'Obtiene los detalles de una cita específica'
+    description: 'Obtiene los detalles de una cita específica',
   })
   @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-  @ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
+  @ApiParam({
+    name: 'appointmentId',
+    description: 'ID de la cita',
+    example: 789,
+  })
   @ApiResponse({
     status: 200,
     description: 'Cita obtenida exitosamente',
-    type: BaseResponseDto
+    type: BaseResponseDto,
   })
   @ApiResponse({
     status: 404,
-    description: 'Cita no encontrada'
+    description: 'Cita no encontrada',
   })
   async getAppointment(
     @Param('brandId') brandId: string,
     @Param('appointmentId') appointmentId: string,
-    @Request() req: any
+    @Request() req: any,
   ): Promise<BaseResponseDto<AppointmentDto>> {
     return this.appointmentsService.getAppointmentById(
       parseInt(brandId),
       parseInt(appointmentId),
-      req.user.userId
+      req.user.userId,
     );
   }
 
-   // Obtener transiciones válidas para una cita
-@Get('appointments/:appointmentId/transitions')
-@ApiOperation({
-  summary: 'Obtener transiciones de estado disponibles',
-  description: 'Retorna las transiciones de estado válidas para una cita'
-})
-@ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-@ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
-@ApiResponse({
-  status: 200,
-  description: 'Transiciones válidas obtenidas',
-  type: BaseResponseDto
-})
-async getValidTransitions(
-  @Param('brandId') brandId: string,
-  @Param('appointmentId') appointmentId: string,
-  @Request() req: any
-): Promise<BaseResponseDto<any>> {
-  const validation = await this.statusManager.validateTransition(
-    parseInt(appointmentId),
-    AppointmentStatus.PENDING, // dummy status para obtener todas las transiciones
-    req.user.userId
-  );
+  // Obtener transiciones válidas para una cita
+  @Get('appointments/:appointmentId/transitions')
+  @ApiOperation({
+    summary: 'Obtener transiciones de estado disponibles',
+    description: 'Retorna las transiciones de estado válidas para una cita',
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiParam({
+    name: 'appointmentId',
+    description: 'ID de la cita',
+    example: 789,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Transiciones válidas obtenidas',
+    type: BaseResponseDto,
+  })
+  async getValidTransitions(
+    @Param('brandId') brandId: string,
+    @Param('appointmentId') appointmentId: string,
+    @Request() req: any,
+  ): Promise<BaseResponseDto<any>> {
+    const validation = await this.statusManager.validateTransition(
+      parseInt(appointmentId),
+      AppointmentStatus.PENDING, // dummy status para obtener todas las transiciones
+      req.user.userId,
+    );
 
-  return BaseResponseDto.success(validation);
-}
-
-// Obtener historial de cambios de estado
-@Get('appointments/:appointmentId/status-history')
-@ApiOperation({
-  summary: 'Obtener historial de cambios de estado',
-  description: 'Retorna el historial completo de cambios de estado de una cita'
-})
-@ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-@ApiParam({ name: 'appointmentId', description: 'ID de la cita', example: 789 })
-@ApiResponse({
-  status: 200,
-  description: 'Historial obtenido exitosamente',
-  type: BaseResponseDto
-})
-async getStatusHistory(
-  @Param('brandId') brandId: string,
-  @Param('appointmentId') appointmentId: string,
-  @Request() req: any
-): Promise<BaseResponseDto<StatusHistoryDto[]>> {
-  const history = await this.statusManager.getStatusHistory(
-    parseInt(appointmentId),
-    req.user.userId
-  );
-
-  return BaseResponseDto.success(history);
-}
-
-// Obtener estadísticas de estados (solo ROOT)
-@Get('appointments/statistics/status')
-@UseGuards(BrandOwnerGuard)
-@ApiOperation({
-  summary: 'Obtener estadísticas de estados',
-  description: 'Retorna estadísticas sobre estados de citas (solo ROOT)'
-})
-@ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
-@ApiQuery({ 
-  name: 'startDate', 
-  required: false, 
-  description: 'Fecha inicio (YYYY-MM-DD)' 
-})
-@ApiQuery({ 
-  name: 'endDate', 
-  required: false, 
-  description: 'Fecha fin (YYYY-MM-DD)' 
-})
-@ApiResponse({
-  status: 200,
-  description: 'Estadísticas obtenidas',
-  type: BaseResponseDto
-})
-async getStatusStatistics(
-  @Param('brandId') brandId: string,
-  @Query('startDate') startDate?: string,
-  @Query('endDate') endDate?: string
-): Promise<BaseResponseDto<any>> {
-  const statistics = await this.statusManager.getStatusStatistics(
-    parseInt(brandId),
-    startDate ? new Date(startDate) : undefined,
-    endDate ? new Date(endDate) : undefined
-  );
-
-  return BaseResponseDto.success(statistics);
-}
-
-// TASK-024B#: Cálculo de disponibilidad
-@Get('availability/calculate')
-@UseGuards(JwtAuthGuard)
-@ApiOperation({
-  summary: 'Calcular disponibilidad completa para una fecha específica',
-})
-@ApiParam({
-  name: 'brandId',
-  required: true,
-  description: 'ID de la marca para calcular disponibilidad',
-  example: 1,
-  type: Number
-})
-@ApiQuery({
-  name: 'date',
-  required: true,
-  description: 'Fecha para calcular disponibilidad (YYYY-MM-DD)',
-  example: '2024-08-20',
-  type: String
-})
-@ApiQuery({
-  name: 'duration',
-  required: false,
-  description: 'Duración deseada en minutos (opcional, usa la configuración del negocio)',
-  example: 30,
-  type: Number
-})
-@ApiQuery({
-  name: 'includeUnavailable',
-  required: false,
-  description: 'Incluir slots no disponibles en la respuesta (por defecto false)',
-  example: false,
-  type: Boolean
-})
-@ApiQuery({
-  name: 'includeReasons',
-  required: false,
-  description: 'Incluir razones por las que un slot no está disponible (por defecto true)',
-  example: true,
-  type: Boolean
-})
-@ApiResponse({
-  status: 200,
-  description: 'Disponibilidad calculada exitosamente',
-  type: BaseResponseDto,
-  schema: {
-    example: {
-      success: true,
-      message: "Disponibilidad calculada exitosamente",
-      data: {
-        date: "2024-08-20",
-        dayName: "martes",
-        isOpen: true,
-        openTime: "09:00",
-        closeTime: "18:00",
-        slots: [
-          {
-            time: "09:00",
-            available: true
-          },
-          {
-            time: "09:30",
-            available: false,
-            reason: "Ocupado - Corte de Cabello (Juan Pérez)"
-          }
-        ],
-        totalAvailableSlots: 24,
-        totalOccupiedSlots: 3,
-        totalSlots: 27,
-        usedDuration: 30,
-        calculatedAt: "2024-08-19T10:30:00.000Z"
-      }
-    }
+    return BaseResponseDto.success(validation);
   }
-})
-@ApiResponse({
-  status: 400,
-  description: 'Parámetros inválidos o configuración incompleta'
-})
-@ApiResponse({
-  status: 401,
-  description: 'No autorizado'
-})
-@ApiResponse({
-  status: 403,
-  description: 'No tiene permisos para acceder a esta marca'
-})
-@ApiResponse({
-  status: 404,
-  description: 'Marca no encontrada'
-})
-async calculateAvailability(
-  @Param('brandId', ParseIntPipe) brandId: number,
-  @Query(ValidationPipe) query: CalculateAvailabilityDto
-): Promise<BaseResponseDto<AvailabilityCalculationResultDto>> {
-  return this.appointmentsService.calculateAvailability(brandId, query);
-}
+
+  // Obtener historial de cambios de estado
+  @Get('appointments/:appointmentId/status-history')
+  @ApiOperation({
+    summary: 'Obtener historial de cambios de estado',
+    description:
+      'Retorna el historial completo de cambios de estado de una cita',
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiParam({
+    name: 'appointmentId',
+    description: 'ID de la cita',
+    example: 789,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Historial obtenido exitosamente',
+    type: BaseResponseDto,
+  })
+  async getStatusHistory(
+    @Param('brandId') brandId: string,
+    @Param('appointmentId') appointmentId: string,
+    @Request() req: any,
+  ): Promise<BaseResponseDto<StatusHistoryDto[]>> {
+    const history = await this.statusManager.getStatusHistory(
+      parseInt(appointmentId),
+      req.user.userId,
+    );
+
+    return BaseResponseDto.success(history);
+  }
+
+  // Obtener estadísticas de estados (solo ROOT)
+  @Get('appointments/statistics/status')
+  @UseGuards(BrandOwnerGuard)
+  @ApiOperation({
+    summary: 'Obtener estadísticas de estados',
+    description: 'Retorna estadísticas sobre estados de citas (solo ROOT)',
+  })
+  @ApiParam({ name: 'brandId', description: 'ID del brand', example: 456 })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'Fecha inicio (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'Fecha fin (YYYY-MM-DD)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Estadísticas obtenidas',
+    type: BaseResponseDto,
+  })
+  async getStatusStatistics(
+    @Param('brandId') brandId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ): Promise<BaseResponseDto<any>> {
+    const statistics = await this.statusManager.getStatusStatistics(
+      parseInt(brandId),
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+    );
+
+    return BaseResponseDto.success(statistics);
+  }
+
+  // TASK-024B#: Cálculo de disponibilidad
+  @Get('availability/calculate')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Calcular disponibilidad completa para una fecha específica',
+  })
+  @ApiParam({
+    name: 'brandId',
+    required: true,
+    description: 'ID de la marca para calcular disponibilidad',
+    example: 1,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'date',
+    required: true,
+    description: 'Fecha para calcular disponibilidad (YYYY-MM-DD)',
+    example: '2024-08-20',
+    type: String,
+  })
+  @ApiQuery({
+    name: 'duration',
+    required: false,
+    description:
+      'Duración deseada en minutos (opcional, usa la configuración del negocio)',
+    example: 30,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'includeUnavailable',
+    required: false,
+    description:
+      'Incluir slots no disponibles en la respuesta (por defecto false)',
+    example: false,
+    type: Boolean,
+  })
+  @ApiQuery({
+    name: 'includeReasons',
+    required: false,
+    description:
+      'Incluir razones por las que un slot no está disponible (por defecto true)',
+    example: true,
+    type: Boolean,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Disponibilidad calculada exitosamente',
+    type: BaseResponseDto,
+    schema: {
+      example: {
+        success: true,
+        message: 'Disponibilidad calculada exitosamente',
+        data: {
+          date: '2024-08-20',
+          dayName: 'martes',
+          isOpen: true,
+          openTime: '09:00',
+          closeTime: '18:00',
+          slots: [
+            {
+              time: '09:00',
+              available: true,
+            },
+            {
+              time: '09:30',
+              available: false,
+              reason: 'Ocupado - Corte de Cabello (Juan Pérez)',
+            },
+          ],
+          totalAvailableSlots: 24,
+          totalOccupiedSlots: 3,
+          totalSlots: 27,
+          usedDuration: 30,
+          calculatedAt: '2024-08-19T10:30:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Parámetros inválidos o configuración incompleta',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'No autorizado',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'No tiene permisos para acceder a esta marca',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Marca no encontrada',
+  })
+  async calculateAvailability(
+    @Param('brandId', ParseIntPipe) brandId: number,
+    @Query(ValidationPipe) query: CalculateAvailabilityDto,
+  ): Promise<BaseResponseDto<AvailabilityCalculationResultDto>> {
+    return this.appointmentsService.calculateAvailability(brandId, query);
+  }
 }

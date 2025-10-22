@@ -2,7 +2,13 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsEmail, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsEmail,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 // ==================== IMPORTACIÓN ====================
 
@@ -25,16 +31,18 @@ export class ImportClientDataDto {
   @IsString()
   phone?: string;
 
-  @ApiPropertyOptional({ example: 'Cliente preferencial, le gusta el servicio premium' })
+  @ApiPropertyOptional({
+    example: 'Cliente preferencial, le gusta el servicio premium',
+  })
   @IsOptional()
   @IsString()
   notes?: string;
 }
 
 export class ImportClientsDto {
-  @ApiProperty({ 
+  @ApiProperty({
     type: [ImportClientDataDto],
-    description: 'Lista de clientes a importar'
+    description: 'Lista de clientes a importar',
   })
   @IsArray()
   @ValidateNested({ each: true })
@@ -46,47 +54,47 @@ export class ImportErrorDto {
   @ApiProperty({ example: 'cliente@ejemplo.com' })
   email: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     example: 'Email ya existe en este negocio',
-    description: 'Mensaje de error simple'
+    description: 'Mensaje de error simple',
   })
   error?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     type: 'array',
     description: 'Lista de errores detallados',
     example: [
       {
         code: 'EMAIL_EXISTS_IN_BRANCH',
-        description: 'El email ya está registrado en este negocio'
-      }
-    ]
+        description: 'El email ya está registrado en este negocio',
+      },
+    ],
   })
   errors?: any[];
 }
 
 export class ImportClientsResponseDto {
-  @ApiProperty({ 
+  @ApiProperty({
     example: 50,
-    description: 'Total de clientes procesados'
+    description: 'Total de clientes procesados',
   })
   total: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: 45,
-    description: 'Clientes importados exitosamente'
+    description: 'Clientes importados exitosamente',
   })
   successful: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: 5,
-    description: 'Clientes que fallaron al importar'
+    description: 'Clientes que fallaron al importar',
   })
   failed: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     type: [ImportErrorDto],
-    description: 'Detalles de los errores de importación'
+    description: 'Detalles de los errores de importación',
   })
   errors: ImportErrorDto[];
 }
@@ -121,7 +129,7 @@ export class ExportClientDto {
   @ApiPropertyOptional({ example: 15 })
   totalAppointments?: number;
 
-  @ApiPropertyOptional({ example: 1250.00 })
+  @ApiPropertyOptional({ example: 1250.0 })
   totalRevenue?: number;
 
   @ApiPropertyOptional({ example: '2024-08-15T10:00:00Z' })
@@ -129,53 +137,54 @@ export class ExportClientDto {
 }
 
 export class ExportClientsJsonResponseDto {
-  @ApiProperty({ 
+  @ApiProperty({
     type: [ExportClientDto],
-    description: 'Lista de clientes exportados'
+    description: 'Lista de clientes exportados',
   })
   clients: ExportClientDto[];
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: 50,
-    description: 'Total de clientes exportados'
+    description: 'Total de clientes exportados',
   })
   total: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: 'json',
-    description: 'Formato de exportación'
+    description: 'Formato de exportación',
   })
   format: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: '2024-08-22T10:00:00Z',
-    description: 'Fecha de exportación'
+    description: 'Fecha de exportación',
   })
   exportedAt: Date;
 }
 
 export class ExportClientsCsvResponseDto {
-  @ApiProperty({ 
-    example: 'id,email,firstName,lastName,phone,isActive,createdAt,updatedAt,totalAppointments,totalRevenue,lastVisit\n123,cliente@ejemplo.com,Juan,Pérez,+50688887777,true,2024-01-15T10:30:00Z,2024-08-20T14:45:00Z,15,1250.00,2024-08-15T10:00:00Z',
-    description: 'Contenido CSV'
+  @ApiProperty({
+    example:
+      'id,email,firstName,lastName,phone,isActive,createdAt,updatedAt,totalAppointments,totalRevenue,lastVisit\n123,cliente@ejemplo.com,Juan,Pérez,+50688887777,true,2024-01-15T10:30:00Z,2024-08-20T14:45:00Z,15,1250.00,2024-08-15T10:00:00Z',
+    description: 'Contenido CSV',
   })
   csv: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: 50,
-    description: 'Total de clientes exportados'
+    description: 'Total de clientes exportados',
   })
   total: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: 'csv',
-    description: 'Formato de exportación'
+    description: 'Formato de exportación',
   })
   format: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: 'clients_export_20240822.csv',
-    description: 'Nombre sugerido para el archivo'
+    description: 'Nombre sugerido para el archivo',
   })
   filename: string;
 }

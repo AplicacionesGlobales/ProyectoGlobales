@@ -6,9 +6,9 @@ export class ErrorDetail {
 }
 
 export class BaseResponseDto<T = any> {
-  success: boolean;  // Changed from 'successful' to 'success'
+  success: boolean; // Changed from 'successful' to 'success'
   data?: T;
-  errors?: ErrorDetail[];  // Changed from 'error' to 'errors'
+  errors?: ErrorDetail[]; // Changed from 'error' to 'errors'
 
   constructor(success: boolean, data?: T, errors?: ErrorDetail[]) {
     this.success = success;
@@ -33,7 +33,7 @@ export class BaseResponseDto<T = any> {
       code: 400,
       description: error,
       field: undefined,
-      message: error
+      message: error,
     }));
     return new BaseResponseDto(false, undefined, errors);
   }

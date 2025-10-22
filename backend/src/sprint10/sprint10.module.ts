@@ -8,6 +8,6 @@ import { CommonModule } from '../common/common.module';
   imports: [CommonModule],
   controllers: [Sprint10Controller],
   providers: [Sprint10Service],
-  exports: [Sprint10Service]
+  exports: [Sprint10Service],
 })
 export class Sprint10Module {}

@@ -46,7 +46,7 @@ export class SubscriptionPlanDto {
   @ApiProperty({ example: '2024-02-01T00:00:00Z' })
   nextBillingDate: string;
 
-  @ApiProperty({ example: 29.00 })
+  @ApiProperty({ example: 29.0 })
   basePrice: number;
 }
 
@@ -71,7 +71,7 @@ export class PricingBreakdownDto {
   @ApiProperty({ example: 'citas' })
   featureKey: string;
 
-  @ApiProperty({ example: 20.00 })
+  @ApiProperty({ example: 20.0 })
   price: number;
 
   @ApiProperty({ example: 'monthly' })
@@ -79,10 +79,10 @@ export class PricingBreakdownDto {
 }
 
 export class CostBreakdownDto {
-  @ApiProperty({ example: 29.00 })
+  @ApiProperty({ example: 29.0 })
   planBase: number;
 
-  @ApiProperty({ example: 53.00 })
+  @ApiProperty({ example: 53.0 })
   features: number;
 
   @ApiProperty({ example: 0 })
@@ -91,7 +91,7 @@ export class CostBreakdownDto {
   @ApiProperty({ example: 0 })
   taxes: number;
 
-  @ApiProperty({ example: 82.00 })
+  @ApiProperty({ example: 82.0 })
   total: number;
 }
 
@@ -102,7 +102,7 @@ export class CostSummaryDto {
   @ApiProperty({ type: CostBreakdownDto })
   breakdown: CostBreakdownDto;
 
-  @ApiProperty({ example: 82.00 })
+  @ApiProperty({ example: 82.0 })
   nextBillingAmount: number;
 
   @ApiProperty({ example: '2024-02-01T00:00:00Z' })
@@ -125,36 +125,53 @@ export class SubscriptionFeaturesResponseDto {
   @ApiProperty({ type: [ActiveFeatureDto] })
   activeFeatures: ActiveFeatureDto[];
 
-  @ApiProperty({ 
-    example: { 
+  @ApiProperty({
+    example: {
       ESSENTIAL: [{ id: 1, key: 'citas', title: 'Sistema de Citas' }],
-      ADVANCED: [{ id: 2, key: 'analytics', title: 'Análisis Avanzado' }]
-    } 
+      ADVANCED: [{ id: 2, key: 'analytics', title: 'Análisis Avanzado' }],
+    },
   })
   featuresByCategory: Record<string, ActiveFeatureDto[]>;
 
   @ApiProperty({ example: 3 })
   totalFeatures: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     type: [PricingBreakdownDto],
-    description: 'Desglose detallado de costos por feature ordenado de mayor a menor precio'
+    description:
+      'Desglose detallado de costos por feature ordenado de mayor a menor precio',
   })
   pricingBreakdown: PricingBreakdownDto[];
 
-  @ApiProperty({ example: 53.00, description: 'Suma de todas las features activas' })
+  @ApiProperty({
+    example: 53.0,
+    description: 'Suma de todas las features activas',
+  })
   subtotalFeatures: number;
 
-  @ApiProperty({ example: 29.00, description: 'Precio base del plan sin features' })
+  @ApiProperty({
+    example: 29.0,
+    description: 'Precio base del plan sin features',
+  })
   basePlanPrice: number;
 
-  @ApiProperty({ example: 82.00, description: 'Precio total mensual (plan + features)' })
+  @ApiProperty({
+    example: 82.0,
+    description: 'Precio total mensual (plan + features)',
+  })
   totalMonthlyPrice: number;
 
-  @ApiProperty({ type: CostSummaryDto, description: 'Resumen completo de costos' })
+  @ApiProperty({
+    type: CostSummaryDto,
+    description: 'Resumen completo de costos',
+  })
   costSummary: CostSummaryDto;
 
-  @ApiProperty({ example: 149.95, deprecated: true, description: 'Use subtotalFeatures instead' })
+  @ApiProperty({
+    example: 149.95,
+    deprecated: true,
+    description: 'Use subtotalFeatures instead',
+  })
   monthlyFeaturesPrice: number;
 
   @ApiProperty({ type: SubscriptionLimitsDto })

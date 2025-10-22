@@ -10,10 +10,7 @@ import { AppointmentStatusManagerService } from './appointment-status-manager.se
 @Module({
   imports: [PrismaModule, BrandModule, CommonModule],
   controllers: [AppointmentsController],
-  providers: [
-    AppointmentsService,
-    AppointmentStatusManagerService
-  ],
-  exports: [AppointmentsService, AppointmentStatusManagerService]
+  providers: [AppointmentsService, AppointmentStatusManagerService],
+  exports: [AppointmentsService, AppointmentStatusManagerService],
 })
 export class AppointmentsModule {}
