@@ -74,6 +74,91 @@ export class AnalyticsService {
   }
 
   /**
+   * Obtiene los KPIs de un brand
+   */
+  async getKpis(
+    brandId: number,
+    referenceDate?: Date,
+  ): Promise<BaseResponseDto<any>> {
+    try {
+      // Verificar que el brand existe
+      const brand = await this.prisma.brand.findUnique({
+        where: { id: brandId },
+      });
+
+      if (!brand) {
+        return BaseResponseDto.singleError(404, `Brand with ID ${brandId} not found`);
+      }
+
+      const now = referenceDate || new Date();
+
+      // Obtener citas completadas
+      const completedAppointments = await this.prisma.appointment.count({
+        where: {
+          brandId,
+          status: 'COMPLETED',
+        },
+      });
+
+      // Obtener total de citas para calcular tasa de completitud
+      const totalAppointments = await this.prisma.appointment.count({
+        where: { brandId },
+      });
+
+      // Obtener clientes activos únicos
+      const activeClients = await this.prisma.appointment.groupBy({
+        by: ['clientId'],
+        where: {
+          brandId,
+          status: { in: ['COMPLETED', 'CONFIRMED', 'PENDING'] },
+        },
+      });
+
+      const totalActiveClients = activeClients.length;
+
+      // Calcular ingreso total desde pagos
+      const payments = await this.prisma.payment.aggregate({
+        where: {
+          brandId,
+          status: 'completed',
+        },
+        _sum: { amount: true },
+      });
+
+      const totalRevenue = payments._sum.amount?.toNumber() || 0;
+
+      // Calcular ingreso promedio por cliente
+      const averageRevenuePerClient = totalActiveClients > 0 
+        ? totalRevenue / totalActiveClients 
+        : 0;
+
+      // Calcular tasa de completitud
+      const completionRate = totalAppointments > 0 
+        ? (completedAppointments / totalAppointments) * 100 
+        : 0;
+
+      const response = {
+        brandId,
+        kpis: {
+          averageRevenuePerClient: Math.round(averageRevenuePerClient * 100) / 100,
+          completedAppointments,
+          totalActiveClients,
+          totalRevenue: Math.round(totalRevenue * 100) / 100,
+          completionRate: Math.round(completionRate * 100) / 100,
+        },
+      };
+
+      return BaseResponseDto.success(response);
+    } catch (error) {
+      console.error('Error getting KPIs:', error);
+      return BaseResponseDto.singleError(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
+  }
+
+  /**
    * Calcula métricas diarias (hoy vs ayer)
    */
   private async calculateDailyMetrics(

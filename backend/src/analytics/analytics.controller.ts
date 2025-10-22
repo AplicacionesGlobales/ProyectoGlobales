@@ -5,6 +5,7 @@ import { BaseResponseDto } from '../common/dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BrandOwnerGuard } from '../common/guards/brand-owner.guard';
 import { RevenueAnalyticsQueryDto, RevenueAnalyticsResponseDto } from './dto/revenue-analytics.dto';
+import { KpisQueryDto, KpisResponseDto } from './dto/kpis.dto';
 
 @ApiTags('Analytics')
 @Controller('api/analytics')
@@ -74,5 +75,50 @@ export class AnalyticsController {
   ): Promise<BaseResponseDto<RevenueAnalyticsResponseDto>> {
     const referenceDate = query.referenceDate ? new Date(query.referenceDate) : undefined;
     return this.analyticsService.getRevenueMetrics(brandId, referenceDate);
+  }
+
+  @Get('kpis/:brandId')
+  @UseGuards(BrandOwnerGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get key performance indicators (KPIs) for a brand',
+    description: 'Retrieves KPIs including average revenue per client, completed appointments, total active clients, total revenue, and completion rate.',
+  })
+  @ApiParam({
+    name: 'brandId',
+    description: 'ID of the brand to get KPIs for',
+    example: 1,
+    type: 'integer',
+  })
+  @ApiQuery({
+    name: 'referenceDate',
+    description: 'Optional reference date (ISO 8601 format). Defaults to current date.',
+    required: false,
+    example: '2025-10-20T00:00:00Z',
+    type: 'string',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'KPIs retrieved successfully',
+    type: KpisResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - User does not have ROOT/ADMIN permissions for this brand',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Brand not found',
+  })
+  async getKpis(
+    @Param('brandId', ParseIntPipe) brandId: number,
+    @Query() query: KpisQueryDto,
+  ): Promise<BaseResponseDto<KpisResponseDto>> {
+    const referenceDate = query.referenceDate ? new Date(query.referenceDate) : undefined;
+    return this.analyticsService.getKpis(brandId, referenceDate);
   }
 }
