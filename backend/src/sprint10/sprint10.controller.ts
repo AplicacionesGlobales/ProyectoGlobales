@@ -32,9 +32,9 @@ import {
 } from './dto';
 
 @ApiTags('Sprint 10')
-@Controller('')
+@Controller('api')
 export class Sprint10Controller {
-  constructor(private readonly sprint10Service: Sprint10Service) {}
+  constructor(private readonly sprint10Service: Sprint10Service) { }
 
   /**
    * Endpoint para descargar recibo en formato PDF (Pablo)

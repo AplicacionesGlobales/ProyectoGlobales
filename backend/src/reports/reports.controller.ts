@@ -24,12 +24,12 @@ import { PrismaService } from '../prisma/prisma.service';
 @ApiTags('Reports')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('brands/:brandId/reports')
+@Controller('api/brands/:brandId/reports')
 export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   @Get('appointments')
   @ApiOperation({

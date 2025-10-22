@@ -21,9 +21,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Configurar prefijo global para todas las rutas
-  app.setGlobalPrefix('api');
-
   // Configurar validación global
   app.useGlobalPipes(
     new ValidationPipe({

@@ -26,11 +26,11 @@ import {
 } from './dto/activate-feature.dto';
 
 @ApiTags('Subscription Management')
-@Controller('subscription')
+@Controller('api/subscription')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) {}
+  constructor(private readonly subscriptionService: SubscriptionService) { }
 
   @Get('features')
   @HttpCode(HttpStatus.OK)

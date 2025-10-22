@@ -23,9 +23,9 @@ import { CreateLocationDto } from './dto';
 
 @ApiTags('Appointment Locations')
 @ApiBearerAuth()
-@Controller('')
+@Controller('api')
 export class Sprint11Controller {
-  constructor(private readonly sprint11Service: Sprint11Service) {}
+  constructor(private readonly sprint11Service: Sprint11Service) { }
 
   /**
    * POST /api/appointments/:id/location

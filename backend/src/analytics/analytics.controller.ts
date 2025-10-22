@@ -27,7 +27,7 @@ import {
 import { KpisQueryDto, KpisResponseDto } from './dto/kpis.dto';
 
 @ApiTags('Analytics')
-@Controller('analytics')
+@Controller('api/analytics')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AnalyticsController {
