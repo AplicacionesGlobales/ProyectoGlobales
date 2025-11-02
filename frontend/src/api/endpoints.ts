@@ -20,7 +20,11 @@ import {
   CreateAppointmentRequest,
   CreateAppointmentResponse,
   AppointmentsByDateResponse,
-  AppointmentsByDateRangeResponse
+  AppointmentsByDateRangeResponse,
+  // Client Dashboard types
+  ClientProfileResponse,
+  ClientAppointmentsResponse,
+  GetClientAppointmentsQuery
 } from './types';
 import { secureStorage } from '../utils/secureStorage';
 
@@ -525,13 +529,55 @@ export const getAppointmentsByDate = async (
   );
 };
 
-export const getAppointmentsByDateRange = async (
-  brandId: number, 
-  startDate: string, 
-  endDate: string
+export const getAppointmentsByDateRange = (
+  brandId: number,
+  startDate: string,
+  endDate: string,
+  limit: number = 50
 ): Promise<AppointmentsByDateRangeResponse> => {
+  // Asegurarse de que el límite no exceda el máximo permitido por el backend
+  const safeLimitValue = Math.min(limit, 50);
+  
   return apiRequest<AppointmentsByDateRangeResponse>(
-    `${API_ENDPOINTS.APPOINTMENTS.BY_DATE_RANGE.replace('{brandId}', brandId.toString())}?startDate=${startDate}&endDate=${endDate}&limit=100`,
+    `${API_ENDPOINTS.APPOINTMENTS.BY_DATE_RANGE.replace('{brandId}', brandId.toString())}?startDate=${startDate}&endDate=${endDate}&limit=${safeLimitValue}`,
+    'GET',
+    undefined,
+    true
+  );
+};
+
+// Client Dashboard Endpoints
+export const getClientProfile = async (brandId: number): Promise<ClientProfileResponse> => {
+  return apiRequest<ClientProfileResponse>(
+    API_ENDPOINTS.CLIENT_PROFILE.PROFILE.replace('{brandId}', brandId.toString()),
+    'GET',
+    undefined,
+    true
+  );
+};
+
+export const getClientAppointments = async (
+  brandId: number,
+  filters: GetClientAppointmentsQuery = {}
+): Promise<ClientAppointmentsResponse> => {
+  const queryParams = new URLSearchParams();
+  
+  if (filters.startDate) queryParams.append('startDate', filters.startDate);
+  if (filters.endDate) queryParams.append('endDate', filters.endDate);
+  if (filters.status) queryParams.append('status', filters.status);
+  if (filters.period) queryParams.append('period', filters.period);
+  if (filters.page) queryParams.append('page', filters.page.toString());
+  // Validar que el límite no exceda el máximo permitido por el backend
+  if (filters.limit) {
+    const safeLimit = Math.min(filters.limit, 50);
+    queryParams.append('limit', safeLimit.toString());
+  }
+
+  const queryString = queryParams.toString();
+  const url = `${API_ENDPOINTS.CLIENT_PROFILE.APPOINTMENTS.replace('{brandId}', brandId.toString())}${queryString ? `?${queryString}` : ''}`;
+
+  return apiRequest<ClientAppointmentsResponse>(
+    url,
     'GET',
     undefined,
     true

@@ -41,6 +41,12 @@ export const API_ENDPOINTS = {
     BY_DATE: '/brand/{brandId}/appointments/date/{date}',
     BY_DATE_RANGE: '/brand/{brandId}/appointments',
   },
+  // Client Profile endpoints
+  CLIENT_PROFILE: {
+    PROFILE: '/brands/{brandId}/profile',
+    APPOINTMENTS: '/brands/{brandId}/profile/appointments',
+    ACTIVITY: '/brands/{brandId}/profile/activity',
+  },
   CALENDAR: {
     MONTH: '/brand/{brandId}/calendar/month/{month}',
     WEEK: '/brand/{brandId}/appointments/calendar', // Using existing with date range

@@ -28,6 +28,7 @@ import {
   ClientResponseDto,
   GetClientAppointmentsQueryDto,
   ClientAppointmentListResponseDto,
+  ClientActivityResponseDto,
 } from './dto';
 import { BaseResponseDto } from '../common/dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -68,10 +69,9 @@ export class ClientProfileController {
     @Param('brandId') brandId: string,
     @Request() req: any,
   ): Promise<BaseResponseDto<ClientResponseDto>> {
-    return this.clientService.getClient(
+    return this.clientService.getMyProfile(
       parseInt(brandId),
       req.user.userId,
-      req.user.userId, // El cliente actúa como owner de sí mismo para esta operación
     );
   }
 
@@ -138,6 +138,57 @@ export class ClientProfileController {
       parseInt(brandId),
       req.user.userId,
       updateClientProfileDto,
+    );
+  }
+
+  @Get('activity')
+  @ApiOperation({
+    summary: 'Obtener mi actividad',
+    description:
+      'Permite al cliente obtener su historial de actividad en el brand específico',
+  })
+  @ApiParam({
+    name: 'brandId',
+    description: 'ID del brand',
+    example: 456,
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Número de página (empezando en 1)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Número de actividades por página (máximo 50)',
+    example: 20,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Actividad obtenida exitosamente',
+    type: BaseResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Sin permisos para acceder a este brand',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cliente no encontrado',
+  })
+  async getMyActivity(
+    @Param('brandId') brandId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+    @Request() req: any,
+  ): Promise<BaseResponseDto<ClientActivityResponseDto>> {
+    return this.clientService.getClientActivity(
+      parseInt(brandId),
+      req.user.userId,
+      parseInt(page),
+      parseInt(limit),
+      req.user.userId, // El cliente actúa como owner de sí mismo para esta operación
     );
   }
 

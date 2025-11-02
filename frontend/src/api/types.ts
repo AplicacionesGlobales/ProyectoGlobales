@@ -311,3 +311,72 @@ export interface AppointmentsByDateRangeResponse {
   };
 }
 
+// Client Dashboard Types
+export interface ClientProfile {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientProfileResponse extends BaseResponseDto<ClientProfile> {}
+
+export interface ClientAppointmentDto {
+  id: number;
+  startTime: string;
+  endTime: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  duration: number;
+  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+  notes?: string;
+  price?: number;
+  serviceType: {
+    id: number;
+    name: string;
+    price: number;
+  };
+  professional?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientAppointmentSummary {
+  totalAppointments: number;
+  completedAppointments: number;
+  cancelledAppointments: number;
+  pendingAppointments: number;
+}
+
+export interface ClientAppointmentPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ClientAppointmentsListResponse {
+  appointments: ClientAppointmentDto[];
+  pagination: ClientAppointmentPagination;
+  summary: ClientAppointmentSummary;
+}
+
+export interface ClientAppointmentsResponse extends BaseResponseDto<ClientAppointmentsListResponse> {}
+
+// Dashboard request types
+export interface GetClientAppointmentsQuery {
+  startDate?: string;
+  endDate?: string;
+  status?: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+  period?: 'upcoming' | 'past' | 'today' | 'all';
+  page?: number;
+  limit?: number;
+}
+

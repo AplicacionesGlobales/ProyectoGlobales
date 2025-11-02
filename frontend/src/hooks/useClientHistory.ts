@@ -7,173 +7,29 @@ import {
     HistoryStats,
     HistoryItemType,
 } from '@/types/history.types';
+import { useClientAppointments } from './useClientAppointments';
 
-// Datos mock para testing
-const mockHistoryData: HistoryItem[] = [
-    {
-        id: 'h1',
-        type: 'appointment',
-        date: '2024-12-08T10:00:00Z',
-        title: 'Corte de Cabello Premium',
-        subtitle: 'María González - 10:00 AM',
-        amount: 450,
-        status: 'completed',
+// Convertir citas a items de historial para compatibilidad con el componente existente
+const convertAppointmentsToHistoryItems = (appointments: any[]): HistoryItem[] => {
+    return appointments.map(apt => ({
+        id: `appointment-${apt.id}`,
+        type: 'appointment' as const,
+        date: apt.startTime,
+        title: apt.notes || 'Cita programada',
+        subtitle: `${apt.displayDate || new Date(apt.startTime).toLocaleDateString()} • ${apt.displayTime || new Date(apt.startTime).toLocaleTimeString()}`,
+        status: apt.status.toLowerCase() === 'pending' ? 'pending' : 
+                apt.status.toLowerCase() === 'confirmed' ? 'confirmed' :
+                apt.status.toLowerCase() === 'completed' ? 'completed' : 'cancelled',
         details: {
-            serviceName: 'Corte de Cabello Premium',
-            duration: 60,
-            professional: 'María González',
-            time: '10:00 AM',
-            serviceId: 'svc_1',
-            notes: 'Cliente muy satisfecho con el resultado',
+            serviceName: apt.notes || 'Servicio general',
+            duration: apt.duration,
+            professional: 'Profesional asignado', // Por ahora valor por defecto
+            time: apt.displayTime || new Date(apt.startTime).toLocaleTimeString(),
+            serviceId: `svc_${apt.id}`,
+            notes: apt.notes,
         },
-    },
-    {
-        id: 'h2',
-        type: 'payment',
-        date: '2024-12-08T10:45:00Z',
-        title: 'Pago - Corte Premium',
-        subtitle: 'Tarjeta de crédito ****1234',
-        amount: 450,
-        status: 'completed',
-        details: {
-            method: 'credit_card',
-            receipt: 'RCP-20241208-001',
-            serviceAssociated: 'Corte de Cabello Premium',
-            transactionId: 'txn_abc123',
-            currency: 'MXN',
-        },
-    },
-    {
-        id: 'h3',
-        type: 'appointment',
-        date: '2024-12-05T14:30:00Z',
-        title: 'Tinte y Mechas',
-        subtitle: 'Ana Rodríguez - 2:30 PM',
-        amount: 890,
-        status: 'completed',
-        details: {
-            serviceName: 'Tinte y Mechas',
-            duration: 120,
-            professional: 'Ana Rodríguez',
-            time: '2:30 PM',
-            serviceId: 'svc_2',
-            notes: 'Cambio de look exitoso',
-        },
-    },
-    {
-        id: 'h4',
-        type: 'payment',
-        date: '2024-12-05T16:30:00Z',
-        title: 'Pago - Tinte y Mechas',
-        subtitle: 'Efectivo',
-        amount: 890,
-        status: 'completed',
-        details: {
-            method: 'cash',
-            receipt: 'RCP-20241205-003',
-            serviceAssociated: 'Tinte y Mechas',
-            transactionId: 'txn_cash001',
-            currency: 'MXN',
-        },
-    },
-    {
-        id: 'h5',
-        type: 'appointment',
-        date: '2024-11-28T11:00:00Z',
-        title: 'Tratamiento Capilar',
-        subtitle: 'Luis Martínez - 11:00 AM',
-        amount: 650,
-        status: 'completed',
-        details: {
-            serviceName: 'Tratamiento Capilar Nutritivo',
-            duration: 90,
-            professional: 'Luis Martínez',
-            time: '11:00 AM',
-            serviceId: 'svc_3',
-            notes: 'Cabello más fuerte y brillante',
-        },
-    },
-    {
-        id: 'h6',
-        type: 'appointment',
-        date: '2024-11-20T09:15:00Z',
-        title: 'Manicure Francesa',
-        subtitle: 'Carmen Silva - 9:15 AM',
-        amount: 280,
-        status: 'completed',
-        details: {
-            serviceName: 'Manicure Francesa',
-            duration: 45,
-            professional: 'Carmen Silva',
-            time: '9:15 AM',
-            serviceId: 'svc_4',
-        },
-    },
-    {
-        id: 'h7',
-        type: 'appointment',
-        date: '2024-11-15T16:00:00Z',
-        title: 'Corte y Peinado',
-        subtitle: 'María González - 4:00 PM',
-        amount: 380,
-        status: 'cancelled',
-        details: {
-            serviceName: 'Corte y Peinado',
-            duration: 60,
-            professional: 'María González',
-            time: '4:00 PM',
-            serviceId: 'svc_1',
-            notes: 'Cancelado por emergencia familiar',
-        },
-    },
-    {
-        id: 'h8',
-        type: 'appointment',
-        date: '2024-12-15T13:00:00Z',
-        title: 'Facial Hidratante',
-        subtitle: 'Sofia Reyes - 1:00 PM',
-        amount: 520,
-        status: 'confirmed',
-        details: {
-            serviceName: 'Facial Hidratante',
-            duration: 75,
-            professional: 'Sofia Reyes',
-            time: '1:00 PM',
-            serviceId: 'svc_5',
-        },
-    },
-    {
-        id: 'h9',
-        type: 'service',
-        date: '2024-10-30T10:30:00Z',
-        title: 'Evaluación Servicio',
-        subtitle: 'Corte de Cabello - Calificación: 5⭐',
-        status: 'completed',
-        details: {
-            description: 'Excelente servicio, muy profesional',
-            category: 'Cabello',
-            rating: 5,
-            review: 'María es increíble, siempre sabe exactamente lo que necesito',
-            professionalId: 'prof_maria',
-        },
-    },
-    {
-        id: 'h10',
-        type: 'appointment',
-        date: '2024-10-25T15:45:00Z',
-        title: 'Pedicure Spa',
-        subtitle: 'Carmen Silva - 3:45 PM',
-        amount: 320,
-        status: 'completed',
-        details: {
-            serviceName: 'Pedicure Spa',
-            duration: 60,
-            professional: 'Carmen Silva',
-            time: '3:45 PM',
-            serviceId: 'svc_6',
-        },
-    },
-];
+    }));
+};
 
 const defaultFilters: HistoryFilters = {
     types: ['appointment', 'payment', 'service'],
@@ -190,19 +46,21 @@ export const useClientHistory = (): ClientHistoryState & ClientHistoryActions =>
         filters: defaultFilters,
     });
 
-    // Simular carga inicial
+    // Hook para obtener citas reales
+    const { appointments, loading: appointmentsLoading, error } = useClientAppointments();
+
+    // Cargar datos reales cuando lleguen las citas
     useEffect(() => {
-        const loadInitialData = setTimeout(() => {
+        if (!appointmentsLoading && appointments) {
+            const historyItems = convertAppointmentsToHistoryItems(appointments);
             setState(prev => ({
                 ...prev,
-                items: mockHistoryData,
-                filteredItems: applyFilters(mockHistoryData, defaultFilters),
+                items: historyItems,
+                filteredItems: applyFilters(historyItems, prev.filters),
                 loading: false,
             }));
-        }, 1000);
-
-        return () => clearTimeout(loadInitialData);
-    }, []);
+        }
+    }, [appointments, appointmentsLoading]);
 
     // Aplicar filtros a los datos
     const applyFilters = useCallback((items: HistoryItem[], filters: HistoryFilters): HistoryItem[] => {
@@ -279,18 +137,25 @@ export const useClientHistory = (): ClientHistoryState & ClientHistoryActions =>
     const refresh = useCallback(async () => {
         setState(prev => ({ ...prev, loading: true }));
 
-        // Simular delay de red
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        setState(prev => ({
-            ...prev,
-            items: mockHistoryData,
-            filteredItems: applyFilters(mockHistoryData, prev.filters),
-            loading: false,
-            page: 1,
-            hasMore: true,
-        }));
-    }, [applyFilters]);
+        try {
+            // Los datos se actualizarán automáticamente cuando el hook useClientAppointments refresque
+            // Este método está aquí para compatibilidad con la interfaz existente
+            if (appointments) {
+                const historyItems = convertAppointmentsToHistoryItems(appointments);
+                setState(prev => ({
+                    ...prev,
+                    items: historyItems,
+                    filteredItems: applyFilters(historyItems, prev.filters),
+                    loading: false,
+                    page: 1,
+                    hasMore: true,
+                }));
+            }
+        } catch (error) {
+            console.error('Error refreshing history:', error);
+            setState(prev => ({ ...prev, loading: false }));
+        }
+    }, [appointments, applyFilters]);
 
     // Obtener item por ID
     const getItemById = useCallback((id: string): HistoryItem | undefined => {

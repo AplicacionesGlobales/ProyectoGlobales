@@ -523,6 +523,92 @@ export class ClientService {
     }
   }
 
+  // ==================== GET MY PROFILE (CLIENT SELF-ACCESS) ====================
+
+  async getMyProfile(
+    brandId: number,
+    clientId: number,
+  ): Promise<BaseResponseDto<ClientResponseDto>> {
+    console.log('\n👤 === OBTENER MI PERFIL ===');
+    console.log('🏢 BrandId:', brandId);
+    console.log('👤 ClientId:', clientId);
+
+    try {
+      // Para el perfil propio, no necesitamos validateBrandOwnership
+      // Solo verificamos que el cliente exista y esté activo en el brand
+      const userBrand = await this.prisma.userBrand.findFirst({
+        where: {
+          userId: clientId,
+          brandId: brandId,
+          isActive: true,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              isActive: true,
+              role: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+      });
+
+      if (!userBrand) {
+        console.log('❌ Cliente no encontrado o inactivo');
+        return BaseResponseDto.singleError(
+          ERROR_CODES.USER_NOT_FOUND,
+          'Cliente no encontrado o inactivo',
+        );
+      }
+
+      // Verificar que sea realmente un cliente
+      if (userBrand.user.role !== 'CLIENT') {
+        console.log('❌ Usuario no es cliente');
+        return BaseResponseDto.singleError(
+          ERROR_CODES.FORBIDDEN,
+          'Solo los clientes pueden acceder a su perfil',
+        );
+      }
+
+      // Obtener estadísticas
+      const stats = await this.clientStatsService.getClientStats(
+        clientId,
+        brandId,
+      );
+
+      const response: ClientResponseDto = {
+        id: userBrand.user.id,
+        email: userBrand.user.email,
+        firstName: userBrand.user.firstName || '',
+        lastName: userBrand.user.lastName || null,
+        phone: userBrand.user.phone || '',
+        notes: userBrand.notes || null,
+        isActive: userBrand.user.isActive,
+        brandId: brandId,
+        totalAppointments: stats.totalAppointments,
+        lastVisit: stats.lastVisit || null,
+        createdAt: userBrand.user.createdAt,
+        updatedAt: userBrand.user.updatedAt,
+      };
+
+      console.log('✅ Mi perfil obtenido:', userBrand.user.email);
+      return BaseResponseDto.success(response);
+    } catch (error) {
+      console.error('❌ Error en getMyProfile:', error);
+      console.error('Stack trace:', error.stack);
+      return BaseResponseDto.singleError(
+        ERROR_CODES.INTERNAL_ERROR,
+        ERROR_MESSAGES.INTERNAL_ERROR,
+      );
+    }
+  }
+
   // ==================== UPDATE CLIENT ====================
 
   async updateClient(
@@ -1168,18 +1254,50 @@ export class ClientService {
     console.log('\n🔍 === ACTIVIDAD DEL CLIENTE ===');
     console.log('🏢 BrandId:', brandId);
     console.log('👤 ClientId:', clientId);
+    console.log('👔 OwnerId:', ownerId);
 
     try {
-      // Verificar permisos
-      const hasPermission =
-        await this.clientValidationService.validateBrandOwnership(
+      // Verificar permisos: Owner del brand O el cliente viendo su propia actividad
+      let hasPermission = false;
+      
+      // Caso 1: Es el mismo cliente viendo su propia actividad
+      if (ownerId === clientId) {
+        console.log('🔍 Cliente viendo su propia actividad');
+        // Verificar que el usuario esté registrado en este brand
+        const userBrand = await this.prisma.userBrand.findFirst({
+          where: {
+            userId: clientId,
+            brandId: brandId,
+            isActive: true,
+          },
+          include: {
+            user: {
+              select: {
+                role: true,
+                isActive: true,
+              },
+            },
+          },
+        });
+
+        if (userBrand && userBrand.user.role === 'CLIENT' && userBrand.user.isActive) {
+          hasPermission = true;
+          console.log('✅ Cliente tiene acceso a su propia actividad');
+        }
+      } else {
+        // Caso 2: Es un owner/admin del brand
+        console.log('🔍 Owner/Admin viendo actividad de cliente');
+        hasPermission = await this.clientValidationService.validateBrandOwnership(
           ownerId,
           brandId,
         );
+      }
+
       if (!hasPermission) {
+        console.log('❌ Sin permisos para ver actividad');
         return BaseResponseDto.singleError(
           ERROR_CODES.FORBIDDEN,
-          'No tienes permisos para ver actividad de este negocio',
+          'No tienes permisos para ver esta actividad',
         );
       }
 
