@@ -1010,23 +1010,7 @@ define([
     ];
 
     if (filterDate) {
-      // Convert the UTC date to NetSuite account's timezone first (with time)
-      // Then extract just the date portion for the search filter
-      const nsDateTime = format.format({
-        value: filterDate,
-        type: format.Type.DATETIMETZ,
-      });
-
-      // Now extract just the date portion from the server's timezone
-      const nsDate = format.format({
-        value: format.parse({
-          value: nsDateTime,
-          type: format.Type.DATETIMETZ,
-        }),
-        type: format.Type.DATE,
-      });
-
-      filters.push("AND", ["modified", "onorafter", nsDate]);
+      filters.push("AND", ["modified", "onorafter", filterDate]);
     }
 
     if (searchFilters && searchFilters.length > 0) {
@@ -1472,10 +1456,6 @@ define([
 
   function shouldIgnorePath(filePath, ignoredPaths) {
     const fileName = filePath.split("/").pop() || "";
-
-    if (!filePath.includes("/")) {
-      return true;
-    }
 
     let ignored = false;
 
