@@ -1001,6 +1001,11 @@ define([
     const errors = [];
     const folderPathCache = {}; // Cache folder paths to avoid repeated record.load calls
 
+    // Prepopulate cache with root folders
+    FILE_CABINET_ROOTS.forEach((root) => {
+      folderPathCache[root.id] = root.name;
+    });
+
     // 1. Search files modified on or after the date
     // Note: NetSuite search filters only accept date strings (not datetime)
     // We do precise UTC datetime comparison in the loop below
@@ -1080,10 +1085,13 @@ define([
           } else {
             // Build the path and cache all folders in the chain
             const folderChain = [];
+            let cachedParentPath = null;
+
             while (currentFolderId) {
               // Check if this folder is already cached
               if (folderPathCache[currentFolderId]) {
-                fullPath = folderPathCache[currentFolderId] + "/" + fullPath;
+                cachedParentPath = folderPathCache[currentFolderId];
+                fullPath = cachedParentPath + "/" + fullPath;
                 break;
               }
 
@@ -1104,7 +1112,8 @@ define([
             }
 
             // Cache all folders in the chain we just traversed
-            let pathSoFar = "";
+            // Start from the cached parent path (if found) or empty string
+            let pathSoFar = cachedParentPath || "";
             for (let i = folderChain.length - 1; i >= 0; i--) {
               pathSoFar = pathSoFar
                 ? pathSoFar + "/" + folderChain[i].name
