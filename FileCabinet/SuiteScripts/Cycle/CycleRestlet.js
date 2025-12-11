@@ -1518,4 +1518,3 @@ define([
     post: doPost,
   };
 });
-
