@@ -980,9 +980,7 @@ define([
     const executionTime = Date.now() - startTime;
     logger.audit(
       "Done syncNetsuiteCabinet",
-      `Uploaded: ${filesToUpload.length}, Deleted: ${
-        filesToDelete.length
-      } | Execution time: ${executionTime}ms (${(executionTime / 1000).toFixed(
+      `Execution time: ${executionTime}ms (${(executionTime / 1000).toFixed(
         2
       )}s)`
     );
@@ -1001,6 +999,11 @@ define([
     const errors = [];
     const folderPathCache = {}; // Cache folder paths to avoid repeated record.load calls
 
+    // Prepopulate cache with root folders
+    FILE_CABINET_ROOTS.forEach((root) => {
+      folderPathCache[root.id] = root.name;
+    });
+
     // 1. Search files modified on or after the date
     // Note: NetSuite search filters only accept date strings (not datetime)
     // We do precise UTC datetime comparison in the loop below
@@ -1008,25 +1011,8 @@ define([
     const filters = [
       ["folder", "anyof", FILE_CABINET_ROOTS.map((root) => root.id)], // Search in all File Cabinet roots
     ];
-
     if (filterDate) {
-      // Convert the UTC date to NetSuite account's timezone first (with time)
-      // Then extract just the date portion for the search filter
-      const nsDateTime = format.format({
-        value: filterDate,
-        type: format.Type.DATETIMETZ,
-      });
-
-      // Now extract just the date portion from the server's timezone
-      const nsDate = format.format({
-        value: format.parse({
-          value: nsDateTime,
-          type: format.Type.DATETIMETZ,
-        }),
-        type: format.Type.DATE,
-      });
-
-      filters.push("AND", ["modified", "onorafter", nsDate]);
+      filters.push("AND", ["modified", "onorafter", filterDate]);
     }
 
     if (searchFilters && searchFilters.length > 0) {
@@ -1096,10 +1082,13 @@ define([
           } else {
             // Build the path and cache all folders in the chain
             const folderChain = [];
+            let cachedParentPath = null;
+
             while (currentFolderId) {
               // Check if this folder is already cached
               if (folderPathCache[currentFolderId]) {
-                fullPath = folderPathCache[currentFolderId] + "/" + fullPath;
+                cachedParentPath = folderPathCache[currentFolderId];
+                fullPath = cachedParentPath + "/" + fullPath;
                 break;
               }
 
@@ -1120,7 +1109,8 @@ define([
             }
 
             // Cache all folders in the chain we just traversed
-            let pathSoFar = "";
+            // Start from the cached parent path (if found) or empty string
+            let pathSoFar = cachedParentPath || "";
             for (let i = folderChain.length - 1; i >= 0; i--) {
               pathSoFar = pathSoFar
                 ? pathSoFar + "/" + folderChain[i].name
@@ -1472,10 +1462,6 @@ define([
 
   function shouldIgnorePath(filePath, ignoredPaths) {
     const fileName = filePath.split("/").pop() || "";
-
-    if (!filePath.includes("/")) {
-      return true;
-    }
 
     let ignored = false;
 
