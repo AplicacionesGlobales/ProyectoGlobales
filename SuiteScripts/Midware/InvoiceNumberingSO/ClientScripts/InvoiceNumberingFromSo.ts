@@ -1,1 +1,99 @@
-LyoqDQogKiBATkFwaVZlcnNpb24gMi4wDQogKiBATlNjcmlwdFR5cGUgQ2xpZW50U2NyaXB0DQogKiBATk1vZHVsZVNjb3BlIFNhbWVBY2NvdW50DQogKiBAYXV0aG9yIE1pZHdhcmUNCiAqIEBkZXZlbG9wZXIgTHVpcyBWZW5lZ2FzDQogKiBAY29udGFjdCBjb250YWN0QG1pZHdhcmUubmV0DQogKi8NCg0KaW1wb3J0IHsgRW50cnlQb2ludHMgfSBmcm9tICJOL3R5cGVzIjsNCg0KaW1wb3J0ICogYXMgbG9nIGZyb20gIk4vbG9nIjsNCmltcG9ydCAqIGFzIHJlY29yZCBmcm9tICJOL3JlY29yZCI7DQoNCmV4cG9ydCBmdW5jdGlvbiBwYWdlSW5pdChwQ29udGV4dDogRW50cnlQb2ludHMuQ2xpZW50LnBhZ2VJbml0Q29udGV4dCkgew0KICAgIHRyeSB7DQogICAgICAgIGNvbnN0IGludm9pY2UgPSBwQ29udGV4dC5jdXJyZW50UmVjb3JkOw0KDQogICAgICAgIGNvbnNvbGUubG9nKHBDb250ZXh0Lm1vZGUpOw0KDQogICAgICAgIGlmIChwQ29udGV4dC5tb2RlID09ICJjcmVhdGUiIHx8IHBDb250ZXh0Lm1vZGUgPT0gImNvcHkiKSB7DQogICAgICAgICAgICBjb25zdCBjcmVhdGVkRnJvbSA9IGludm9pY2UuZ2V0VmFsdWUoew0KICAgICAgICAgICAgICAgIGZpZWxkSWQ6ICJjcmVhdGVkZnJvbSIsDQogICAgICAgICAgICB9KTsNCg0KICAgICAgICAgICAgLy9jb25zb2xlLmxvZyhjcmVhdGVkRnJvbSk7DQoNCiAgICAgICAgICAgIGlmIChjcmVhdGVkRnJvbSkgew0KICAgICAgICAgICAgICAgIGNvbnN0IHNhbGVPcmRlciA9IHJlY29yZC5sb2FkKHsNCiAgICAgICAgICAgICAgICAgICAgdHlwZTogcmVjb3JkLlR5cGUuU0FMRVNfT1JERVIsDQogICAgICAgICAgICAgICAgICAgIGlkOiBjcmVhdGVkRnJvbSwNCiAgICAgICAgICAgICAgICB9KTsNCg0KICAgICAgICAgICAgICAgIHRyeSB7DQogICAgICAgICAgICAgICAgICAgIGNvbnN0IHNvTnVtYmVySUQgPSBzYWxlT3JkZXIuZ2V0VGV4dCh7DQogICAgICAgICAgICAgICAgICAgICAgICBmaWVsZElkOiAidHJhbmlkIiwNCiAgICAgICAgICAgICAgICAgICAgfSk7DQoNCiAgICAgICAgICAgICAgICAgICAgY29uc3Qgc29OdW1iZXIgPSBTdHJpbmcoc29OdW1iZXJJRCkucmVwbGFjZSgvXEQvZywgIiIpOyAvL0dldCByaWQgb2YgYWxsIG5vdCBudW1lcmljYWwgY2hhcmFjdGVycw0KDQogICAgICAgICAgICAgICAgICAgIC8vY29uc29sZS5sb2coc29OdW1iZXIpOw0KDQogICAgICAgICAgICAgICAgICAgIGludm9pY2Uuc2V0VmFsdWUoew0KICAgICAgICAgICAgICAgICAgICAgICAgZmllbGRJZDogInRyYW5pZCIsDQogICAgICAgICAgICAgICAgICAgICAgICB2YWx1ZTogIklOViIgKyBzb051bWJlciwNCiAgICAgICAgICAgICAgICAgICAgfSk7DQogICAgICAgICAgICAgICAgfSBjYXRjaCAoZXJyb3IpIHsNCiAgICAgICAgICAgICAgICAgICAgaGFuZGxlRXJyb3IoZXJyb3IpOw0KICAgICAgICAgICAgICAgIH0NCg0KICAgICAgICAgICAgICAgIGNvbnN0IGxpbmVzVG9BZGQgPSBbXTsNCg0KICAgICAgICAgICAgICAgIGNvbnN0IGxpbmVDb3VudCA9IHNhbGVPcmRlci5nZXRMaW5lQ291bnQoeyBzdWJsaXN0SWQ6ICJpdGVtIiB9KTsNCg0KICAgICAgICAgICAgICAgIC8vIEl0ZXJhdGUgdGhyb3VnaCB0aGUgaXRlbSBzdWJsaXN0IG9mIHRoZSBTYWxlcyBPcmRlcg0KICAgICAgICAgICAgICAgIGZvciAobGV0IGxpbmUgPSAwOyBsaW5lIDwgbGluZUNvdW50OyBsaW5lKyspIHsNCiAgICAgICAgICAgICAgICAgICAgY29uc3QgcXVhbnRpdHkgPSBzYWxlT3JkZXIuZ2V0U3VibGlzdFZhbHVlKHsNCiAgICAgICAgICAgICAgICAgICAgICAgIHN1Ymxpc3RJZDogIml0ZW0iLA0KICAgICAgICAgICAgICAgICAgICAgICAgZmllbGRJZDogInF1YW50aXR5IiwNCiAgICAgICAgICAgICAgICAgICAgICAgIGxpbmU6IGxpbmUsDQogICAgICAgICAgICAgICAgICAgIH0pOw0KDQogICAgICAgICAgICAgICAgICAgIGlmIChxdWFudGl0eSA9PT0gMCkgew0KICAgICAgICAgICAgICAgICAgICAgICAgLy8gSXRlbSB3aXRoIHF1YW50aXR5IDAgZm91bmQsIGFkZCB0aGUgbGluZSB0byB0aGUgYXJyYXkNCiAgICAgICAgICAgICAgICAgICAgICAgIGxpbmVzVG9BZGQucHVzaChsaW5lKTsNCiAgICAgICAgICAgICAgICAgICAgfQ0KICAgICAgICAgICAgICAgIH0NCiAgICAgICAgICAgICAgICBsaW5lc1RvQWRkLmZvckVhY2goZnVuY3Rpb24gKGxpbmUpIHsNCiAgICAgICAgICAgICAgICAgICAgLy8gQ29weSB0aGUgbGluZSBmcm9tIHRoZSBTYWxlIE9yZGVyIFRvIFRoZSBJbnZvaWNlDQogICAgICAgICAgICAgICAgICAgIGludm9pY2Uuc2VsZWN0TmV3TGluZSh7IHN1Ymxpc3RJZDogIml0ZW0iIH0pOw0KICAgICAgICAgICAgICAgICAgICBjb25zdCBpdGVtU3VibGlzdEZpZWxkcyA9IHNhbGVPcmRlci5nZXRTdWJsaXN0RmllbGRzKHsgc3VibGlzdElkOiAiaXRlbSIgfSk7DQoNCiAgICAgICAgICAgICAgICAgICAgaXRlbVN1Ymxpc3RGaWVsZHMuZm9yRWFjaChmdW5jdGlvbiAoZmllbGRJZCkgew0KICAgICAgICAgICAgICAgICAgICAgICAgY29uc3QgdmFsdWUgPSBzYWxlT3JkZXIuZ2V0U3VibGlzdFZhbHVlKHsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBzdWJsaXN0SWQ6ICJpdGVtIiwNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBmaWVsZElkOiBmaWVsZElkLA0KICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbmU6IGxpbmUsDQogICAgICAgICAgICAgICAgICAgICAgICB9KTsNCg0KICAgICAgICAgICAgICAgICAgICAgICAgaW52b2ljZS5zZXRDdXJyZW50U3VibGlzdFZhbHVlKHsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBzdWJsaXN0SWQ6ICJpdGVtIiwNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBmaWVsZElkOiBmaWVsZElkLA0KICAgICAgICAgICAgICAgICAgICAgICAgICAgIHZhbHVlOiB2YWx1ZSwNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBpZ25vcmVGaWVsZENoYW5nZTogdHJ1ZSwNCiAgICAgICAgICAgICAgICAgICAgICAgIH0pOw0KICAgICAgICAgICAgICAgICAgICB9KTsNCiAgICAgICAgICAgICAgICAgICAgaW52b2ljZS5jb21taXRMaW5lKHsgc3VibGlzdElkOiAiaXRlbSIgfSk7DQogICAgICAgICAgICAgICAgfSk7DQogICAgICAgICAgICB9DQogICAgICAgIH0NCiAgICB9IGNhdGNoIChlcnJvcikgew0KICAgICAgICBoYW5kbGVFcnJvcihlcnJvcik7DQogICAgfQ0KfQ0KDQpmdW5jdGlvbiBoYW5kbGVFcnJvcihwRXJyb3I6IEVycm9yKSB7DQogICAgbG9nLmVycm9yKHsgdGl0bGU6ICJFcnJvciIsIGRldGFpbHM6IHBFcnJvci5tZXNzYWdlIH0pOw0KICAgIGxvZy5lcnJvcih7IHRpdGxlOiAiU3RhY2siLCBkZXRhaWxzOiBKU09OLnN0cmluZ2lmeShwRXJyb3IpIH0pOw0KfQ0K
+/**
+ * @NApiVersion 2.0
+ * @NScriptType ClientScript
+ * @NModuleScope SameAccount
+ * @author Midware
+ * @developer Luis Venegas
+ * @contact contact@midware.net
+ */
+
+import { EntryPoints } from "N/types";
+
+import * as log from "N/log";
+import * as record from "N/record";
+
+export function pageInit(pContext: EntryPoints.Client.pageInitContext) {
+    try {
+        const invoice = pContext.currentRecord;
+
+        console.log(pContext.mode);
+
+        if (pContext.mode == "create" || pContext.mode == "copy") {
+            const createdFrom = invoice.getValue({
+                fieldId: "createdfrom",
+            });
+
+            //console.log(createdFrom);
+
+            if (createdFrom) {
+                const saleOrder = record.load({
+                    type: record.Type.SALES_ORDER,
+                    id: createdFrom,
+                });
+
+                try {
+                    const soNumberID = saleOrder.getText({
+                        fieldId: "tranid",
+                    });
+
+                    const soNumber = String(soNumberID).replace(/\D/g, ""); //Get rid of all not numerical characters
+
+                    //console.log(soNumber);
+
+                    invoice.setValue({
+                        fieldId: "tranid",
+                        value: "INV" + soNumber,
+                    });
+                } catch (error) {
+                    handleError(error);
+                }
+
+                const linesToAdd = [];
+
+                const lineCount = saleOrder.getLineCount({ sublistId: "item" });
+
+                // Iterate through the item sublist of the Sales Order
+                for (let line = 0; line < lineCount; line++) {
+                    const quantity = saleOrder.getSublistValue({
+                        sublistId: "item",
+                        fieldId: "quantity",
+                        line: line,
+                    });
+
+                    if (quantity === 0) {
+                        // Item with quantity 0 found, add the line to the array
+                        linesToAdd.push(line);
+                    }
+                }
+                linesToAdd.forEach(function (line) {
+                    // Copy the line from the Sale Order To The Invoice
+                    invoice.selectNewLine({ sublistId: "item" });
+                    const itemSublistFields = saleOrder.getSublistFields({ sublistId: "item" });
+
+                    itemSublistFields.forEach(function (fieldId) {
+                        const value = saleOrder.getSublistValue({
+                            sublistId: "item",
+                            fieldId: fieldId,
+                            line: line,
+                        });
+
+                        invoice.setCurrentSublistValue({
+                            sublistId: "item",
+                            fieldId: fieldId,
+                            value: value,
+                            ignoreFieldChange: true,
+                        });
+                    });
+                    invoice.commitLine({ sublistId: "item" });
+                });
+            }
+        }
+    } catch (error) {
+        handleError(error);
+    }
+}
+
+function handleError(pError: Error) {
+    log.error({ title: "Error", details: pError.message });
+    log.error({ title: "Stack", details: JSON.stringify(pError) });
+}

@@ -980,9 +980,7 @@ define([
     const executionTime = Date.now() - startTime;
     logger.audit(
       "Done syncNetsuiteCabinet",
-      `Uploaded: ${filesToUpload.length}, Deleted: ${
-        filesToDelete.length
-      } | Execution time: ${executionTime}ms (${(executionTime / 1000).toFixed(
+      `Execution time: ${executionTime}ms (${(executionTime / 1000).toFixed(
         2
       )}s)`
     );
@@ -1013,7 +1011,6 @@ define([
     const filters = [
       ["folder", "anyof", FILE_CABINET_ROOTS.map((root) => root.id)], // Search in all File Cabinet roots
     ];
-
     if (filterDate) {
       filters.push("AND", ["modified", "onorafter", filterDate]);
     }
