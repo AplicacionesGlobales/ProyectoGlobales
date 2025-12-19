@@ -7,9 +7,7 @@
  * @contact contact@midware.net
  */
 define(["require", "exports", "N/log", "N/search", "N/currentRecord"], function (require, exports, log, search, currentRecord) {
-    "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.sublistChanged = exports.fieldChanged = exports.pageInit = void 0;
     var E_SURCHARGE_ID = "208";
     function pageInit(pContext) { }
     exports.pageInit = pageInit;
@@ -55,7 +53,7 @@ define(["require", "exports", "N/log", "N/search", "N/currentRecord"], function 
                             value: newShippingCost.toFixed(2)
                         });
                     }
-                    //log.debug("shippingcost", newShippingCost.toFixed(2));
+                    log.debug("shippingcost", newShippingCost.toFixed(2));
                 }
             }
         }
