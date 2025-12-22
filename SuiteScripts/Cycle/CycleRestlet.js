@@ -1504,5 +1504,3 @@ define([
     post: doPost,
   };
 });
-
-
