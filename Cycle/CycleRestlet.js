@@ -19,9 +19,9 @@ define([
   // File Cabinet root folders to search
   const FILE_CABINET_ROOTS = [
     { id: -15, name: "SuiteScripts" },
-    { id: -6, name: "Templates/E-mail Templates" },
+    /* { id: -6, name: "Templates/E-mail Templates" },
     { id: -5, name: "Templates/Marketing Templates" },
-    { id: -100, name: "Web Site Hosting Files" },
+    { id: -100, name: "Web Site Hosting Files" }, */
   ];
 
   // Global log collector for sending logs to backend
@@ -251,31 +251,26 @@ define([
     );
 
     try {
-      // 🔹 Get files recursively from all File Cabinet root folders with resume support
+      // 🔹 Get files recursively from SuiteScripts folder only (ID: -15)
       const allFiles = { fetched: [], errors: [], resumePath: null };
 
-      for (const root of FILE_CABINET_ROOTS) {
-        // Skip folders before resume point (if resuming)
-        if (lastPath && !lastPath.startsWith(root.name + "/")) {
-          continue;
-        }
+      // Only process SuiteScripts folder
+      const suiteScriptsRoot = { id: -15, name: "SuiteScripts" };
 
-        const files = getFilesInFolderRecursive(
-          root.id,
-          `${root.name}/`,
-          lastPath,
-          searchFilters,
-          ignoredPaths
-        );
+      const files = getFilesInFolderRecursive(
+        suiteScriptsRoot.id,
+        `${suiteScriptsRoot.name}/`,
+        lastPath,
+        searchFilters,
+        ignoredPaths
+      );
 
-        allFiles.fetched.push(...files.fetched);
-        allFiles.errors.push(...files.errors);
+      allFiles.fetched.push(...files.fetched);
+      allFiles.errors.push(...files.errors);
 
-        // If this root folder hit the batch limit, store resume path and stop
-        if (files.resumePath) {
-          allFiles.resumePath = files.resumePath;
-          break;
-        }
+      // Store resume path if batch limit was hit
+      if (files.resumePath) {
+        allFiles.resumePath = files.resumePath;
       }
 
       logger.audit(
@@ -445,38 +440,14 @@ define([
           continue;
         }
 
-        let parentFolderId = null;
-        let folderNotFound = false;
-
-        // Walk the folder path
-        for (let i = 0; i < parts.length; i++) {
-          const folderName = parts[i];
-
-          const folderResults = search
-            .create({
-              type: "folder",
-              filters: [
-                ["name", "is", folderName],
-                "AND",
-                parentFolderId
-                  ? ["parent", "anyof", parentFolderId]
-                  : ["parent", "isempty", ""],
-              ],
-              columns: ["internalid"],
-            })
-            .run()
-            .getRange({ start: 0, end: 1 });
-
-          if (!folderResults || folderResults.length === 0) {
-            folderNotFound = true;
-            break;
-          }
-
-          parentFolderId = folderResults[0].getValue({ name: "internalid" });
-        }
+        // Get the folder ID for the parent folder path
+        const folderPath = parts.join("/");
+        const parentFolderId = folderPath
+          ? getFolderIdByPath(folderPath)
+          : null;
 
         // If folder doesn't exist, file is missing
-        if (folderNotFound) {
+        if (folderPath && !parentFolderId) {
           missingFiles.push(filePath);
           continue;
         }
@@ -812,62 +783,19 @@ define([
       }
     }
 
-    /**
-     * Verifies whether a full folder path exists in the File Cabinet.
-     * Example: "SuiteScripts/Cycle/test" → returns the internalid of "test"
-     * If any folder in the path does not exist, returns null.
-     */
-    function getFolderIdByPath(fullPath) {
-      try {
-        const parts = fullPath.split("/").filter(Boolean);
-        let parentId = null;
-
-        for (const name of parts) {
-          const results = search
-            .create({
-              type: "folder",
-              filters: [
-                ["name", "is", name],
-                "AND",
-                [
-                  "parent",
-                  parentId ? "anyof" : "isempty",
-                  parentId || "@NONE@",
-                ],
-              ],
-              columns: ["internalid"],
-            })
-            .run()
-            .getRange({ start: 0, end: 1 });
-
-          if (results && results.length > 0) {
-            parentId = results[0].getValue({ name: "internalid" });
-          } else {
-            // Folder does not exist in this level → path incomplete
-            return null;
-          }
-        }
-
-        // Entire path exists → return id of the last folder
-        return parentId;
-      } catch (err) {
-        logger.error("Error in getFolderIdByPath", {
-          folderPath: fullPath,
-          error: err.message,
-          stack: err.stack,
-        });
-        return null; // Return null on error (treat as folder not found)
-      }
-    }
-
     // ----------------- Upload / overwrite files -----------------
     for (const { path, contentBase64, fileType } of filesToUpload) {
       try {
-        logger.debug("Uploading path", path);
+        // Add SuiteScripts/ prefix if not already present
+        // GitHub paths: "Cycle/CycleRestlet.js" -> NetSuite: "SuiteScripts/Cycle/CycleRestlet.js"
+        const fullPath = path.startsWith("SuiteScripts/")
+          ? path
+          : "SuiteScripts/" + path;
+        logger.debug("Uploading path", fullPath);
+
         if (!path || !contentBase64) continue;
 
-        const parts = path.split("/");
-        parts.shift();
+        const parts = fullPath.split("/");
         const fileName = parts.pop();
         const folderPath = parts.join("/");
 
@@ -901,20 +829,25 @@ define([
       } catch (err) {
         const fileName = path ? path.split("/").pop() : null;
         errors.push(
-          createErrorObject(err, path, fileName, {
+          createErrorObject(err, fullPath, fileName, {
             operation: "upload",
             fileType: fileType,
           })
         );
-        logger.error("Error uploading file", { path, error: err.message });
+        logger.error("Error uploading file", { fullPath, error: err.message });
       }
     }
 
     // ----------------- Delete files -----------------
     for (const path of filesToDelete) {
-      logger.debug("Deleting path", path);
-      const parts = path.split("/");
-      parts.shift();
+      // Add SuiteScripts/ prefix if not already present
+      // GitHub paths: "Cycle/CycleRestlet.js" -> NetSuite: "SuiteScripts/Cycle/CycleRestlet.js"
+      const fullPath = path.startsWith("SuiteScripts/")
+        ? path
+        : "SuiteScripts/" + path;
+      logger.debug("Deleting path", fullPath);
+
+      const parts = fullPath.split("/");
       const fileName = parts.pop();
       const folderPath = parts.join("/");
 
@@ -968,12 +901,12 @@ define([
       } catch (err) {
         const fileName = path.split("/").pop();
         errors.push(
-          createErrorObject(err, path, fileName, {
+          createErrorObject(err, fullPath, fileName, {
             operation: "delete",
             folderId: folderId,
           })
         );
-        logger.error("Error deleting file", { path, error: err.message });
+        logger.error("Error deleting file", { fullPath, error: err.message });
       }
     }
 
@@ -1388,13 +1321,15 @@ define([
   function getPathContent64(filePath) {
     try {
       // Traverse folders by name to find the file's internal id, then load and return base64 content
+      // All paths are relative to SuiteScripts folder (ID: -15)
       const parts = (filePath || "").split("/").filter(Boolean);
       const fileName = parts.pop();
       if (!fileName) throw new Error("Invalid file path");
 
-      let parentFolderId = null;
+      // Start from SuiteScripts folder (ID: -15)
+      let parentFolderId = -15;
 
-      // Walk the folder path
+      // Walk the folder path (starting from SuiteScripts)
       for (let i = 0; i < parts.length; i++) {
         const folderName = parts[i];
 
@@ -1404,9 +1339,7 @@ define([
             filters: [
               ["name", "is", folderName],
               "AND",
-              parentFolderId
-                ? ["parent", "anyof", parentFolderId]
-                : ["parent", "isempty", ""],
+              ["parent", "anyof", parentFolderId],
             ],
             columns: ["internalid"],
           })
@@ -1415,7 +1348,9 @@ define([
 
         if (!results || results.length === 0) {
           throw new Error(
-            `Folder not found in path: ${parts.slice(0, i + 1).join("/")}`
+            `Folder not found in path: SuiteScripts/${parts
+              .slice(0, i + 1)
+              .join("/")}`
           );
         }
 
@@ -1429,9 +1364,7 @@ define([
           filters: [
             ["name", "is", fileName],
             "AND",
-            parentFolderId
-              ? ["folder", "anyof", parentFolderId]
-              : ["folder", "isempty", ""],
+            ["folder", "anyof", parentFolderId],
           ],
           columns: ["internalid"],
         })
@@ -1497,6 +1430,55 @@ define([
     return ignored;
   }
 
+  /**
+   * Verifies whether a full folder path exists in the File Cabinet.
+   * Example: "SuiteScripts/Cycle/test" → returns the internalid of "test"
+   * If any folder in the path does not exist, returns null.
+   */
+  function getFolderIdByPath(fullPath) {
+    try {
+      const parts = fullPath.split("/").filter(Boolean);
+      let parentId = null;
+
+      for (const name of parts) {
+        const filters = [["name", "is", name]];
+
+        if (parentId) {
+          // Search for folder with specific parent
+          filters.push("AND", ["parent", "anyof", parentId]);
+        } else {
+          // Search for top-level folder
+          filters.push("AND", ["istoplevel", "is", "T"]);
+        }
+
+        const results = search
+          .create({
+            type: "folder",
+            filters: filters,
+            columns: ["internalid"],
+          })
+          .run()
+          .getRange({ start: 0, end: 1 });
+
+        if (results && results.length > 0) {
+          parentId = results[0].getValue({ name: "internalid" });
+        } else {
+          // Folder does not exist in this level → path incomplete
+          return null;
+        }
+      }
+
+      // Entire path exists → return id of the last folder
+      return parentId;
+    } catch (err) {
+      logger.error("Error in getFolderIdByPath", {
+        folderPath: fullPath,
+        error: err.message,
+        stack: err.stack,
+      });
+      return null; // Return null on error (treat as folder not found)
+    }
+  }
   /******************************** END HANDLERS ********************************/
 
   return {
