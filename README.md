@@ -82,6 +82,3 @@ git push origin feature/mi-nueva-feature
 ### Flujo de Ramas
 - **main**: Rama principal protegida (producción)
 - **develop**: Rama de desarrollo activa
-
-
-
