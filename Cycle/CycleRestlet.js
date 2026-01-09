@@ -391,7 +391,7 @@ define([
   /**
    * Checks if files exist in NetSuite file cabinet
    * @param {string[]} filePaths - Array of file paths to check (e.g., ["SuiteScripts/file.js", "SuiteScripts/folder/file.txt"])
-   * @returns {Object} - Object containing missing file paths and execution stats
+   * @returns {Object} - Object containing deleted file paths and execution stats
    */
   function checkFilesExistence(filePaths = []) {
     const startTime = Date.now();
@@ -406,13 +406,13 @@ define([
     if (!Array.isArray(filePaths) || filePaths.length === 0) {
       return {
         success: true,
-        missingFiles: [],
+        deletedFiles: [],
         errors: [],
         executionTime: Date.now() - startTime,
       };
     }
 
-    const missingFiles = [];
+    const deletedFiles = [];
     const errors = [];
 
     for (const filePath of filePaths) {
@@ -446,9 +446,9 @@ define([
           ? getFolderIdByPath(folderPath)
           : null;
 
-        // If folder doesn't exist, file is missing
+        // If folder doesn't exist, file is deleted
         if (folderPath && !parentFolderId) {
-          missingFiles.push(filePath);
+          deletedFiles.push(filePath);
           continue;
         }
 
@@ -480,7 +480,7 @@ define([
         });
 
         if (!fileFound) {
-          missingFiles.push(filePath);
+          deletedFiles.push(filePath);
         }
       } catch (err) {
         const fileName = filePath.split("/").pop();
@@ -495,12 +495,12 @@ define([
     const executionTime = Date.now() - startTime;
     logger.audit(
       "Done checkFilesExistence",
-      `Missing: ${missingFiles.length}, Errors: ${errors.length} | Execution time: ${executionTime}ms`
+      `Deleted: ${deletedFiles.length}, Errors: ${errors.length} | Execution time: ${executionTime}ms`
     );
 
     return {
       success: true,
-      missingFiles,
+      deletedFiles,
       errors,
       executionTime,
     };
@@ -526,36 +526,36 @@ define([
       filterDate = parseUTCToServerDate(lastSyncDate);
     }
 
-    let missing = [];
+    let deleted = [];
     let modified = [];
     const errors = [];
     let currentStage = stage;
     let resumeFromDate = null;
     let isComplete = false;
 
-    // Step 1: Find missing files on netsuite (deleted files)
+    // Step 1: Find deleted files on netsuite (deleted files)
     if (currentStage === 0) {
       try {
-        const missingAfterDate = findMissingFiles(
+        const deletedAfterDate = findDeletedFiles(
           filterDate,
           searchFilters,
           ignoredPaths
         );
-        missing = missingAfterDate.missing;
-        errors.push(...missingAfterDate.errors);
+        deleted = deletedAfterDate.deleted;
+        errors.push(...deletedAfterDate.errors);
 
         // Check if we need to stop due to governance
         const remainingUsage = runtime.getCurrentScript().getRemainingUsage();
         if (remainingUsage < BATCH_USAGE_THRESHOLD) {
           logger.debug(
             "Batch limit reached in stage 0",
-            `Remaining Usage: ${remainingUsage}, Missing files found: ${missing.length}`
+            `Remaining Usage: ${remainingUsage}, Deleted files found: ${deleted.length}`
           );
           const executionTime = Date.now() - startTime;
           return {
             success: true,
             modified: [],
-            missing,
+            deleted,
             errors,
             startTimeUTC,
             executionTime,
@@ -569,13 +569,13 @@ define([
         currentStage = 1;
         logger.debug(
           "Stage 0 complete",
-          `Missing files found: ${missing.length}`
+          `Deleted files found: ${deleted.length}`
         );
       } catch (err) {
-        logger.error("findMissingFiles Error", err.message);
+        logger.error("findDeletedFiles Error", err.message);
         errors.push(
           createErrorObject(err, null, null, {
-            stage: "findMissingFiles",
+            stage: "findDeletedFiles",
             context: "checkSyncStatus stage 0",
           })
         );
@@ -626,8 +626,8 @@ define([
 
     logger.audit(
       isComplete ? "Comparison Complete" : "Batch Complete (Partial)",
-      `Modified: ${modified.length}, Missing: ${
-        missing.length
+      `Modified: ${modified.length}, Deleted: ${
+        deleted.length
       } | Stage: ${currentStage} | Execution time: ${executionTime}ms (${(
         executionTime / 1000
       ).toFixed(2)}s)`
@@ -636,7 +636,7 @@ define([
     return {
       success: true,
       modified,
-      missing,
+      deleted,
       errors,
       startTimeUTC,
       executionTime,
@@ -840,7 +840,10 @@ define([
             fileType: fileType,
           })
         );
-        logger.error("Error uploading file", { fullPath: fullPath || path, error: err.message });
+        logger.error("Error uploading file", {
+          fullPath: fullPath || path,
+          error: err.message,
+        });
       }
     }
 
@@ -924,9 +927,11 @@ define([
     const executionTime = Date.now() - startTime;
     logger.audit(
       "Done syncNetsuiteCabinet",
-      `Files processed: ${results.length} successful, ${errors.length} errors | Execution time: ${executionTime}ms (${(executionTime / 1000).toFixed(
-        2
-      )}s)`
+      `Files processed: ${results.length} successful, ${
+        errors.length
+      } errors | Execution time: ${executionTime}ms (${(
+        executionTime / 1000
+      ).toFixed(2)}s)`
     );
 
     return {
@@ -1063,7 +1068,13 @@ define([
               folderPathCache[folderChain[i].id] = pathSoFar;
             }
           }
-          if (shouldIgnorePath(fullPath, ignoredPaths)) continue;
+          if (
+            shouldIgnorePath(
+              fullPath.replace(/^\/?SuiteScripts\//, ""),
+              ignoredPaths
+            )
+          )
+            continue;
           logger.debug("fullPath", fullPath);
 
           // Get base64 content
@@ -1098,11 +1109,11 @@ define([
     return { files: results, errors, resumeFromDate: null };
   }
 
-  function findMissingFiles(filterDate, searchFilters, ignoredPaths) {
-    const missing = [];
+  function findDeletedFiles(filterDate, searchFilters, ignoredPaths) {
+    const deleted = [];
     const errors = [];
     if (!filterDate) {
-      return { missing, errors };
+      return { deleted, errors };
     }
 
     const filters = [
@@ -1162,7 +1173,7 @@ define([
             fileName + " at " + deletedUTC.toISOString()
           );
 
-          missing.push({
+          deleted.push({
             name: fileName,
             modified: deletedUTC.toISOString(),
           });
@@ -1170,14 +1181,14 @@ define([
           const fileName = result.getValue({ name: "name" });
           errors.push(
             createErrorObject(err, null, fileName, {
-              context: "findMissingFiles deleted record processing",
+              context: "findDeletedFiles deleted record processing",
             })
           );
         }
       }
     }
 
-    return { missing, errors };
+    return { deleted, errors };
   }
 
   function getFilesInFolderRecursive(
