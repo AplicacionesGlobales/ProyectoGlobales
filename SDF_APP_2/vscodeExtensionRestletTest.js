@@ -2,6 +2,7 @@
  * @NApiVersion 2.x
  * @NScriptType Restlet
  */
+
 define(["N/file", "N/search", "N/record"], function (file, search, record) {
   function getFolderId(folderPath) {
     var foldersArray = folderPath.split("/");
@@ -125,8 +126,7 @@ define(["N/file", "N/search", "N/record"], function (file, search, record) {
       }
       return true;
     });
-
-    // In case of empty folder return the folder name
+    // In case of empty folder return the name
     if (files.length == 0) {
       files.push({
         type: "folder",
@@ -195,7 +195,6 @@ define(["N/file", "N/search", "N/record"], function (file, search, record) {
   }
 
   function getFileType(fileName) {
-    // TODO: differentiate according to the file extension
     return file.Type.JAVASCRIPT;
   }
 

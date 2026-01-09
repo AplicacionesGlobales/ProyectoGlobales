@@ -2,6 +2,7 @@
     <configuration>
         <path>~/AccountConfiguration/*</path>
     </configuration>
+    
     <objects>
         <path>~/Objects/*</path>
     </objects>
