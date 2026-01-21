@@ -11,7 +11,4 @@ Prueba 10
 Prueba 11
 Prueba 12
 Prueba 13
-After certificate revoked
-Prueba 14
-Prueba 15
-Prueba 16
+Test certificate revoked
