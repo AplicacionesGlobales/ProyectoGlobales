@@ -174,35 +174,41 @@ define([
     logCollector.clear();
 
     var action = requestBody.action;
+    // Extract custom SuiteScripts folder name (defaults to "SuiteScripts")
+    var suiteScriptsFolder = requestBody.suiteScriptsFolder || "SuiteScripts";
+
     try {
       let result;
       switch (action) {
         case "syncNetsuiteCabinet":
           result = syncNetsuiteCabinet(
             requestBody.filesToUpload,
-            requestBody.filesToDelete
+            requestBody.filesToDelete,
+            suiteScriptsFolder
           );
           break;
         case "getAllFiles":
           result = getAllFiles(
             requestBody.lastPath,
             requestBody.searchFilters,
-            requestBody.ignoredPaths
+            requestBody.ignoredPaths,
+            suiteScriptsFolder
           );
           break;
         case "fetchFiles":
-          result = fetchFiles(requestBody.filesToFetch);
+          result = fetchFiles(requestBody.filesToFetch, suiteScriptsFolder);
           break;
         case "checkSyncStatus":
           result = checkSyncStatus(
             requestBody.lastSyncDate,
             requestBody.stage,
             requestBody.searchFilters,
-            requestBody.ignoredPaths
+            requestBody.ignoredPaths,
+            suiteScriptsFolder
           );
           break;
         case "checkFilesExistence":
-          result = checkFilesExistence(requestBody.paths);
+          result = checkFilesExistence(requestBody.paths, suiteScriptsFolder);
           break;
 
         default:
@@ -241,21 +247,51 @@ define([
   }
 
   /******************************* Get All files *******************************/
-  function getAllFiles(lastPath = null, searchFilters, ignoredPaths) {
+  function getAllFiles(
+    lastPath = null,
+    searchFilters,
+    ignoredPaths,
+    suiteScriptsFolder = "SuiteScripts"
+  ) {
     const startTime = Date.now();
     const startTimeUTC = new Date(startTime).toISOString();
 
     logger.audit(
       "Start getAllFiles",
-      `Start time (UTC): ${startTimeUTC} | Resume from: ${lastPath || "START"}`
+      `Start time (UTC): ${startTimeUTC} | Resume from: ${
+        lastPath || "START"
+      } | Folder: ${suiteScriptsFolder}`
     );
 
     try {
-      // 🔹 Get files recursively from SuiteScripts folder only (ID: -15)
+      // 🔹 Get files recursively from configured folder
       const allFiles = { fetched: [], errors: [], resumePath: null };
 
-      // Only process SuiteScripts folder
-      const suiteScriptsRoot = { id: -15, name: "SuiteScripts" };
+      // Find the root folder ID by name (searches top-level folders only)
+      const rootFolderId = getFolderIdByPath(suiteScriptsFolder);
+
+      if (!rootFolderId) {
+        logger.error(
+          "Root folder not found",
+          `Could not find top-level folder: ${suiteScriptsFolder}`
+        );
+        return {
+          success: false,
+          message: `Root folder "${suiteScriptsFolder}" not found in File Cabinet`,
+          fetched: [],
+          errors: [
+            {
+              message: `Root folder "${suiteScriptsFolder}" does not exist`,
+              path: suiteScriptsFolder,
+            },
+          ],
+          resumePath: null,
+          isComplete: true,
+          executionTime: Date.now() - startTime,
+        };
+      }
+
+      const suiteScriptsRoot = { id: rootFolderId, name: suiteScriptsFolder };
 
       const files = getFilesInFolderRecursive(
         suiteScriptsRoot.id,
@@ -314,13 +350,13 @@ define([
   /******************************** End Get All files ********************************/
 
   /******************************** Start fetchFiles from list ********************************/
-  function fetchFiles(filesToFetch = []) {
+  function fetchFiles(filesToFetch = [], suiteScriptsFolder = "SuiteScripts") {
     const startTime = Date.now();
     const startTimeUTC = new Date(startTime).toISOString();
 
     logger.audit(
       "Start fetchFiles",
-      `fetchFiles Start time (UTC): ${startTimeUTC}`
+      `fetchFiles Start time (UTC): ${startTimeUTC} | Folder: ${suiteScriptsFolder}`
     );
 
     const fetched = [];
@@ -390,16 +426,19 @@ define([
   /******************************* Check Files Existence *******************************/
   /**
    * Checks if files exist in NetSuite file cabinet
-   * @param {string[]} filePaths - Array of file paths to check (e.g., ["SuiteScripts/file.js", "SuiteScripts/folder/file.txt"])
+   * @param {string[]} filePaths - Array of file paths to check (e.g., ["SuiteScripts/file.js", "TestScripts/folder/file.txt"])
    * @returns {Object} - Object containing deleted file paths and execution stats
    */
-  function checkFilesExistence(filePaths = []) {
+  function checkFilesExistence(
+    filePaths = [],
+    suiteScriptsFolder = "SuiteScripts"
+  ) {
     const startTime = Date.now();
     const startTimeUTC = new Date(startTime).toISOString();
 
     logger.audit(
       "Start checkFilesExistence",
-      `Checking ${filePaths.length} file paths | Start time (UTC): ${startTimeUTC}`
+      `Checking ${filePaths.length} file paths | Start time (UTC): ${startTimeUTC} | Folder: ${suiteScriptsFolder}`
     );
     logger.debug("filePaths", filePaths);
 
@@ -512,18 +551,27 @@ define([
     lastSyncDate,
     stage = 0,
     searchFilters,
-    ignoredPaths
+    ignoredPaths,
+    suiteScriptsFolder = "SuiteScripts"
   ) {
     const startTime = Date.now();
     const startTimeUTC = new Date(startTime).toISOString();
     logger.audit(
       "Start checkSyncStatus",
-      `Comparing NetSuite files, modified since: ${lastSyncDate} | Stage: ${stage} | Start time (UTC): ${startTimeUTC}`
+      `Comparing NetSuite files, modified since: ${lastSyncDate} | Stage: ${stage} | Start time (UTC): ${startTimeUTC} | Folder: ${suiteScriptsFolder}`
     );
-    let filterDate = lastSyncDate;
+
+    // Prepare date filters in both formats:
+    // 1. filterDateString: Date-only string for NetSuite search filters (e.g., "1/20/2026")
+    // 2. filterDateUTC: Full Date object for precise UTC comparisons
+    let filterDateString = null;
+    let filterDateUTC = null;
+
     if (lastSyncDate) {
-      // Parse the date parameter
-      filterDate = parseUTCToServerDate(lastSyncDate);
+      // Convert ISO string to Date object for precise comparisons
+      filterDateUTC = new Date(lastSyncDate);
+      // Convert to NetSuite server date string for search filters
+      filterDateString = parseUTCToServerDate(lastSyncDate);
     }
 
     let deleted = [];
@@ -537,7 +585,8 @@ define([
     if (currentStage === 0) {
       try {
         const deletedAfterDate = findDeletedFiles(
-          filterDate,
+          filterDateString,
+          filterDateUTC,
           searchFilters,
           ignoredPaths
         );
@@ -586,9 +635,11 @@ define([
     if (currentStage === 1) {
       try {
         const modifiedAfterDate = getFilesModifiedAfterUTC(
-          filterDate,
+          filterDateString,
+          filterDateUTC,
           searchFilters,
-          ignoredPaths
+          ignoredPaths,
+          suiteScriptsFolder
         );
 
         modified = modifiedAfterDate.files;
@@ -648,11 +699,15 @@ define([
   /******************************** End Sync check by date  ********************************/
 
   /******************************** Upload commit files to netsuite *************************/
-  function syncNetsuiteCabinet(filesToUpload, filesToDelete) {
+  function syncNetsuiteCabinet(
+    filesToUpload,
+    filesToDelete,
+    suiteScriptsFolder = "SuiteScripts"
+  ) {
     const startTime = Date.now();
     logger.audit(
       "Start syncNetsuiteCabinet",
-      `Files to upload: ${filesToUpload.length}, Files to delete: ${filesToDelete.length}`
+      `Files to upload: ${filesToUpload.length}, Files to delete: ${filesToDelete.length} | Folder: ${suiteScriptsFolder}`
     );
     let errors = [];
     let results = []; // Track successfully processed files
@@ -789,11 +844,10 @@ define([
     for (const { path, contentBase64, fileType, operation } of filesToUpload) {
       let fullPath;
       try {
-        // Add SuiteScripts/ prefix if not already present
-        // GitHub paths: "Cycle/CycleRestlet.js" -> NetSuite: "SuiteScripts/Cycle/CycleRestlet.js"
-        fullPath = path.startsWith("SuiteScripts/")
-          ? path
-          : "SuiteScripts/" + path;
+        // Add folder prefix if not already present
+        // GitHub paths: "Cycle/CycleRestlet.js" -> NetSuite: "[Folder]/Cycle/CycleRestlet.js"
+        const folderPrefix = suiteScriptsFolder + "/";
+        fullPath = path.startsWith(folderPrefix) ? path : folderPrefix + path;
         logger.debug("Uploading path", fullPath);
 
         if (!path || !contentBase64) continue;
@@ -849,11 +903,12 @@ define([
 
     // ----------------- Delete files -----------------
     for (const path of filesToDelete) {
-      // Add SuiteScripts/ prefix if not already present
-      // GitHub paths: "Cycle/CycleRestlet.js" -> NetSuite: "SuiteScripts/Cycle/CycleRestlet.js"
-      const fullPath = path.startsWith("SuiteScripts/")
+      // Add folder prefix if not already present
+      // GitHub paths: "Cycle/CycleRestlet.js" -> NetSuite: "[Folder]/Cycle/CycleRestlet.js"
+      const folderPrefix = suiteScriptsFolder + "/";
+      const fullPath = path.startsWith(folderPrefix)
         ? path
-        : "SuiteScripts/" + path;
+        : folderPrefix + path;
       logger.debug("Deleting path", fullPath);
 
       const parts = fullPath.split("/");
@@ -944,25 +999,49 @@ define([
 
   /******************************** END Upload commit files to netsuite *************************/
 
-  function getFilesModifiedAfterUTC(filterDate, searchFilters, ignoredPaths) {
+  function getFilesModifiedAfterUTC(
+    filterDateString,
+    filterDateUTC,
+    searchFilters,
+    ignoredPaths,
+    suiteScriptsFolder = "SuiteScripts"
+  ) {
     const results = [];
     const errors = [];
     const folderPathCache = {}; // Cache folder paths to avoid repeated record.load calls
 
-    // Prepopulate cache with root folders
-    FILE_CABINET_ROOTS.forEach((root) => {
-      folderPathCache[root.id] = root.name;
-    });
+    // Find the root folder ID by name (searches top-level folders only)
+    const rootFolderId = getFolderIdByPath(suiteScriptsFolder);
+
+    if (!rootFolderId) {
+      logger.error(
+        "Root folder not found",
+        `Could not find top-level folder: ${suiteScriptsFolder}`
+      );
+      return {
+        files: [],
+        errors: [
+          {
+            message: `Root folder "${suiteScriptsFolder}" does not exist`,
+            path: suiteScriptsFolder,
+          },
+        ],
+        resumeFromDate: null,
+      };
+    }
+
+    // Prepopulate cache with the found root folder
+    folderPathCache[rootFolderId] = suiteScriptsFolder;
 
     // 1. Search files modified on or after the date
     // Note: NetSuite search filters only accept date strings (not datetime)
     // We do precise UTC datetime comparison in the loop below
 
     const filters = [
-      ["folder", "anyof", FILE_CABINET_ROOTS.map((root) => root.id)], // Search in all File Cabinet roots
+      ["folder", "anyof", [rootFolderId]], // Search in the configured root folder
     ];
-    if (filterDate) {
-      filters.push("AND", ["modified", "onorafter", filterDate]);
+    if (filterDateString) {
+      filters.push("AND", ["modified", "onorafter", filterDateString]);
     }
 
     if (searchFilters && searchFilters.length > 0) {
@@ -1020,8 +1099,7 @@ define([
           const modifiedUTC = parseNetSuiteDateToUTC(modifiedStr);
 
           // Filter precisely by UTC - only include files modified on or after the filter date
-          if (filterDate && modifiedUTC < filterDate) continue;
-
+          if (filterDateUTC && modifiedUTC < filterDateUTC) continue;
           // 2. Build full path by traversing parent folders (with caching)
           let fullPath = fileName;
           let currentFolderId = folderId;
@@ -1068,9 +1146,14 @@ define([
               folderPathCache[folderChain[i].id] = pathSoFar;
             }
           }
+          // Remove the configured folder prefix for .cycleignore matching
+          const folderPrefixRegex = new RegExp(
+            `^\\/?${suiteScriptsFolder}\\/`,
+            "i"
+          );
           if (
             shouldIgnorePath(
-              fullPath.replace(/^\/?SuiteScripts\//, ""),
+              fullPath.replace(folderPrefixRegex, ""),
               ignoredPaths
             )
           )
@@ -1109,17 +1192,22 @@ define([
     return { files: results, errors, resumeFromDate: null };
   }
 
-  function findDeletedFiles(filterDate, searchFilters, ignoredPaths) {
+  function findDeletedFiles(
+    filterDateString,
+    filterDateUTC,
+    searchFilters,
+    ignoredPaths
+  ) {
     const deleted = [];
     const errors = [];
-    if (!filterDate) {
+    if (!filterDateString || !filterDateUTC) {
       return { deleted, errors };
     }
 
     const filters = [
       ["recordtype", "anyof", "file"],
       "AND",
-      ["deleteddate", "onorafter", filterDate],
+      ["deleteddate", "onorafter", filterDateString],
     ];
 
     if (searchFilters && searchFilters.length > 0) {
@@ -1136,6 +1224,10 @@ define([
         search.createColumn({
           name: "deleteddate",
           summary: search.Summary.MAX,
+        }),
+        search.createColumn({
+          name: "deletedby",
+          summary: search.Summary.GROUP,
         }),
       ],
     });
@@ -1155,6 +1247,10 @@ define([
             name: "deleteddate",
             summary: search.Summary.MAX,
           });
+          const deletedBy = result.getText({
+            name: "deletedby",
+            summary: search.Summary.GROUP,
+          });
 
           // Check if this filename should be ignored
           // Since we only have the filename, shouldIgnorePath will only match filename-only patterns
@@ -1166,16 +1262,17 @@ define([
           const deletedUTC = parseNetSuiteDateToUTC(deletedDateStr);
 
           // Filter precisely by UTC - only include files deleted on or after the filter date
-          if (deletedUTC < filterDate) continue;
+          if (deletedUTC < filterDateUTC) continue;
 
           logger.debug(
             "Deleted file",
-            fileName + " at " + deletedUTC.toISOString()
+            fileName + " at " + deletedUTC.toISOString() + " by " + (deletedBy || "unknown")
           );
 
           deleted.push({
             name: fileName,
             modified: deletedUTC.toISOString(),
+            lastModifiedBy: deletedBy || undefined,
           });
         } catch (err) {
           const fileName = result.getValue({ name: "name" });
