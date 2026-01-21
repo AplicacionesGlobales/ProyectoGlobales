@@ -19,9 +19,9 @@ define([
   // File Cabinet root folders to search
   const FILE_CABINET_ROOTS = [
     { id: -15, name: "SuiteScripts" },
-    { id: -6, name: "Templates/E-mail Templates" },
+    /* { id: -6, name: "Templates/E-mail Templates" },
     { id: -5, name: "Templates/Marketing Templates" },
-    { id: -100, name: "Web Site Hosting Files" },
+    { id: -100, name: "Web Site Hosting Files" }, */
   ];
 
   // Global log collector for sending logs to backend
@@ -174,35 +174,41 @@ define([
     logCollector.clear();
 
     var action = requestBody.action;
+    // Extract custom SuiteScripts folder name (defaults to "SuiteScripts")
+    var suiteScriptsFolder = requestBody.suiteScriptsFolder || "SuiteScripts";
+
     try {
       let result;
       switch (action) {
         case "syncNetsuiteCabinet":
           result = syncNetsuiteCabinet(
             requestBody.filesToUpload,
-            requestBody.filesToDelete
+            requestBody.filesToDelete,
+            suiteScriptsFolder
           );
           break;
         case "getAllFiles":
           result = getAllFiles(
             requestBody.lastPath,
             requestBody.searchFilters,
-            requestBody.ignoredPaths
+            requestBody.ignoredPaths,
+            suiteScriptsFolder
           );
           break;
         case "fetchFiles":
-          result = fetchFiles(requestBody.filesToFetch);
+          result = fetchFiles(requestBody.filesToFetch, suiteScriptsFolder);
           break;
         case "checkSyncStatus":
           result = checkSyncStatus(
             requestBody.lastSyncDate,
             requestBody.stage,
             requestBody.searchFilters,
-            requestBody.ignoredPaths
+            requestBody.ignoredPaths,
+            suiteScriptsFolder
           );
           break;
         case "checkFilesExistence":
-          result = checkFilesExistence(requestBody.paths);
+          result = checkFilesExistence(requestBody.paths, suiteScriptsFolder);
           break;
 
         default:
@@ -241,41 +247,66 @@ define([
   }
 
   /******************************* Get All files *******************************/
-  function getAllFiles(lastPath = null, searchFilters, ignoredPaths) {
+  function getAllFiles(
+    lastPath = null,
+    searchFilters,
+    ignoredPaths,
+    suiteScriptsFolder = "SuiteScripts"
+  ) {
     const startTime = Date.now();
     const startTimeUTC = new Date(startTime).toISOString();
 
     logger.audit(
       "Start getAllFiles",
-      `Start time (UTC): ${startTimeUTC} | Resume from: ${lastPath || "START"}`
+      `Start time (UTC): ${startTimeUTC} | Resume from: ${
+        lastPath || "START"
+      } | Folder: ${suiteScriptsFolder}`
     );
 
     try {
-      // 🔹 Get files recursively from all File Cabinet root folders with resume support
+      // 🔹 Get files recursively from configured folder
       const allFiles = { fetched: [], errors: [], resumePath: null };
 
-      for (const root of FILE_CABINET_ROOTS) {
-        // Skip folders before resume point (if resuming)
-        if (lastPath && !lastPath.startsWith(root.name + "/")) {
-          continue;
-        }
+      // Find the root folder ID by name (searches top-level folders only)
+      const rootFolderId = getFolderIdByPath(suiteScriptsFolder);
 
-        const files = getFilesInFolderRecursive(
-          root.id,
-          `${root.name}/`,
-          lastPath,
-          searchFilters,
-          ignoredPaths
+      if (!rootFolderId) {
+        logger.error(
+          "Root folder not found",
+          `Could not find top-level folder: ${suiteScriptsFolder}`
         );
+        return {
+          success: false,
+          message: `Root folder "${suiteScriptsFolder}" not found in File Cabinet`,
+          fetched: [],
+          errors: [
+            {
+              message: `Root folder "${suiteScriptsFolder}" does not exist`,
+              path: suiteScriptsFolder,
+            },
+          ],
+          resumePath: null,
+          isComplete: true,
+          executionTime: Date.now() - startTime,
+        };
+      }
 
-        allFiles.fetched.push(...files.fetched);
-        allFiles.errors.push(...files.errors);
+      const suiteScriptsRoot = { id: rootFolderId, name: suiteScriptsFolder };
 
-        // If this root folder hit the batch limit, store resume path and stop
-        if (files.resumePath) {
-          allFiles.resumePath = files.resumePath;
-          break;
-        }
+      const files = getFilesInFolderRecursive(
+        suiteScriptsRoot.id,
+        `${suiteScriptsRoot.name}/`,
+        lastPath,
+        searchFilters,
+        ignoredPaths
+      );
+
+      allFiles.fetched.push(...files.fetched);
+      allFiles.errors.push(...files.errors);
+
+      // Store resume path if batch limit was hit
+      if (files.resumePath) {
+        allFiles.resumePath = files.resumePath;
       }
 
       logger.audit(
@@ -319,13 +350,13 @@ define([
   /******************************** End Get All files ********************************/
 
   /******************************** Start fetchFiles from list ********************************/
-  function fetchFiles(filesToFetch = []) {
+  function fetchFiles(filesToFetch = [], suiteScriptsFolder = "SuiteScripts") {
     const startTime = Date.now();
     const startTimeUTC = new Date(startTime).toISOString();
 
     logger.audit(
       "Start fetchFiles",
-      `fetchFiles Start time (UTC): ${startTimeUTC}`
+      `fetchFiles Start time (UTC): ${startTimeUTC} | Folder: ${suiteScriptsFolder}`
     );
 
     const fetched = [];
@@ -395,29 +426,32 @@ define([
   /******************************* Check Files Existence *******************************/
   /**
    * Checks if files exist in NetSuite file cabinet
-   * @param {string[]} filePaths - Array of file paths to check (e.g., ["SuiteScripts/file.js", "SuiteScripts/folder/file.txt"])
-   * @returns {Object} - Object containing missing file paths and execution stats
+   * @param {string[]} filePaths - Array of file paths to check (e.g., ["SuiteScripts/file.js", "TestScripts/folder/file.txt"])
+   * @returns {Object} - Object containing deleted file paths and execution stats
    */
-  function checkFilesExistence(filePaths = []) {
+  function checkFilesExistence(
+    filePaths = [],
+    suiteScriptsFolder = "SuiteScripts"
+  ) {
     const startTime = Date.now();
     const startTimeUTC = new Date(startTime).toISOString();
 
     logger.audit(
       "Start checkFilesExistence",
-      `Checking ${filePaths.length} file paths | Start time (UTC): ${startTimeUTC}`
+      `Checking ${filePaths.length} file paths | Start time (UTC): ${startTimeUTC} | Folder: ${suiteScriptsFolder}`
     );
     logger.debug("filePaths", filePaths);
 
     if (!Array.isArray(filePaths) || filePaths.length === 0) {
       return {
         success: true,
-        missingFiles: [],
+        deletedFiles: [],
         errors: [],
         executionTime: Date.now() - startTime,
       };
     }
 
-    const missingFiles = [];
+    const deletedFiles = [];
     const errors = [];
 
     for (const filePath of filePaths) {
@@ -445,39 +479,15 @@ define([
           continue;
         }
 
-        let parentFolderId = null;
-        let folderNotFound = false;
+        // Get the folder ID for the parent folder path
+        const folderPath = parts.join("/");
+        const parentFolderId = folderPath
+          ? getFolderIdByPath(folderPath)
+          : null;
 
-        // Walk the folder path
-        for (let i = 0; i < parts.length; i++) {
-          const folderName = parts[i];
-
-          const folderResults = search
-            .create({
-              type: "folder",
-              filters: [
-                ["name", "is", folderName],
-                "AND",
-                parentFolderId
-                  ? ["parent", "anyof", parentFolderId]
-                  : ["parent", "isempty", ""],
-              ],
-              columns: ["internalid"],
-            })
-            .run()
-            .getRange({ start: 0, end: 1 });
-
-          if (!folderResults || folderResults.length === 0) {
-            folderNotFound = true;
-            break;
-          }
-
-          parentFolderId = folderResults[0].getValue({ name: "internalid" });
-        }
-
-        // If folder doesn't exist, file is missing
-        if (folderNotFound) {
-          missingFiles.push(filePath);
+        // If folder doesn't exist, file is deleted
+        if (folderPath && !parentFolderId) {
+          deletedFiles.push(filePath);
           continue;
         }
 
@@ -509,7 +519,7 @@ define([
         });
 
         if (!fileFound) {
-          missingFiles.push(filePath);
+          deletedFiles.push(filePath);
         }
       } catch (err) {
         const fileName = filePath.split("/").pop();
@@ -524,12 +534,12 @@ define([
     const executionTime = Date.now() - startTime;
     logger.audit(
       "Done checkFilesExistence",
-      `Missing: ${missingFiles.length}, Errors: ${errors.length} | Execution time: ${executionTime}ms`
+      `Deleted: ${deletedFiles.length}, Errors: ${errors.length} | Execution time: ${executionTime}ms`
     );
 
     return {
       success: true,
-      missingFiles,
+      deletedFiles,
       errors,
       executionTime,
     };
@@ -541,50 +551,60 @@ define([
     lastSyncDate,
     stage = 0,
     searchFilters,
-    ignoredPaths
+    ignoredPaths,
+    suiteScriptsFolder = "SuiteScripts"
   ) {
     const startTime = Date.now();
     const startTimeUTC = new Date(startTime).toISOString();
     logger.audit(
       "Start checkSyncStatus",
-      `Comparing NetSuite files, modified since: ${lastSyncDate} | Stage: ${stage} | Start time (UTC): ${startTimeUTC}`
+      `Comparing NetSuite files, modified since: ${lastSyncDate} | Stage: ${stage} | Start time (UTC): ${startTimeUTC} | Folder: ${suiteScriptsFolder}`
     );
-    let filterDate = lastSyncDate;
+
+    // Prepare date filters in both formats:
+    // 1. filterDateString: Date-only string for NetSuite search filters (e.g., "1/20/2026")
+    // 2. filterDateUTC: Full Date object for precise UTC comparisons
+    let filterDateString = null;
+    let filterDateUTC = null;
+
     if (lastSyncDate) {
-      // Parse the date parameter
-      filterDate = parseUTCToServerDate(lastSyncDate);
+      // Convert ISO string to Date object for precise comparisons
+      filterDateUTC = new Date(lastSyncDate);
+      // Convert to NetSuite server date string for search filters
+      filterDateString = parseUTCToServerDate(lastSyncDate);
     }
 
-    let missing = [];
+    let deleted = [];
     let modified = [];
     const errors = [];
     let currentStage = stage;
     let resumeFromDate = null;
     let isComplete = false;
 
-    // Step 1: Find missing files on netsuite (deleted files)
+    // Step 1: Find deleted files on netsuite (deleted files)
     if (currentStage === 0) {
       try {
-        const missingAfterDate = findMissingFiles(
-          filterDate,
+        const deletedAfterDate = findDeletedFiles(
+          filterDateString,
+          filterDateUTC,
           searchFilters,
           ignoredPaths
         );
-        missing = missingAfterDate.missing;
-        errors.push(...missingAfterDate.errors);
+        deleted = deletedAfterDate.deleted;
+        errors.push(...deletedAfterDate.errors);
 
         // Check if we need to stop due to governance
         const remainingUsage = runtime.getCurrentScript().getRemainingUsage();
         if (remainingUsage < BATCH_USAGE_THRESHOLD) {
           logger.debug(
             "Batch limit reached in stage 0",
-            `Remaining Usage: ${remainingUsage}, Missing files found: ${missing.length}`
+            `Remaining Usage: ${remainingUsage}, Deleted files found: ${deleted.length}`
           );
           const executionTime = Date.now() - startTime;
           return {
             success: true,
             modified: [],
-            missing,
+            deleted,
             errors,
             startTimeUTC,
             executionTime,
@@ -598,13 +618,13 @@ define([
         currentStage = 1;
         logger.debug(
           "Stage 0 complete",
-          `Missing files found: ${missing.length}`
+          `Deleted files found: ${deleted.length}`
         );
       } catch (err) {
-        logger.error("findMissingFiles Error", err.message);
+        logger.error("findDeletedFiles Error", err.message);
         errors.push(
           createErrorObject(err, null, null, {
-            stage: "findMissingFiles",
+            stage: "findDeletedFiles",
             context: "checkSyncStatus stage 0",
           })
         );
@@ -615,9 +635,11 @@ define([
     if (currentStage === 1) {
       try {
         const modifiedAfterDate = getFilesModifiedAfterUTC(
-          filterDate,
+          filterDateString,
+          filterDateUTC,
           searchFilters,
-          ignoredPaths
+          ignoredPaths,
+          suiteScriptsFolder
         );
 
         modified = modifiedAfterDate.files;
@@ -655,8 +677,8 @@ define([
 
     logger.audit(
       isComplete ? "Comparison Complete" : "Batch Complete (Partial)",
-      `Modified: ${modified.length}, Missing: ${
-        missing.length
+      `Modified: ${modified.length}, Deleted: ${
+        deleted.length
       } | Stage: ${currentStage} | Execution time: ${executionTime}ms (${(
         executionTime / 1000
       ).toFixed(2)}s)`
@@ -665,7 +687,7 @@ define([
     return {
       success: true,
       modified,
-      missing,
+      deleted,
       errors,
       startTimeUTC,
       executionTime,
@@ -677,13 +699,19 @@ define([
   /******************************** End Sync check by date  ********************************/
 
   /******************************** Upload commit files to netsuite *************************/
-  function syncNetsuiteCabinet(filesToUpload, filesToDelete) {
+  function syncNetsuiteCabinet(
+    filesToUpload,
+    filesToDelete,
+    suiteScriptsFolder = "SuiteScripts"
+  ) {
     const startTime = Date.now();
     logger.audit(
       "Start syncNetsuiteCabinet",
-      `Files to upload: ${filesToUpload.length}, Files to delete: ${filesToDelete.length}`
+      `Files to upload: ${filesToUpload.length}, Files to delete: ${filesToDelete.length} | Folder: ${suiteScriptsFolder}`
     );
     let errors = [];
+    let results = []; // Track successfully processed files
+
     //Create folder path recursively if it doesn't exist. Returns the internal ID of the deepest folder.
     function ensureFolderPath(fullPath) {
       try {
@@ -812,62 +840,19 @@ define([
       }
     }
 
-    /**
-     * Verifies whether a full folder path exists in the File Cabinet.
-     * Example: "SuiteScripts/Cycle/test" → returns the internalid of "test"
-     * If any folder in the path does not exist, returns null.
-     */
-    function getFolderIdByPath(fullPath) {
-      try {
-        const parts = fullPath.split("/").filter(Boolean);
-        let parentId = null;
-
-        for (const name of parts) {
-          const results = search
-            .create({
-              type: "folder",
-              filters: [
-                ["name", "is", name],
-                "AND",
-                [
-                  "parent",
-                  parentId ? "anyof" : "isempty",
-                  parentId || "@NONE@",
-                ],
-              ],
-              columns: ["internalid"],
-            })
-            .run()
-            .getRange({ start: 0, end: 1 });
-
-          if (results && results.length > 0) {
-            parentId = results[0].getValue({ name: "internalid" });
-          } else {
-            // Folder does not exist in this level → path incomplete
-            return null;
-          }
-        }
-
-        // Entire path exists → return id of the last folder
-        return parentId;
-      } catch (err) {
-        logger.error("Error in getFolderIdByPath", {
-          folderPath: fullPath,
-          error: err.message,
-          stack: err.stack,
-        });
-        return null; // Return null on error (treat as folder not found)
-      }
-    }
-
     // ----------------- Upload / overwrite files -----------------
-    for (const { path, contentBase64, fileType } of filesToUpload) {
+    for (const { path, contentBase64, fileType, operation } of filesToUpload) {
+      let fullPath;
       try {
-        logger.debug("Uploading path", path);
+        // Add folder prefix if not already present
+        // GitHub paths: "Cycle/CycleRestlet.js" -> NetSuite: "[Folder]/Cycle/CycleRestlet.js"
+        const folderPrefix = suiteScriptsFolder + "/";
+        fullPath = path.startsWith(folderPrefix) ? path : folderPrefix + path;
+        logger.debug("Uploading path", fullPath);
+
         if (!path || !contentBase64) continue;
 
-        const parts = path.split("/");
-        parts.shift();
+        const parts = fullPath.split("/");
         const fileName = parts.pop();
         const folderPath = parts.join("/");
 
@@ -898,23 +883,35 @@ define([
           "Uploaded file",
           JSON.stringify({ fileName, fileId: id, folderId })
         );
+
+        // Track successful upload (use fullPath to match error format)
+        results.push({ path: fullPath, status: "success" });
       } catch (err) {
         const fileName = path ? path.split("/").pop() : null;
         errors.push(
-          createErrorObject(err, path, fileName, {
-            operation: "upload",
+          createErrorObject(err, fullPath || path, fileName, {
+            operation: operation || "MODIFY", // Use provided operation or default to MODIFY
             fileType: fileType,
           })
         );
-        logger.error("Error uploading file", { path, error: err.message });
+        logger.error("Error uploading file", {
+          fullPath: fullPath || path,
+          error: err.message,
+        });
       }
     }
 
     // ----------------- Delete files -----------------
     for (const path of filesToDelete) {
-      logger.debug("Deleting path", path);
-      const parts = path.split("/");
-      parts.shift();
+      // Add folder prefix if not already present
+      // GitHub paths: "Cycle/CycleRestlet.js" -> NetSuite: "[Folder]/Cycle/CycleRestlet.js"
+      const folderPrefix = suiteScriptsFolder + "/";
+      const fullPath = path.startsWith(folderPrefix)
+        ? path
+        : folderPrefix + path;
+      logger.debug("Deleting path", fullPath);
+
+      const parts = fullPath.split("/");
       const fileName = parts.pop();
       const folderPath = parts.join("/");
 
@@ -951,16 +948,21 @@ define([
             file.delete({ id: fileId });
             logger.debug("Deleted file", { path, fileId });
             fileDeleted = true;
+
+            // Track successful deletion (use fullPath to match error format)
+            results.push({ path: fullPath, status: "success" });
           }
           return true; // Continue processing if multiple files found
         });
 
         if (!fileDeleted) {
-          logger.debug("File not found for deletion", {
+          // File not found means it's already deleted - this is success
+          logger.debug("File not found for deletion (already deleted)", {
             path,
             fileName,
             folderId,
           });
+          results.push({ path: fullPath, status: "success" });
         } else if (folderId) {
           // Check if folder is now empty and delete it (and parent folders) if so
           deleteFolderIfEmpty(folderId);
@@ -968,54 +970,78 @@ define([
       } catch (err) {
         const fileName = path.split("/").pop();
         errors.push(
-          createErrorObject(err, path, fileName, {
-            operation: "delete",
+          createErrorObject(err, fullPath, fileName, {
+            operation: "DELETE",
             folderId: folderId,
           })
         );
-        logger.error("Error deleting file", { path, error: err.message });
+        logger.error("Error deleting file", { fullPath, error: err.message });
       }
     }
 
     const executionTime = Date.now() - startTime;
     logger.audit(
       "Done syncNetsuiteCabinet",
-      `Uploaded: ${filesToUpload.length}, Deleted: ${
-        filesToDelete.length
-      } | Execution time: ${executionTime}ms (${(executionTime / 1000).toFixed(
-        2
-      )}s)`
+      `Files processed: ${results.length} successful, ${
+        errors.length
+      } errors | Execution time: ${executionTime}ms (${(
+        executionTime / 1000
+      ).toFixed(2)}s)`
     );
 
     return {
       success: true,
       executionTime,
+      results, // Return successfully processed files
       errors,
     };
   }
 
   /******************************** END Upload commit files to netsuite *************************/
 
-  function getFilesModifiedAfterUTC(filterDate, searchFilters, ignoredPaths) {
+  function getFilesModifiedAfterUTC(
+    filterDateString,
+    filterDateUTC,
+    searchFilters,
+    ignoredPaths,
+    suiteScriptsFolder = "SuiteScripts"
+  ) {
     const results = [];
     const errors = [];
     const folderPathCache = {}; // Cache folder paths to avoid repeated record.load calls
 
-    // Prepopulate cache with root folders
-    FILE_CABINET_ROOTS.forEach((root) => {
-      folderPathCache[root.id] = root.name;
-    });
+    // Find the root folder ID by name (searches top-level folders only)
+    const rootFolderId = getFolderIdByPath(suiteScriptsFolder);
+
+    if (!rootFolderId) {
+      logger.error(
+        "Root folder not found",
+        `Could not find top-level folder: ${suiteScriptsFolder}`
+      );
+      return {
+        files: [],
+        errors: [
+          {
+            message: `Root folder "${suiteScriptsFolder}" does not exist`,
+            path: suiteScriptsFolder,
+          },
+        ],
+        resumeFromDate: null,
+      };
+    }
+
+    // Prepopulate cache with the found root folder
+    folderPathCache[rootFolderId] = suiteScriptsFolder;
 
     // 1. Search files modified on or after the date
     // Note: NetSuite search filters only accept date strings (not datetime)
     // We do precise UTC datetime comparison in the loop below
 
     const filters = [
-      ["folder", "anyof", FILE_CABINET_ROOTS.map((root) => root.id)], // Search in all File Cabinet roots
+      ["folder", "anyof", [rootFolderId]], // Search in the configured root folder
     ];
-
-    if (filterDate) {
-      filters.push("AND", ["modified", "onorafter", filterDate]);
+    if (filterDateString) {
+      filters.push("AND", ["modified", "onorafter", filterDateString]);
     }
 
     if (searchFilters && searchFilters.length > 0) {
@@ -1073,8 +1099,7 @@ define([
           const modifiedUTC = parseNetSuiteDateToUTC(modifiedStr);
 
           // Filter precisely by UTC - only include files modified on or after the filter date
-          if (filterDate && modifiedUTC < filterDate) continue;
-
+          if (filterDateUTC && modifiedUTC < filterDateUTC) continue;
           // 2. Build full path by traversing parent folders (with caching)
           let fullPath = fileName;
           let currentFolderId = folderId;
@@ -1121,7 +1146,18 @@ define([
               folderPathCache[folderChain[i].id] = pathSoFar;
             }
           }
-          if (shouldIgnorePath(fullPath, ignoredPaths)) continue;
+          // Remove the configured folder prefix for .cycleignore matching
+          const folderPrefixRegex = new RegExp(
+            `^\\/?${suiteScriptsFolder}\\/`,
+            "i"
+          );
+          if (
+            shouldIgnorePath(
+              fullPath.replace(folderPrefixRegex, ""),
+              ignoredPaths
+            )
+          )
+            continue;
           logger.debug("fullPath", fullPath);
 
           // Get base64 content
@@ -1156,17 +1192,22 @@ define([
     return { files: results, errors, resumeFromDate: null };
   }
 
-  function findMissingFiles(filterDate, searchFilters, ignoredPaths) {
-    const missing = [];
+  function findDeletedFiles(
+    filterDateString,
+    filterDateUTC,
+    searchFilters,
+    ignoredPaths
+  ) {
+    const deleted = [];
     const errors = [];
-    if (!filterDate) {
-      return { missing, errors };
+    if (!filterDateString || !filterDateUTC) {
+      return { deleted, errors };
     }
 
     const filters = [
       ["recordtype", "anyof", "file"],
       "AND",
-      ["deleteddate", "onorafter", filterDate],
+      ["deleteddate", "onorafter", filterDateString],
     ];
 
     if (searchFilters && searchFilters.length > 0) {
@@ -1183,6 +1224,10 @@ define([
         search.createColumn({
           name: "deleteddate",
           summary: search.Summary.MAX,
+        }),
+        search.createColumn({
+          name: "deletedby",
+          summary: search.Summary.GROUP,
         }),
       ],
     });
@@ -1202,6 +1247,10 @@ define([
             name: "deleteddate",
             summary: search.Summary.MAX,
           });
+          const deletedBy = result.getText({
+            name: "deletedby",
+            summary: search.Summary.GROUP,
+          });
 
           // Check if this filename should be ignored
           // Since we only have the filename, shouldIgnorePath will only match filename-only patterns
@@ -1213,29 +1262,30 @@ define([
           const deletedUTC = parseNetSuiteDateToUTC(deletedDateStr);
 
           // Filter precisely by UTC - only include files deleted on or after the filter date
-          if (deletedUTC < filterDate) continue;
+          if (deletedUTC < filterDateUTC) continue;
 
           logger.debug(
             "Deleted file",
-            fileName + " at " + deletedUTC.toISOString()
+            fileName + " at " + deletedUTC.toISOString() + " by " + (deletedBy || "unknown")
           );
 
-          missing.push({
+          deleted.push({
             name: fileName,
             modified: deletedUTC.toISOString(),
+            lastModifiedBy: deletedBy || undefined,
           });
         } catch (err) {
           const fileName = result.getValue({ name: "name" });
           errors.push(
             createErrorObject(err, null, fileName, {
-              context: "findMissingFiles deleted record processing",
+              context: "findDeletedFiles deleted record processing",
             })
           );
         }
       }
     }
 
-    return { missing, errors };
+    return { deleted, errors };
   }
 
   function getFilesInFolderRecursive(
@@ -1391,13 +1441,15 @@ define([
   function getPathContent64(filePath) {
     try {
       // Traverse folders by name to find the file's internal id, then load and return base64 content
+      // All paths are relative to SuiteScripts folder (ID: -15)
       const parts = (filePath || "").split("/").filter(Boolean);
       const fileName = parts.pop();
       if (!fileName) throw new Error("Invalid file path");
 
-      let parentFolderId = null;
+      // Start from SuiteScripts folder (ID: -15)
+      let parentFolderId = -15;
 
-      // Walk the folder path
+      // Walk the folder path (starting from SuiteScripts)
       for (let i = 0; i < parts.length; i++) {
         const folderName = parts[i];
 
@@ -1407,9 +1459,7 @@ define([
             filters: [
               ["name", "is", folderName],
               "AND",
-              parentFolderId
-                ? ["parent", "anyof", parentFolderId]
-                : ["parent", "isempty", ""],
+              ["parent", "anyof", parentFolderId],
             ],
             columns: ["internalid"],
           })
@@ -1418,7 +1468,9 @@ define([
 
         if (!results || results.length === 0) {
           throw new Error(
-            `Folder not found in path: ${parts.slice(0, i + 1).join("/")}`
+            `Folder not found in path: SuiteScripts/${parts
+              .slice(0, i + 1)
+              .join("/")}`
           );
         }
 
@@ -1432,9 +1484,7 @@ define([
           filters: [
             ["name", "is", fileName],
             "AND",
-            parentFolderId
-              ? ["folder", "anyof", parentFolderId]
-              : ["folder", "isempty", ""],
+            ["folder", "anyof", parentFolderId],
           ],
           columns: ["internalid"],
         })
@@ -1500,6 +1550,55 @@ define([
     return ignored;
   }
 
+  /**
+   * Verifies whether a full folder path exists in the File Cabinet.
+   * Example: "SuiteScripts/Cycle/test" → returns the internalid of "test"
+   * If any folder in the path does not exist, returns null.
+   */
+  function getFolderIdByPath(fullPath) {
+    try {
+      const parts = fullPath.split("/").filter(Boolean);
+      let parentId = null;
+
+      for (const name of parts) {
+        const filters = [["name", "is", name]];
+
+        if (parentId) {
+          // Search for folder with specific parent
+          filters.push("AND", ["parent", "anyof", parentId]);
+        } else {
+          // Search for top-level folder
+          filters.push("AND", ["istoplevel", "is", "T"]);
+        }
+
+        const results = search
+          .create({
+            type: "folder",
+            filters: filters,
+            columns: ["internalid"],
+          })
+          .run()
+          .getRange({ start: 0, end: 1 });
+
+        if (results && results.length > 0) {
+          parentId = results[0].getValue({ name: "internalid" });
+        } else {
+          // Folder does not exist in this level → path incomplete
+          return null;
+        }
+      }
+
+      // Entire path exists → return id of the last folder
+      return parentId;
+    } catch (err) {
+      logger.error("Error in getFolderIdByPath", {
+        folderPath: fullPath,
+        error: err.message,
+        stack: err.stack,
+      });
+      return null; // Return null on error (treat as folder not found)
+    }
+  }
   /******************************** END HANDLERS ********************************/
 
   return {

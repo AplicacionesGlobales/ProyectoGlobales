@@ -1,5 +1,5 @@
 /**
- * @NApiVersion 2.0
+ * @NApiVersion 2.1
  * @NScriptType ClientScript
  * @NModuleScope SameAccount
  * @author Midware
@@ -79,7 +79,7 @@ function updateShippingCost(pRecord) {
                     });
                 }
 
-                log.debug("shippingcost", newShippingCost.toFixed(2));
+                //log.debug("shippingcost", newShippingCost.toFixed(2));
             }
         }
     } catch (error) {
