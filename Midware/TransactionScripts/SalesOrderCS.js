@@ -6,27 +6,29 @@
  * @developer Ignacio A.
  * @contact contact@midware.net
  */
-define(["require", "exports", "N/log", "N/search"], function (require, exports, log, search) {
+define(["require", "exports", "N/log", "./Functions/TransactionFunctions"], function (require, exports, log, TransactionFunctions_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.saveRecord = void 0;
-    var queriesCache = {};
+    exports.addMinimumOrderChargeToSummary = exports.saveRecord = void 0;
     function saveRecord(pContext) {
         try {
             var currentRecord = pContext.currentRecord;
             var customerOverride = currentRecord.getValue({ fieldId: "custbody_mw_order_amount_override" });
             var subTotal = currentRecord.getValue({ fieldId: "subtotal" });
-            var eSurcharge = currentRecord.getValue({ fieldId: "shippingcost" });
             log.debug("[saveRecord] customerOverride", customerOverride);
             log.debug("[saveRecord] totalAmount", subTotal);
-            log.debug("[saveRecord] eSurcharge", eSurcharge);
-            var totalAmount = Number(subTotal) + Number(eSurcharge);
+            var totalAmount = Number(subTotal);
             if (!customerOverride) {
                 var customer = currentRecord.getValue({ fieldId: "entity" });
-                var customerMinimumOrderAmount = getCustomerMinimumOrderAmount(customer);
+                var customerMinimumOrderAmount = (0, TransactionFunctions_1.getCustomerMinimumOrderAmount)(customer);
                 log.debug("[saveRecord] customerMinimumOrderAmount", customerMinimumOrderAmount);
                 if (Number(totalAmount) < customerMinimumOrderAmount) {
-                    return confirm("This customer minimum order amount is ".concat(customerMinimumOrderAmount, ". Do you want to continue?"));
+                    var response = confirm("This customer minimum order amount is ".concat(formatAsCurrency(customerMinimumOrderAmount), ". Do you want to continue?"));
+                    currentRecord.setValue({ fieldId: "custbody_mw_complement_order_min", value: response });
+                    return response;
+                }
+                else {
+                    currentRecord.setValue({ fieldId: "custbody_mw_complement_order_min", value: false });
                 }
             }
             return true;
@@ -36,28 +38,34 @@ define(["require", "exports", "N/log", "N/search"], function (require, exports, 
         }
     }
     exports.saveRecord = saveRecord;
-    function getCustomerMinimumOrderAmount(customerId) {
-        if (queriesCache["".concat(customerId, "-custentity_mw_minimum_order_amount")]) {
-            var _a = queriesCache["".concat(customerId, "-custentity_mw_minimum_order_amount")], executionTime = _a.executionTime, value = _a.value;
-            var currentTime = Date.now();
-            var cacheExpirationTime = 2 * 60 * 1000; // 2 minutes in milliseconds
-            if (currentTime - executionTime < cacheExpirationTime) {
-                return value;
+    function addMinimumOrderChargeToSummary(minimumOrderAmount) {
+        var table = document.getElementsByClassName("totallingtable")[0];
+        var tableBody = table === null || table === void 0 ? void 0 : table.tBodies[0];
+        if (!tableBody)
+            return;
+        var children = tableBody.children;
+        // Find the insertion point (last row with content)
+        var insertIndex = children.length;
+        for (var i = children.length - 1; i >= 0; i--) {
+            var row = children[i];
+            if (!row.classList.contains("totallingtable_item")) {
+                insertIndex = i - 1;
+                break;
             }
         }
-        var customerLookup = search.lookupFields({
-            type: search.Type.CUSTOMER,
-            id: customerId,
-            columns: ["custentity_mw_minimum_order_amount"],
-        });
-        var minimumOrderQuantity = customerLookup && customerLookup.custentity_mw_minimum_order_amount
-            ? Number(customerLookup.custentity_mw_minimum_order_amount)
-            : 0;
-        queriesCache["".concat(customerId, "-custentity_mw_minimum_order_amount")] = {
-            executionTime: Date.now(),
-            value: minimumOrderQuantity,
-        };
-        return minimumOrderQuantity;
+        var newRow = document.createElement("tr");
+        newRow.className = "totallingtable_item uir-field-wrapper-cell";
+        newRow.innerHTML = "\n        <td>\n            <div>\n                <span class=\"smalltextnolink uir-label\">\n                    <span class=\"uir-label-span smalltextnolink\">Minimum Order Charge</span>\n                </span>\n                <span class=\"uir-field inputreadonly\">\n                    ".concat(formatAsCurrency(minimumOrderAmount).replace("$", ""), "\n                </span>\n            </div>\n        </td>\n    ");
+        if (insertIndex < children.length) {
+            tableBody.insertBefore(newRow, children[insertIndex]);
+        }
+        else {
+            tableBody.appendChild(newRow);
+        }
+    }
+    exports.addMinimumOrderChargeToSummary = addMinimumOrderChargeToSummary;
+    function formatAsCurrency(value) {
+        return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
     }
     function handleError(pError) {
         log.error({ title: "Error", details: pError.message });
