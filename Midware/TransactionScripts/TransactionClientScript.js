@@ -1,5 +1,5 @@
 /**
- * @NApiVersion 2.0
+ * @NApiVersion 2.1
  * @NScriptType ClientScript
  * @NModuleScope SameAccount
  * @author Midware
@@ -7,59 +7,9 @@
  * @contact contact@midware.net
  */
 define(["require", "exports", "N/log", "N/record", "./Constants/Constants"], function (require, exports, log, record, constants) {
+    "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    function pageInit(pContext) {
-        try {
-            /* For customer */
-            /* if (pContext.mode == "create") {
-                const currentRecord = pContext.currentRecord;
-                currentRecord.setValue({
-                    fieldId: "taxitem",
-                    value: 411,
-                });
-            } */
-        }
-        catch (error) {
-            handleError(error);
-        }
-    }
-    exports.pageInit = pageInit;
-    function validateField(pContext) {
-        try {
-            return true;
-        }
-        catch (error) {
-            handleError(error);
-        }
-    }
-    exports.validateField = validateField;
-    function validateLine(pContext) {
-        try {
-            return true;
-        }
-        catch (error) {
-            handleError(error);
-        }
-    }
-    exports.validateLine = validateLine;
-    function validateInsert(pContext) {
-        try {
-            return true;
-        }
-        catch (error) {
-            handleError(error);
-        }
-    }
-    exports.validateInsert = validateInsert;
-    function validateDelete(pContext) {
-        try {
-            return true;
-        }
-        catch (error) {
-            handleError(error);
-        }
-    }
-    exports.validateDelete = validateDelete;
+    exports.postSourcing = exports.fieldChanged = void 0;
     function fieldChanged(pContext) {
         try {
             var currentRecord = pContext.currentRecord;
@@ -238,61 +188,65 @@ define(["require", "exports", "N/log", "N/record", "./Constants/Constants"], fun
                     }
                 }
             }
-            else if (sublistId === 'item' && fieldId === 'custcol_mw_bill_by') {
-                var selectedOption = currentLine.getCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: fieldId
-                }).toString();
+            else if (sublistId === "item" && fieldId === "custcol_mw_bill_by") {
+                var selectedOption = currentLine
+                    .getCurrentSublistValue({
+                    sublistId: "item",
+                    fieldId: fieldId,
+                })
+                    .toString();
                 updateQuantityField(currentLine, selectedOption);
             }
-            else if (sublistId === 'item' && (constants.BYLL_BY_ID_LIST.indexOf(fieldId) !== -1)) {
-                var selectedOption = currentLine.getCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'custcol_mw_bill_by'
-                }).toString();
+            else if (sublistId === "item" && constants.BYLL_BY_ID_LIST.indexOf(fieldId) !== -1) {
+                var selectedOption = currentLine
+                    .getCurrentSublistValue({
+                    sublistId: "item",
+                    fieldId: "custcol_mw_bill_by",
+                })
+                    .toString();
                 if (constants.BILL_BY_SELECTOR[selectedOption] == fieldId) {
                     updateQuantityField(currentLine, selectedOption);
                 }
             }
-            else if (sublistId === 'item' && fieldId === 'description') {
+            else if (sublistId === "item" && fieldId === "description") {
                 var description = currentRecord.getCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'description'
+                    sublistId: "item",
+                    fieldId: "description",
                 });
                 if (description) {
                     if (description !== description.toString().toUpperCase()) {
                         var upperCaseDescription = description.toString().toUpperCase();
                         currentRecord.setCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: 'description',
-                            value: upperCaseDescription
+                            sublistId: "item",
+                            fieldId: "description",
+                            value: upperCaseDescription,
                         });
                     }
                 }
             }
-            else if (sublistId === 'item' && fieldId === 'item') {
+            else if (sublistId === "item" && fieldId === "item") {
                 var item = currentRecord.getCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'item'
+                    sublistId: "item",
+                    fieldId: "item",
                 });
                 if (item) {
                     if (constants.ITEMS_BILL_BY[item.toString()]) {
                         currentRecord.setCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: 'custcol_mw_bill_by',
-                            value: constants.ITEMS_BILL_BY[item.toString()]
+                            sublistId: "item",
+                            fieldId: "custcol_mw_bill_by",
+                            value: constants.ITEMS_BILL_BY[item.toString()],
                         });
                     }
                     else {
                         var billBy = currentRecord.getCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: 'custcol_mw_bill_by'
+                            sublistId: "item",
+                            fieldId: "custcol_mw_bill_by",
                         });
                         if ("2" != billBy) {
                             currentRecord.setCurrentSublistValue({
-                                sublistId: 'item',
-                                fieldId: 'custcol_mw_bill_by',
-                                value: "2"
+                                sublistId: "item",
+                                fieldId: "custcol_mw_bill_by",
+                                value: "2",
                             });
                         }
                     }
@@ -304,23 +258,6 @@ define(["require", "exports", "N/log", "N/record", "./Constants/Constants"], fun
         }
     }
     exports.fieldChanged = fieldChanged;
-    function updateQuantityField(pCurrentLine, pSelectedOption) {
-        var selectedQty = 0;
-        if (pSelectedOption == "6") {
-            selectedQty = 1;
-        }
-        else {
-            selectedQty = pCurrentLine.getCurrentSublistValue({
-                sublistId: 'item',
-                fieldId: constants.BILL_BY_SELECTOR[pSelectedOption]
-            });
-        }
-        pCurrentLine.setCurrentSublistValue({
-            sublistId: 'item',
-            fieldId: 'quantity',
-            value: selectedQty || 0
-        });
-    }
     function postSourcing(pContext) {
         try {
             var currentRecord = pContext.currentRecord;
@@ -348,9 +285,9 @@ define(["require", "exports", "N/log", "N/record", "./Constants/Constants"], fun
                         value: constants.RECORD_IDS.qty_unit_id,
                     });
                     currentRecord.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'custcol_mw_out_weight',
-                        value: ""
+                        sublistId: "item",
+                        fieldId: "custcol_mw_out_weight",
+                        value: "",
                     });
                 }
                 else {
@@ -389,24 +326,23 @@ define(["require", "exports", "N/log", "N/record", "./Constants/Constants"], fun
         }
     }
     exports.postSourcing = postSourcing;
-    function sublistChanged(pContext) {
-        try {
-            return true;
+    function updateQuantityField(pCurrentLine, pSelectedOption) {
+        var selectedQty = 0;
+        if (pSelectedOption == "6") {
+            selectedQty = 1;
         }
-        catch (error) {
-            handleError(error);
+        else {
+            selectedQty = pCurrentLine.getCurrentSublistValue({
+                sublistId: "item",
+                fieldId: constants.BILL_BY_SELECTOR[pSelectedOption],
+            });
         }
+        pCurrentLine.setCurrentSublistValue({
+            sublistId: "item",
+            fieldId: "quantity",
+            value: selectedQty || 0,
+        });
     }
-    exports.sublistChanged = sublistChanged;
-    function saveRecord(pContext) {
-        try {
-            return true;
-        }
-        catch (error) {
-            handleError(error);
-        }
-    }
-    exports.saveRecord = saveRecord;
     function handleError(pError) {
         log.error({ title: "Error", details: pError.message });
         log.error({ title: "Stack", details: JSON.stringify(pError) });

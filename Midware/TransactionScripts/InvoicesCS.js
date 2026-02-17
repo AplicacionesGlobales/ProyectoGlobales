@@ -9,15 +9,7 @@
 define(["require", "exports", "N/log"], function (require, exports, log) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.fieldChanged = exports.validateInsert = exports.validateLine = exports.pageInit = void 0;
-    function pageInit(pContext) {
-        try {
-        }
-        catch (error) {
-            handleError(error);
-        }
-    }
-    exports.pageInit = pageInit;
+    exports.fieldChanged = exports.validateInsert = exports.validateLine = void 0;
     function validateLine(pContext) {
         try {
             var itemClass = pContext.currentRecord.getCurrentSublistValue({

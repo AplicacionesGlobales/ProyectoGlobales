@@ -13,8 +13,6 @@ import * as log from "N/log";
 import * as serverWidget from "N/ui/serverWidget";
 import * as record from "N/record";
 
-import * as constants from "./Constants/Constants";
-
 export function beforeLoad(pContext: EntryPoints.UserEvent.beforeLoadContext) {
     try {
         if (pContext.type) {
@@ -51,26 +49,21 @@ export function beforeLoad(pContext: EntryPoints.UserEvent.beforeLoadContext) {
 
 export function beforeSubmit(pContext: EntryPoints.UserEvent.beforeSubmitContext) {
     try {
-
         let oldRec = pContext.oldRecord;
         let rec = pContext.newRecord;
 
         let trackedJobName = rec.getValue("custbody_pl_dn_trck_job") ? rec.getText("custbody_pl_dn_trck_job") : null;
 
         if (trackedJobName) {
-
             let oldTrackedJobName = rec.getValue("custbody_pl_dn_trck_job") ? rec.getText("custbody_pl_dn_trck_job") : null;
 
             if (trackedJobName != oldTrackedJobName) {
-
                 rec.setValue({
-                    fieldId : "custbody_platve_duncan_non_tracked_pj",
-                    value : trackedJobName.toString()
+                    fieldId: "custbody_platve_duncan_non_tracked_pj",
+                    value: trackedJobName.toString(),
                 });
-
             }
         }
-
     } catch (error) {
         handleError(error);
     }

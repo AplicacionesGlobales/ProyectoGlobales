@@ -1,5 +1,5 @@
 /**
- * @NApiVersion 2.0
+ * @NApiVersion 2.1
  * @NScriptType ClientScript
  * @NModuleScope SameAccount
  * @author Midware
@@ -11,64 +11,14 @@ import { EntryPoints } from "N/types";
 
 import * as log from "N/log";
 import * as record from "N/record";
-
 import * as constants from "./Constants/Constants";
 
-export function pageInit(pContext: EntryPoints.Client.pageInitContext) {
-    try {
-        /* For customer */
-        /* if (pContext.mode == "create") {
-            const currentRecord = pContext.currentRecord;
-            currentRecord.setValue({
-                fieldId: "taxitem",
-                value: 411,
-            });
-        } */
-    } catch (error) {
-        handleError(error);
-    }
-}
-
-export function validateField(pContext: EntryPoints.Client.validateFieldContext) {
-    try {
-        return true;
-    } catch (error) {
-        handleError(error);
-    }
-}
-
-export function validateLine(pContext: EntryPoints.Client.validateLineContext) {
-    try {
-        return true;
-    } catch (error) {
-        handleError(error);
-    }
-}
-
-export function validateInsert(pContext: EntryPoints.Client.validateInsertContext) {
-    try {
-        return true;
-    } catch (error) {
-        handleError(error);
-    }
-}
-
-export function validateDelete(pContext: EntryPoints.Client.validateDeleteContext) {
-    try {
-        return true;
-    } catch (error) {
-        handleError(error);
-    }
-}
-
 export function fieldChanged(pContext: EntryPoints.Client.fieldChangedContext) {
-
     try {
-        
         const currentRecord = pContext.currentRecord;
-        let currentLine = pContext.currentRecord;
-        let sublistId = pContext.sublistId;
-        let fieldId = pContext.fieldId;
+        const currentLine = pContext.currentRecord;
+        const sublistId = pContext.sublistId;
+        const fieldId = pContext.fieldId;
 
         /* dft, ext_pp_inspection and ext_ip_inspection */
 
@@ -239,112 +189,75 @@ export function fieldChanged(pContext: EntryPoints.Client.fieldChangedContext) {
                     });
                 }
             }
-        } else if (sublistId === 'item' && fieldId === 'custcol_mw_bill_by') {
-
-            let selectedOption = currentLine.getCurrentSublistValue({
-                sublistId: 'item',
-                fieldId: fieldId
-            }).toString();
+        } else if (sublistId === "item" && fieldId === "custcol_mw_bill_by") {
+            const selectedOption = currentLine
+                .getCurrentSublistValue({
+                    sublistId: "item",
+                    fieldId: fieldId,
+                })
+                .toString();
 
             updateQuantityField(currentLine, selectedOption);
+        } else if (sublistId === "item" && constants.BYLL_BY_ID_LIST.indexOf(fieldId) !== -1) {
+            const selectedOption = currentLine
+                .getCurrentSublistValue({
+                    sublistId: "item",
+                    fieldId: "custcol_mw_bill_by",
+                })
+                .toString();
 
-        } else if (sublistId === 'item' && (constants.BYLL_BY_ID_LIST.indexOf(fieldId) !== -1)) {
-
-            let selectedOption = currentLine.getCurrentSublistValue({
-                sublistId: 'item',
-                fieldId: 'custcol_mw_bill_by'
-            }).toString();
-
-            if ( constants.BILL_BY_SELECTOR[selectedOption] == fieldId ) {
-
+            if (constants.BILL_BY_SELECTOR[selectedOption] == fieldId) {
                 updateQuantityField(currentLine, selectedOption);
-
             }
-        } else if (sublistId === 'item' && fieldId === 'description') {
-
-            let description = currentRecord.getCurrentSublistValue({
-                sublistId: 'item',
-                fieldId: 'description'
+        } else if (sublistId === "item" && fieldId === "description") {
+            const description = currentRecord.getCurrentSublistValue({
+                sublistId: "item",
+                fieldId: "description",
             });
 
             if (description) {
-
                 if (description !== description.toString().toUpperCase()) {
-
-                    let upperCaseDescription = description.toString().toUpperCase();
+                    const upperCaseDescription = description.toString().toUpperCase();
 
                     currentRecord.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'description',
-                        value: upperCaseDescription
+                        sublistId: "item",
+                        fieldId: "description",
+                        value: upperCaseDescription,
                     });
-
                 }
             }
-        } else if (sublistId === 'item' && fieldId === 'item') {
-            
-            let item = currentRecord.getCurrentSublistValue({
-                sublistId: 'item',
-                fieldId: 'item'
+        } else if (sublistId === "item" && fieldId === "item") {
+            const item = currentRecord.getCurrentSublistValue({
+                sublistId: "item",
+                fieldId: "item",
             });
 
             if (item) {
-
-                if ( constants.ITEMS_BILL_BY[item.toString()] ) {
-
+                if (constants.ITEMS_BILL_BY[item.toString()]) {
                     currentRecord.setCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'custcol_mw_bill_by',
-                        value: constants.ITEMS_BILL_BY[item.toString()]
+                        sublistId: "item",
+                        fieldId: "custcol_mw_bill_by",
+                        value: constants.ITEMS_BILL_BY[item.toString()],
                     });
-
                 } else {
-
-                    let billBy = currentRecord.getCurrentSublistValue({
-                        sublistId: 'item',
-                        fieldId: 'custcol_mw_bill_by'
+                    const billBy = currentRecord.getCurrentSublistValue({
+                        sublistId: "item",
+                        fieldId: "custcol_mw_bill_by",
                     });
 
-                    if ("2" != billBy){
-
+                    if ("2" != billBy) {
                         currentRecord.setCurrentSublistValue({
-                            sublistId: 'item',
-                            fieldId: 'custcol_mw_bill_by',
-                            value: "2"
+                            sublistId: "item",
+                            fieldId: "custcol_mw_bill_by",
+                            value: "2",
                         });
-
                     }
                 }
             }
         }
-
     } catch (error) {
         handleError(error);
     }
-}
-
-function updateQuantityField(pCurrentLine, pSelectedOption) {
-
-    let selectedQty = 0;
-
-    if ( pSelectedOption == "6" ){
-
-        selectedQty = 1;
-
-    } else {
-
-        selectedQty = pCurrentLine.getCurrentSublistValue({
-            sublistId: 'item',
-            fieldId: constants.BILL_BY_SELECTOR[pSelectedOption]
-        });
-
-    }
-
-    pCurrentLine.setCurrentSublistValue({
-        sublistId: 'item',
-        fieldId: 'quantity',
-        value: selectedQty || 0
-    });
 }
 
 export function postSourcing(pContext: EntryPoints.Client.postSourcingContext) {
@@ -376,9 +289,9 @@ export function postSourcing(pContext: EntryPoints.Client.postSourcingContext) {
                     value: constants.RECORD_IDS.qty_unit_id,
                 });
                 currentRecord.setCurrentSublistValue({
-                    sublistId: 'item',
-                    fieldId: 'custcol_mw_out_weight',
-                    value: ""
+                    sublistId: "item",
+                    fieldId: "custcol_mw_out_weight",
+                    value: "",
                 });
             } else {
                 //Default unit = lb to all items except material
@@ -417,20 +330,23 @@ export function postSourcing(pContext: EntryPoints.Client.postSourcingContext) {
     }
 }
 
-export function sublistChanged(pContext: EntryPoints.Client.sublistChangedContext) {
-    try {
-        return true;
-    } catch (error) {
-        handleError(error);
-    }
-}
+function updateQuantityField(pCurrentLine, pSelectedOption) {
+    let selectedQty = 0;
 
-export function saveRecord(pContext: EntryPoints.Client.saveRecordContext) {
-    try {
-        return true;
-    } catch (error) {
-        handleError(error);
+    if (pSelectedOption == "6") {
+        selectedQty = 1;
+    } else {
+        selectedQty = pCurrentLine.getCurrentSublistValue({
+            sublistId: "item",
+            fieldId: constants.BILL_BY_SELECTOR[pSelectedOption],
+        });
     }
+
+    pCurrentLine.setCurrentSublistValue({
+        sublistId: "item",
+        fieldId: "quantity",
+        value: selectedQty || 0,
+    });
 }
 
 function handleError(pError: Error) {

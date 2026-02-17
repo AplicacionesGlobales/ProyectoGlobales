@@ -7,7 +7,9 @@
  * @contact contact@midware.net
  */
 define(["require", "exports", "N/log", "N/ui/serverWidget", "N/record"], function (require, exports, log, serverWidget, record) {
+    "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.afterSubmit = exports.beforeSubmit = exports.beforeLoad = void 0;
     function beforeLoad(pContext) {
         try {
             if (pContext.type) {
@@ -50,7 +52,7 @@ define(["require", "exports", "N/log", "N/ui/serverWidget", "N/record"], functio
                 if (trackedJobName != oldTrackedJobName) {
                     rec.setValue({
                         fieldId: "custbody_platve_duncan_non_tracked_pj",
-                        value: trackedJobName.toString()
+                        value: trackedJobName.toString(),
                     });
                 }
             }
