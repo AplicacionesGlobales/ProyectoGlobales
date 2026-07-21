@@ -1,0 +1,45 @@
+# IMPORTANT
+# This file defines the tracking scope in the File Cabinet.
+# Do not delete this file, and only modify it when required.
+# Changing tracked directories will create a new baseline, changing
+# file extension filters will not.
+
+# Exclude all File Cabinet content by default.
+/*
+
+# Include SuiteScripts.
+!/SuiteScripts/
+!/SuiteScripts/**
+
+# Include website and SSP assets.
+!/Web Site Hosting Files/
+!/Web Site Hosting Files/**
+
+# Include only explicitly approved folders in Templates.
+# !/Templates/
+# /Templates/*
+# !/Templates/Tracked Content/
+# !/Templates/Tracked Content/**
+
+# Exclude common document and binary files.
+**/*.pdf
+**/*.doc
+**/*.docx
+**/*.xls
+**/*.xlsx
+**/*.ppt
+**/*.pptx
+**/*.rtf
+**/*.zip
+**/*.tar
+**/*.gz
+**/*.tgz
+**/*.tbz
+**/*.mp3
+**/*.mp4
+**/*.mov
+**/*.mpeg
+**/*.mpg
+**/*.avi
+**/*.bin
+**/*.csv
